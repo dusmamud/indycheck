@@ -1,0 +1,78 @@
+---
+title: TAN
+description: Validate TAN (Tax Deduction and Collection Account Number) — 4 letters, 5 digits, 1 letter. Format only, no public checksum.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates a Tax Deduction and Collection Account Number (TAN): 10 characters — 4 letters, 5 digits, 1 letter. TAN is issued by the Income Tax Department to anyone who deducts or collects tax at source (TDS/TCS).
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Format | `^[A-Z]{4}[0-9]{5}[A-Z]$` |
+| Length | Exactly 10 characters |
+| 1st–3rd characters | Jurisdiction code (e.g. `MUM` = Mumbai, `DEL` = Delhi) |
+| 4th character | First initial of the deductor's name |
+| 5th–9th characters | System-generated sequence number |
+| 10th character | System-generated check letter |
+| Checksum | **None — format only, no public checksum.** The last letter is a check character, but its algorithm is not published, so indycheck cannot verify it |
+
+## Usage
+
+```js
+import { validateTan } from 'indycheck';
+
+validateTan('MUMB12345C');
+// { ok: true, code: 'VALID', normalized: 'MUMB12345C',
+//   parsed: { tan: 'MUMB12345C' } }
+```
+
+```python
+from indycheck import validate_tan
+
+validate_tan("MUMB12345C").ok  # True
+```
+
+```rust
+use indycheck::validate_tan;
+
+let r = validate_tan("MUMB12345C");
+assert!(r.ok);
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `MUMB12345C` | ✅ Valid | `VALID` |
+| `DELH12345A` | ✅ Valid | `VALID` |
+| `mumb12345c` | ✅ Valid (normalised) | `VALID` |
+| `MUMB1234C` | ❌ Invalid — 9 characters | `INVALID_LENGTH` |
+| `MUM12345C` | ❌ Invalid — 9 characters | `INVALID_LENGTH` |
+| `MUMB123455` | ❌ Invalid — last char must be a letter | `INVALID_FORMAT` |
+| `MUMB12A45C` | ❌ Invalid — letter inside the digits | `INVALID_FORMAT` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_LENGTH` | Not exactly 10 characters |
+| `INVALID_FORMAT` | Doesn't match 4 letters + 5 digits + 1 letter |
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{
+  "tan": "MUMB12345C"
+}
+```
+
+<Aside type="caution" title="Honest limits — format only">
+  TAN has **no public checksum**, so indycheck can only check the shape. A well-formed TAN may still be unissued or belong to someone else. Real verification needs the Income Tax Department's TAN search. Do not confuse TAN with PAN — both are 10 characters, but PAN is 5 letters + 4 digits + 1 letter, while TAN is 4 letters + 5 digits + 1 letter.
+</Aside>
