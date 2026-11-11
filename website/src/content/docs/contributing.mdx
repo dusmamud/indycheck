@@ -1,0 +1,64 @@
+---
+title: Contributing
+description: How to contribute to indycheck — issues, code, docs, and the rules every change must follow.
+---
+
+indycheck is open source and contributions are welcome — bug reports, rule corrections, new bindings, docs and examples.
+
+## Before you start
+
+- **Discuss first for big changes.** Open an issue describing what you want to change before writing a lot of code — especially for new validators or new language bindings.
+- **Never use real personal data.** Test values in issues, PRs and tests must be synthetic (like `AAAPL1234C` or `234567890124`). Never paste a real person's PAN, Aadhaar, GSTIN or mobile number anywhere in the repo.
+- **One Rust core.** All validation rules live in the Rust crate. Language bindings are thin wrappers — do not re-implement rules in JavaScript or Python.
+
+## How to contribute
+
+1. Fork the repo and clone your fork.
+2. Create a branch: `git checkout -b fix/pan-holder-type` or `git checkout -b docs/hindi-errors`.
+3. Make your change, with tests.
+4. Run the checks (see below) and make sure everything passes.
+5. Open a pull request against `main`, describing what changed and why, with before/after examples.
+
+## Rules for validation changes
+
+- Every rule change needs a **test with a valid and an invalid example**, plus the official source for the rule (e.g. UIDAI's Verhoeff note, the GSTN check-digit algorithm, RBI's IFSC format).
+- Error `code` values are a public API — **never rename or remove one** without a major-version discussion. Add new codes instead.
+- Every failure path must produce both `reason_en` and `reason_hi`.
+- Keep the result shape identical across JS, Python and Rust.
+
+## Running the checks
+
+```bash
+# Rust core + all tests
+cargo test
+
+# JavaScript binding (Node 18+)
+cd packages/indycheck-js && npm install && npm test
+
+# Python binding (Python 3.9+)
+cd packages/indycheck-py && pip install -e . && pytest
+
+# This website
+cd website && npm install && npm run build
+```
+
+## Docs contributions
+
+Docs live in `website/src/content/docs/` (English for v0.1) and the landing/playground pages in `website/src/pages/`. Every doc page should have: real valid + invalid examples, a code sample in at least JavaScript, and the honest-limits note. Check your change with `npm run build` in `website/`.
+
+## Code style
+
+- Rust: `cargo fmt` and `cargo clippy` clean.
+- JavaScript/TypeScript: 2-space indent, single quotes, semicolons (see `.prettierrc`).
+- Keep functions small and pure — validators take a string and return a result; no I/O, no globals, no network.
+
+## Reporting a bug
+
+Open an issue with:
+
+1. The validator and the exact input (synthetic data only).
+2. What indycheck returned (`ok`, `code`).
+3. What you expected, and the official source for the rule.
+4. Your environment: package version, language, OS.
+
+Security issues (for example, a validation bypass with real-world impact): please open a GitHub issue marked **security** rather than posting a public proof of concept.
