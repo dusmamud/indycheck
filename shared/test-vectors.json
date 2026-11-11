@@ -1,0 +1,1756 @@
+[
+  {
+    "input": "ABCDE1234F",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "abcde1234f",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "XYZCP1234A",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AAAHH1234B",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AAAFF1234C",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AAAAT1234D",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AAABB1234E",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AAAJJ1234F",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AAAGG1234H",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AAALA1234K",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AAAAA1234A",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": " ABCDE1234F ",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABCDX1234F",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABCDE12345",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "ABCDE1234",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "ABCDE1234FG",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "pan",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "ABCD11234F",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "ABCDEABCD1",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "123451234F",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "ABCDE1234@",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "ABCDE1234f",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ZYXWP9876Q",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABCDE123",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "ABCDE1234FF",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "234567890124",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "987654321090",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "2345 6789 0124",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "2345-6789-0124",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "234567890125",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "987654321091",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "123456789017",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_FIRST_DIGIT",
+    "detect": true
+  },
+  {
+    "input": "023456789012",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_FIRST_DIGIT",
+    "detect": true
+  },
+  {
+    "input": "23456789012",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "2345678901245",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "23456789012A",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "23456789ABCD",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "234567890000",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "999999999999",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "200000000000",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "234567890124",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": " 234567890124 ",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "345678901234",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "876543210987",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "23456789012 ",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "2345678901",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "234567890123",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "456789012345",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "567890123456",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "18AAAPL1234C1ZD",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "27ABCDE1234F1Z0",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "07ABCDE1234F1Z2",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "18aaapl1234c1zd",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "18AAAPL1234C1ZE",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "27ABCDE1234F1Z1",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "99AAAPL1234C1ZD",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_STATE_CODE",
+    "detect": true
+  },
+  {
+    "input": "00AAAPL1234C1ZD",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_STATE_CODE",
+    "detect": true
+  },
+  {
+    "input": "39AAAPL1234C1ZD",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_STATE_CODE",
+    "detect": true
+  },
+  {
+    "input": "18AAAPL1234C1AD",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "18AAAPL1234C1Z",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "18AAAPL1234C1ZDD",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "gstin",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "18AAA111234C1ZD",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "18AAAPL1234C1ZD ",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "01AAAPL1234C1Z5",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "36AAAPL1234C1Z0",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "29ABCDE1234F1ZW",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "18ABCDE1234F1ZZ",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "22AAAAA0000A1ZC",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "18AAAPL1234C2ZD",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "37ABCDE1234F1Z5",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "38ABCDE1234F1Z5",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "33ABCDE1234F1Z5",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "18AAAPL1234CXZD",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "18AAAPL1234C1Z@",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "1AAAAPL1234C1ZD",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "18AAAPL1234C1",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "18AAAPL1234C1ZD ",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "24ABCDE1234F1Z5",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_CHECKSUM",
+    "detect": true
+  },
+  {
+    "input": "SBIN0000123",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "HDFC0001234",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "sbin0000123",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "SBIN0001234",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ICIC0000001",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "UTIB0001234",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": " SBIN0000123 ",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "SBIN1000123",
+    "type": "ifsc",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "SBIN000012",
+    "type": "ifsc",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "SBIN00001234",
+    "type": "ifsc",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "ifsc",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "SB1N0000123",
+    "type": "ifsc",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "SBIN00001@3",
+    "type": "ifsc",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "12340000123",
+    "type": "ifsc",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "SBIN000ABC1",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABCD0ABCDEF",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABCD0ABCDE",
+    "type": "ifsc",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "SBIN0000123X",
+    "type": "ifsc",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "sbin000abcd",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "KKBK0000123",
+    "type": "ifsc",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "dus@okaxis",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "dus@paytm",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "dus.name@okhdfcbank",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "user123@okicici",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@oksbi",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@ybl",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@axl",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@upi",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@OKAXIS",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "my-name_1@jio",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@amazonpay",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@freecharge",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@aubank",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@barodampay",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@federal",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@unknownhandle",
+    "type": "upi",
+    "valid": false,
+    "code": "INVALID_HANDLE",
+    "detect": true
+  },
+  {
+    "input": "name@",
+    "type": "upi",
+    "valid": false,
+    "code": "INVALID_HANDLE",
+    "detect": true
+  },
+  {
+    "input": "@okaxis",
+    "type": "upi",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "name",
+    "type": "upi",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "upi",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "a@okaxis",
+    "type": "upi",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "name@okaxis@extra",
+    "type": "upi",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "na me@okaxis",
+    "type": "upi",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "name@okaxis ",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "name@okbob",
+    "type": "upi",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "9876543210",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "+91 98765 43210",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "+919876543210",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "919876543210",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "09876543210",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "98765-43210",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "98765 43210",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "6123456789",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "7123456789",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "8123456789",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "5876543210",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FIRST_DIGIT",
+    "detect": true
+  },
+  {
+    "input": "1876543210",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FIRST_DIGIT",
+    "detect": true
+  },
+  {
+    "input": "0876543210",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FIRST_DIGIT",
+    "detect": true
+  },
+  {
+    "input": "987654321",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "98765432101",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "mobile",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "98765abc10",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "987654321a",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "+91 58765 43210",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FIRST_DIGIT",
+    "detect": true
+  },
+  {
+    "input": "91987654321",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": " 9876543210 ",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "9999999999",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "6000000000",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "98765432100",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "+1 9876543210",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "781001",
+    "type": "pincode",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "110001",
+    "type": "pincode",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "400001",
+    "type": "pincode",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": " 781001 ",
+    "type": "pincode",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "999999",
+    "type": "pincode",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "100000",
+    "type": "pincode",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "081001",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_FIRST_DIGIT",
+    "detect": true
+  },
+  {
+    "input": "001001",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_FIRST_DIGIT",
+    "detect": true
+  },
+  {
+    "input": "78100",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "7810011",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "pincode",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "78100A",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "781 001",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "ABCDEF",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "781001 ",
+    "type": "pincode",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "560001",
+    "type": "pincode",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "700001",
+    "type": "pincode",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "000000",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_FIRST_DIGIT",
+    "detect": true
+  },
+  {
+    "input": "12345",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "1234567",
+    "type": "pincode",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "AAAA12345B",
+    "type": "tan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "delh12345a",
+    "type": "tan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABCD12345E",
+    "type": "tan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABC12345B",
+    "type": "tan",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "AAAA1234B",
+    "type": "tan",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "AAAA123456",
+    "type": "tan",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "AAAA12345",
+    "type": "tan",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "tan",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "123412345B",
+    "type": "tan",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "AAAA12345@",
+    "type": "tan",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "AAAA 12345B",
+    "type": "tan",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "AAAA12345B ",
+    "type": "tan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "L12345MH2020PLC123456",
+    "type": "cin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "U12345DL2019PTC000001",
+    "type": "cin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "l12345mh2020plc123456",
+    "type": "cin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "X12345MH2020PLC123456",
+    "type": "cin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "L1234MH2020PLC123456",
+    "type": "cin",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "L12345MH2020PLC12345",
+    "type": "cin",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "L12345MH202PLC123456",
+    "type": "cin",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "cin",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "L12345M12020PLC123456",
+    "type": "cin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "L12345MH2020PLC12345A",
+    "type": "cin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "L12345MH2020PLC123456 ",
+    "type": "cin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "U99999KA2023LLP654321",
+    "type": "cin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AAA1234",
+    "type": "llpin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "abc1234",
+    "type": "llpin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ZZZ9999",
+    "type": "llpin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AA12345",
+    "type": "llpin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "AAAA123",
+    "type": "llpin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "ABC123",
+    "type": "llpin",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "ABC12345",
+    "type": "llpin",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "llpin",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "ABC12A4",
+    "type": "llpin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": " AAA1234 ",
+    "type": "llpin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABC1234567",
+    "type": "voter",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "abc1234567",
+    "type": "voter",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "XYZ0000001",
+    "type": "voter",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "AB12345678",
+    "type": "voter",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "ABC123456",
+    "type": "voter",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "ABC12345678",
+    "type": "voter",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "voter",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "ABC123456A",
+    "type": "voter",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "AB C1234567",
+    "type": "voter",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": " ABC1234567 ",
+    "type": "voter",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "DL01AB1234",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "DL01A1234",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "MH12AB1234",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "DL01AB123",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "dl01ab1234",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "DL 01 AB 1234",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "DL-01-AB-1234",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "DL0AB1234",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "D101AB1234",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "DL01ABCD1234",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "DL01AB12345",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_LENGTH",
+    "detect": false
+  },
+  {
+    "input": "",
+    "type": "vehicle",
+    "valid": false,
+    "code": "EMPTY",
+    "detect": false
+  },
+  {
+    "input": "DL01AB12CD",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "D01AB1234",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "abcde1234f",
+    "type": "pan",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false,
+    "options": {
+      "uppercase": false
+    }
+  },
+  {
+    "input": "ABCDE1234F",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "options": {
+      "uppercase": false
+    }
+  },
+  {
+    "input": "+91 98765 43210",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false,
+    "options": {
+      "normalise_plus91": false
+    }
+  },
+  {
+    "input": "98765 43210",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false,
+    "options": {
+      "allow_spaces_hyphens": false
+    }
+  },
+  {
+    "input": "98765 43210",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "options": {
+      "allow_spaces_hyphens": true
+    }
+  },
+  {
+    "input": "2345 6789 0124",
+    "type": "aadhaar",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false,
+    "options": {
+      "allow_spaces_hyphens": false
+    }
+  },
+  {
+    "input": "234567890125",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "options": {
+      "strict": false
+    }
+  },
+  {
+    "input": "123456789017",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "options": {
+      "strict": false
+    }
+  },
+  {
+    "input": "18AAAPL1234C1ZE",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "options": {
+      "strict": false
+    }
+  },
+  {
+    "input": "5876543210",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "options": {
+      "strict": false
+    }
+  },
+  {
+    "input": "18AAAPL1234C1ZD",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "options": {
+      "strict": true
+    }
+  },
+  {
+    "input": "C",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "generator": "pan"
+  },
+  {
+    "input": "",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "generator": "aadhaar"
+  },
+  {
+    "input": "18",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "generator": "gstin"
+  },
+  {
+    "input": "99",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "generator": "gstin"
+  },
+  {
+    "input": "",
+    "type": "mobile",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "generator": "mobile"
+  },
+  {
+    "input": "P",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": false,
+    "generator": "pan"
+  }
+]
