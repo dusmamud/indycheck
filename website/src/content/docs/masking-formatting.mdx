@@ -1,0 +1,95 @@
+---
+title: Masking & formatting
+description: Display Indian IDs safely — mask Aadhaar, PAN, mobile and more, and format numbers the way users expect to read them.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Never show a full Aadhaar or PAN on screen if you can avoid it — and never put one in a log. indycheck's masking helpers return a display-safe version, and the formatting helpers return the conventional display form. Both return `null` unless the value is valid, so you never mask or format a value you haven't checked.
+
+## Masking
+
+```js
+import { mask } from 'indycheck';
+
+mask('aadhaar', '234567890124'); // 'XXXX XXXX 0124'
+mask('pan', 'AAAPL1234C');      // 'AAAPL****C'
+mask('mobile', '9876543210');    // '******3210'
+mask('gstin', '27AAAPL1234C1ZE'); // '27**********1ZE'
+mask('upi', 'rahul@okicici');    // '***@okicici'
+mask('tan', 'MUMB12345C');       // 'MU******5C'
+mask('epic', 'ABC1234567');      // 'ABC***4567'
+mask('pan', 'NOT-A-PAN');        // null — invalid values are never masked
+```
+
+There are also direct helpers: `maskAadhaar()`, `maskPan()`, `maskMobile()`, `maskGstin()`, `maskUpi()`, `maskTan()`, `maskEpic()`.
+
+### Masking rules
+
+| Type | Masked form | What is kept |
+| --- | --- | --- |
+| Aadhaar | `XXXX XXXX 0124` | Last 4 digits |
+| PAN | `AAAPL****C` | First 5 letters + last letter |
+| Mobile | `******3210` | Last 4 digits |
+| GSTIN | `27**********1ZE` | State code + last 3 chars |
+| UPI ID | `***@okicici` | Bank handle only |
+| TAN | `MU******5C` | First 2 + last 2 chars |
+| Voter ID (EPIC) | `ABC***4567` | First 3 + last 4 chars |
+
+## What you get for free
+
+`validateAadhaar` already returns the masked value in `parsed.masked` — you don't need a separate call:
+
+```js
+import { validateAadhaar } from 'indycheck';
+
+const r = validateAadhaar('234567890124');
+if (r.ok) {
+  db.save({ aadhaar_masked: r.parsed.masked }); // 'XXXX XXXX 0124'
+  // Never save r.value or r.normalized unless you have a lawful reason
+  // and proper safeguards.
+}
+```
+
+## Formatting
+
+Display forms users recognise:
+
+```js
+import { format } from 'indycheck';
+
+format('aadhaar', '234567890124'); // '2345 6789 0124'
+format('mobile', '9876543210');    // '+91 98765 43210'
+format('vehicle', 'DL01AB1234');   // 'DL 01 AB 1234'
+format('llpin', 'AAA1234');        // 'AAA-1234'
+format('pan', 'aaapl1234c');       // 'AAAPL1234C' (uppercased)
+format('mobile', '5123456789');    // null — invalid values are never formatted
+```
+
+Direct helpers: `formatAadhaar()`, `formatMobile()`, `formatVehicle()`, `formatPan()`, `formatLlpin()`.
+
+## Python and Rust
+
+```python
+from indycheck import mask, format_value
+
+mask("aadhaar", "234567890124")        # 'XXXX XXXX 0124'
+format_value("mobile", "9876543210")   # '+91 98765 43210'
+```
+
+```rust
+use indycheck::{mask, format_value};
+
+assert_eq!(mask("aadhaar", "234567890124").unwrap(), "XXXX XXXX 0124");
+assert_eq!(format_value("mobile", "9876543210").unwrap(), "+91 98765 43210");
+```
+
+## Rules for handling masked data
+
+- **Store the masked value, not the full one**, unless you have a lawful reason and proper safeguards — especially for Aadhaar, which is sensitive personal information under Indian law.
+- **Never log full IDs.** Log the masked value and the error `code` instead — that is enough to debug a validation failure.
+- **Mask before you render.** Apply `mask()` at the point you build the response or the UI, not at the point you read the input — that way a future code path can't accidentally leak the raw value.
+
+<Aside type="caution" title="Masking is not verification">
+  A masked value proves nothing about the ID — `XXXX XXXX 0124` only tells you the last four digits of a number whose checksum passed. Masking protects privacy; it does not make a fake ID real.
+</Aside>
