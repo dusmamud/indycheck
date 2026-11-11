@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0f172a"/>
+  <rect x="70" y="70" width="110" height="110" rx="24" fill="#22c55e"/>
+  <path d="M92 125 118 151 158 103" fill="none" stroke="#0f172a" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="210" y="148" font-family="system-ui, sans-serif" font-size="84" font-weight="800" fill="#f8fafc">indycheck</text>
+  <text x="72" y="280" font-family="system-ui, sans-serif" font-size="46" font-weight="600" fill="#cbd5e1">Offline Indian ID validator</text>
+  <text x="72" y="350" font-family="system-ui, sans-serif" font-size="32" fill="#94a3b8">PAN · Aadhaar · GSTIN · TAN · CIN · LLPIN · Voter ID · Vehicle</text>
+  <text x="72" y="430" font-family="system-ui, sans-serif" font-size="30" fill="#94a3b8">Rust core · zero dependencies · no network calls</text>
+  <rect x="70" y="490" width="1060" height="70" rx="16" fill="#1e293b"/>
+  <text x="100" y="537" font-family="ui-monospace, monospace" font-size="30" fill="#e2e8f0">npm install indycheck</text>
+  <text x="72" y="600" font-family="system-ui, sans-serif" font-size="24" fill="#64748b">indycheck.dev</text>
+</svg>
