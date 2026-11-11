@@ -1,0 +1,80 @@
+---
+title: Mobile number
+description: Validate Indian mobile numbers — 10 digits starting with 6–9, with +91 / 91 / 0 prefixes accepted.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates an Indian mobile number: exactly 10 digits, starting with 6, 7, 8 or 9. The `+91` country code, a leading `91`, a leading `0`, spaces and dashes are all accepted and stripped before checking — the result's `normalized` field is always the plain 10-digit number.
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Length | 10 digits after removing `+91` / `91` / `0` prefix |
+| First digit | 6, 7, 8 or 9 (allocated mobile series in India) |
+| Characters | Digits only, ignoring spaces and `-` |
+| Checksum | None — mobile numbers have no checksum digit |
+
+## Usage
+
+```js
+import { validateMobile } from 'indycheck';
+
+validateMobile('9876543210');
+// { ok: true, code: 'VALID', normalized: '9876543210',
+//   parsed: { normalized: '9876543210' } }
+
+validateMobile('+91 98765 43210'); // ok: true, normalized: '9876543210'
+validateMobile('919876543210');    // ok: true, normalized: '9876543210'
+validateMobile('09876543210');     // ok: true, normalized: '9876543210'
+```
+
+```python
+from indycheck import validate_mobile
+
+validate_mobile("9876543210").ok  # True
+```
+
+```rust
+use indycheck::validate_mobile;
+
+let r = validate_mobile("9876543210");
+assert!(r.ok);
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `9876543210` | ✅ Valid | `VALID` |
+| `+91 98765 43210` | ✅ Valid | `VALID` |
+| `919876543210` | ✅ Valid | `VALID` |
+| `5123456789` | ❌ Invalid — starts with 5 | `INVALID_FIRST_DIGIT` |
+| `987654321` | ❌ Invalid — only 9 digits, not a valid 10-digit number | `INVALID_FORMAT` |
+| `98765 4321a` | ❌ Invalid — letter inside | `INVALID_FORMAT` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_FORMAT` | Not 10 digits after stripping the prefix, or non-digit characters (other than spaces, `-`, `+91`) |
+| `INVALID_FIRST_DIGIT` | First digit is not 6, 7, 8 or 9 |
+
+The core never emits `INVALID_LENGTH` for mobiles: any wrong-length or non-digit input fails normalisation and is reported as `INVALID_FORMAT`.
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{ "normalized": "9876543210" }
+```
+
+Store `normalized` (the 10-digit number) in your database, not the raw input — that way `+91 98765 43210` and `9876543210` dedupe to the same user.
+
+<Aside type="note" title="Honest limits">
+  A valid result means the number is well-formed — it does not mean the number is active, belongs to the user, or can receive OTPs. indycheck never contacts any telecom operator. For ownership, send an OTP.
+</Aside>
