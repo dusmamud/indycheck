@@ -1,0 +1,96 @@
+---
+title: CIN
+description: Validate CIN (Corporate Identification Number) — 21 characters encoding listing status, industry, state, year and company type. Format only, no public checksum.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates a Corporate Identification Number (CIN): the 21-character code the Registrar of Companies (MCA) allots to every company at incorporation. Each segment carries meaning — listing status, industry, state, year, company type and registration number.
+
+## Structure
+
+| Positions | Meaning | Example |
+| --- | --- | --- |
+| 1 | Listing status: `L` listed, `U` unlisted | `U` |
+| 2–6 | Industry code (NIC) | `12345` |
+| 7–8 | State code | `DL` = Delhi |
+| 9–12 | Year of incorporation | `2025` |
+| 13–15 | Company type (`PTC`, `PLC`, `OPC`, `NPL`…) | `PTC` |
+| 16–21 | Registration number | `123456` |
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Format | `^[LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$` |
+| Length | Exactly 21 characters |
+| 1st character | `L` or `U` only |
+| Checksum | **None — format only, no public checksum** |
+
+## Usage
+
+```js
+import { validateCin } from 'indycheck';
+
+validateCin('U12345DL2025PTC123456');
+// { ok: true, code: 'VALID',
+//   parsed: { cin: 'U12345DL2025PTC123456', listing: 'Unlisted',
+//             industry_code: '12345', state_code: 'DL', year: '2025',
+//             company_type: 'PTC',
+//             registration_number: '123456' } }
+```
+
+```python
+from indycheck import validate_cin
+
+r = validate_cin("U12345DL2025PTC123456")
+print(r.parsed["company_type"])  # PTC
+```
+
+```rust
+use indycheck::validate_cin;
+
+let r = validate_cin("U12345DL2025PTC123456");
+assert_eq!(r.parsed.unwrap()["state_code"], "DL");
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `U12345DL2025PTC123456` | ✅ Valid, unlisted Pvt Ltd, Delhi, 2025 | `VALID` |
+| `L12345MH2020PLC123456` | ✅ Valid, listed public company | `VALID` |
+| `X12345DL2025PTC123456` | ❌ Invalid — must start with L or U | `INVALID_FORMAT` |
+| `U12345DL2025PTC12345` | ❌ Invalid — 20 characters | `INVALID_LENGTH` |
+| `U1234ADL2025PTC123456` | ❌ Invalid — letter inside industry code | `INVALID_FORMAT` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_LENGTH` | Not exactly 21 characters |
+| `INVALID_FORMAT` | Doesn't match the CIN structure, or 1st character is not L/U |
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{
+  "cin": "U12345DL2025PTC123456",
+  "listing": "Unlisted",
+  "industry_code": "12345",
+  "state_code": "DL",
+  "year": "2025",
+  "company_type": "PTC",
+  "registration_number": "123456"
+}
+```
+
+Common company types: `PTC` private limited, `PLC` public limited, `OPC` One Person Company, `NPL` Section 8 not-for-profit, `GPC` government company, `FTC` foreign company.
+
+<Aside type="caution" title="Honest limits — format only">
+  CIN has **no public checksum**, so indycheck can only check the shape. It does not confirm the company exists, is active, or is in good standing — for that, search MCA master data on mca.gov.in. LLPs do not get a CIN; they get an [LLPIN](/llpin/) instead.
+</Aside>
