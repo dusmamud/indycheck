@@ -1,0 +1,100 @@
+---
+title: PAN
+description: Validate Indian PAN cards — 5 letters, 4 digits, 1 letter. Format only; the 4th character is reported as the entity, never rejected.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates an Indian Permanent Account Number (PAN): 10 characters — 5 letters, 4 digits, 1 letter. Lowercase input is accepted and normalised to uppercase. The 4th character is the entity code and is reported in `parsed` — it is **not** checked against the entity list: a 4th character that is not in the published list is reported as entity `"Unknown"` and the PAN is still valid. The canonical format example `ABCDE1234F` itself has 4th character `D`, which is not in the list.
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Format | `^[A-Z]{5}[0-9]{4}[A-Z]$` |
+| Length | Exactly 10 characters |
+| 4th character | Entity code: `P` `C` `H` `F` `A` `T` `B` `L` `J` `G` — reported, not enforced (anything else → entity `"Unknown"`, still valid) |
+| Checksum | None — PAN has no checksum digit; only the format is checked |
+
+### Holder types (4th character)
+
+| Code | Holder |
+| --- | --- |
+| `P` | Individual |
+| `C` | Company |
+| `H` | HUF |
+| `F` | Firm |
+| `A` | AOP |
+| `T` | Trust |
+| `B` | BODY |
+| `L` | Local Authority |
+| `J` | Artificial Juridical Person |
+| `G` | Government |
+
+Any other 4th character is reported as entity `"Unknown"` and the PAN is still format-valid — `ABCDE1234F` (4th character `D`) is valid. `INVALID_ENTITY` is a reserved code for this case and is not emitted in v0.1.
+
+## Usage
+
+```js
+import { validatePan } from 'indycheck';
+
+validatePan('AAAPL1234C');
+// { ok: true, code: 'VALID', normalized: 'AAAPL1234C',
+//   parsed: { entity: 'Individual', entity_code: 'P' } }
+
+validatePan('abcpe1234f'); // ok: true — lowercase is normalised
+validatePan('ABCDE1234F'); // ok: true — entity 'Unknown', still valid
+```
+
+```python
+from indycheck import validate_pan
+
+r = validate_pan("AAAPL1234C")
+print(r.parsed["entity"])  # Individual
+```
+
+```rust
+use indycheck::validate_pan;
+
+let r = validate_pan("AAAPL1234C");
+assert_eq!(r.parsed.unwrap()["entity_code"], "P");
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `AAAPL1234C` | ✅ Valid, individual | `VALID` |
+| `ABCPE1234F` | ✅ Valid, individual | `VALID` |
+| `AAAPL1234c` | ✅ Valid (normalised) | `VALID` |
+| `ABCDE1234F` | ✅ Valid, entity `"Unknown"` (`D` is not a listed holder type) | `VALID` |
+| `AAAPL12345` | ❌ Invalid — last char must be a letter | `INVALID_FORMAT` |
+| `AAAPL123C` | ❌ Invalid — 9 characters | `INVALID_LENGTH` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_LENGTH` | Not exactly 10 characters |
+| `INVALID_FORMAT` | Doesn't match 5 letters + 4 digits + 1 letter |
+
+`INVALID_ENTITY` is a reserved code for an unlisted 4th character — it is **not emitted in v0.1**: an unlisted 4th character is reported as entity `"Unknown"` and the PAN is still valid.
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{
+  "entity": "Individual",
+  "entity_code": "P"
+}
+```
+
+Use `entity_code` to route users in a form — for example, ask companies (`C`) for a GSTIN next, and individuals (`P`) for their name as per PAN. When the 4th character is not in the published list, `entity` is `"Unknown"` (for example `ABCDE1234F` → `{ "entity": "Unknown", "entity_code": "D" }`).
+
+<Aside type="caution" title="Honest limits">
+  A valid PAN format does not mean the PAN exists or belongs to the person who typed it. indycheck never contacts NSDL or the Income Tax Department. For real verification you need an authorised PAN verification API.
+</Aside>
