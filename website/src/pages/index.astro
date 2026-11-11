@@ -1,0 +1,355 @@
+---
+/**
+ * indycheck landing page.
+ *
+ * Pure static page. The mini-validator below runs entirely in the browser
+ * with the small pure-JS rules in `src/lib/validator.js` — no WASM, no
+ * network calls, nothing leaves the page. (The full playground at
+ * /playground/ is where the real WASM build is lazy-loaded when available.)
+ */
+const title = 'indycheck — Offline Indian ID validator';
+const description =
+	'Validate PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN, TAN, CIN, LLPIN, Voter ID and vehicle numbers offline. Rust core, zero dependencies, Hindi + English error reasons.';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="indycheck" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content="https://indycheck.dev/" />
+		<meta property="og:image" content="https://indycheck.dev/og.svg" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="canonical" href="https://indycheck.dev/" />
+		<script type="application/ld+json" set:html={JSON.stringify({
+			'@context': 'https://schema.org',
+			'@type': 'SoftwareApplication',
+			name: 'indycheck',
+			applicationCategory: 'DeveloperApplication',
+			operatingSystem: 'Cross-platform',
+			description,
+			author: { '@type': 'Person', name: 'dusmamud' },
+			offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
+			softwareVersion: '0.1.0',
+			url: 'https://indycheck.dev/',
+		})} />
+		<style>
+			:root { --bg: #0f172a; --card: #1e293b; --ink: #f8fafc; --muted: #94a3b8; --green: #22c55e; --red: #f87171; --amber: #fbbf24; --line: #334155; }
+			* { box-sizing: border-box; }
+			body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; }
+			a { color: #4ade80; }
+			.wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 64px; }
+			header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+			.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.25rem; color: var(--ink); text-decoration: none; }
+			.logo img { width: 32px; height: 32px; }
+			nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-weight: 600; }
+			nav a:hover { color: var(--ink); }
+			.hero { padding: 48px 0 8px; }
+			.hero h1 { font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.12; margin: 0 0 16px; }
+			.hero h1 span { color: var(--green); }
+			.hero p { font-size: 1.2rem; color: var(--muted); max-width: 640px; margin: 0 0 24px; }
+			.cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
+			.btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-weight: 700; text-decoration: none; }
+			.btn-primary { background: var(--green); color: #052e12; }
+			.btn-ghost { border: 1px solid var(--line); color: var(--ink); }
+			h2 { margin: 48px 0 12px; font-size: 1.5rem; }
+			pre { background: #020617; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 0.95rem; margin: 0 0 12px; }
+			pre code { color: #e2e8f0; }
+			.install-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+			.install-tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 600; }
+			.install-tabs button[aria-pressed="true"] { border-color: var(--green); color: var(--green); }
+			.demo { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+			.demo-row { display: flex; gap: 10px; flex-wrap: wrap; }
+			.demo select, .demo input { background: #020617; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-size: 1rem; }
+			.demo select { flex: 0 0 auto; }
+			.demo input { flex: 1 1 260px; font-family: ui-monospace, monospace; }
+			.demo .hint { color: var(--muted); font-size: 0.9rem; margin: 10px 0 0; }
+			.demo .hint button { background: none; border: none; color: #4ade80; cursor: pointer; padding: 0; font-size: 0.9rem; text-decoration: underline; }
+			.result { margin-top: 14px; border-radius: 10px; padding: 14px 16px; display: none; }
+			.result.show { display: block; }
+			.result.valid { background: #052e12; border: 1px solid #166534; }
+			.result.invalid { background: #450a0a; border: 1px solid #991b1b; }
+			.result .verdict { font-weight: 800; font-size: 1.05rem; }
+			.result .verdict.valid { color: var(--green); }
+			.result .verdict.invalid { color: var(--red); }
+			.result code { color: #e2e8f0; }
+			.result .reason-hi { color: var(--muted); }
+			.result pre { background: rgba(2, 6, 23, 0.6); margin-top: 10px; }
+			.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+			.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+			.card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+			.card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+			table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+			th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+			th { color: var(--muted); font-weight: 600; }
+			td code { color: #e2e8f0; }
+			.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+			.limits { background: #451a03; border: 1px solid #92400e; border-radius: 12px; padding: 18px 20px; }
+			.limits h2 { margin-top: 0; color: var(--amber); }
+			.limits p, .limits li { color: #fde68a; }
+			footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 0.9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<header>
+				<a class="logo" href="/"><img src="/favicon.svg" alt="" /> indycheck</a>
+				<nav>
+					<a href="/getting-started/">Docs</a>
+					<a href="/playground/">Playground</a>
+					<a href="https://github.com/dusmamud/indycheck">GitHub</a>
+				</nav>
+			</header>
+
+			<section class="hero">
+				<h1>indycheck — <span>Offline Indian ID validator</span></h1>
+				<p>
+					Validate PAN, Aadhaar, GSTIN, IFSC, UPI IDs, mobile numbers, PIN codes,
+					TAN, CIN, LLPIN, Voter IDs and vehicle numbers —
+					instantly, on-device, with no network call and no data leaving your server.
+					One Rust core, bindings for JavaScript, TypeScript, Python and Rust.
+				</p>
+				<div class="cta">
+					<a class="btn btn-primary" href="/getting-started/">Get started →</a>
+					<a class="btn btn-ghost" href="/playground/">Try the playground</a>
+				</div>
+			</section>
+
+			<section>
+				<h2>Install</h2>
+				<div class="install-tabs" role="group" aria-label="Package manager">
+					<button type="button" data-install="npm" aria-pressed="true">npm</button>
+					<button type="button" data-install="pip" aria-pressed="false">pip</button>
+					<button type="button" data-install="cargo" aria-pressed="false">cargo</button>
+				</div>
+				<pre id="install-cmd"><code>npm install indycheck</code></pre>
+				<pre><code>import &#123; validatePan &#125; from 'indycheck';
+
+const r = validatePan('AAAPL1234C');
+console.log(r.ok);        // true
+console.log(r.parsed);    // &#123; entity: 'Individual', entity_code: 'P' &#125;
+console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></pre>
+			</section>
+
+			<section>
+				<h2>Try it — right here, offline</h2>
+				<div class="demo">
+					<div class="demo-row">
+						<select id="demo-type" aria-label="ID type">
+							<option value="pan">PAN</option>
+							<option value="aadhaar">Aadhaar</option>
+							<option value="gstin">GSTIN</option>
+							<option value="ifsc">IFSC</option>
+							<option value="upi">UPI ID</option>
+							<option value="mobile">Mobile</option>
+							<option value="pincode">PIN code</option>
+							<option value="tan">TAN</option>
+							<option value="cin">CIN</option>
+							<option value="llpin">LLPIN</option>
+							<option value="epic">Voter ID</option>
+							<option value="vehicle">Vehicle</option>
+						</select>
+						<input id="demo-input" type="text" placeholder="AAAPL1234C" autocomplete="off" spellcheck="false" aria-label="Value to validate" />
+					</div>
+					<p class="hint">
+						Try:
+						<button type="button" data-demo="pan|AAAPL1234C">valid PAN</button> ·
+						<button type="button" data-demo="aadhaar|234567890124">valid Aadhaar</button> ·
+						<button type="button" data-demo="gstin|27AAAPL1234C1ZE">valid GSTIN</button> ·
+						<button type="button" data-demo="mobile|9876543210">valid mobile</button> ·
+						<button type="button" data-demo="vehicle|DL01AB1234">valid vehicle no.</button> ·
+						<button type="button" data-demo="pan|AAAPL12345">invalid PAN</button>
+					</p>
+					<div id="demo-result" class="result" aria-live="polite"></div>
+				</div>
+				<p style="color: var(--muted); font-size: 0.9rem;">
+					This demo runs 100% in your browser — the value you type is never sent anywhere.
+					<a href="/playground/">Open the full playground →</a>
+				</p>
+			</section>
+
+			<section>
+				<h2>Why indycheck</h2>
+				<div class="grid">
+					<div class="card">
+						<h3>🪪 12 validators</h3>
+						<p>PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN, TAN, CIN, LLPIN, Voter ID (EPIC) and vehicle numbers.</p>
+					</div>
+					<div class="card">
+						<h3>🔌 Fully offline</h3>
+						<p>No API keys, no network calls, no per-check fees. Works in a Lambda, a CLI, or a browser with no internet.</p>
+					</div>
+					<div class="card">
+						<h3>📦 Zero dependencies</h3>
+						<p>One small Rust core compiled to native, Node and Python. Nothing to audit, nothing to break on install.</p>
+					</div>
+					<div class="card">
+						<h3>🇮🇳 Hindi + English reasons</h3>
+						<p>Every failure comes with <code>reason_en</code> and <code>reason_hi</code>, so your form errors make sense to every user in India.</p>
+					</div>
+					<div class="card">
+						<h3>🎛️ Strict / lenient options</h3>
+						<p>Control spaces, hyphens, <code>+91</code> normalisation and uppercasing per call — strict for APIs, lenient for messy user input.</p>
+					</div>
+					<div class="card">
+						<h3>🎭 Masking &amp; formatting</h3>
+						<p><code>mask('aadhaar', …)</code> → <code>XXXX XXXX 0124</code>, <code>format('mobile', …)</code> → <code>+91 98765 43210</code>. Display-safe by default.</p>
+					</div>
+					<div class="card">
+						<h3>🦀 Rust core</h3>
+						<p>One implementation, one test suite — the same rules in JavaScript, Python and Rust. No drift between ports.</p>
+					</div>
+					<div class="card">
+						<h3>⚡ Batch-friendly</h3>
+						<p>Validate thousands of rows in milliseconds. Built for CSV imports, signup forms and KYC pre-checks.</p>
+					</div>
+					<div class="card">
+						<h3>🎲 Test-data generators</h3>
+						<p><code>generate('pan')</code> gives you a valid-looking value for tests and seed data — clearly labelled TEST DATA ONLY, never a real ID.</p>
+					</div>
+					<div class="card">
+						<h3>🔍 Structured output</h3>
+						<p>Every result returns a stable error <code>code</code>, a parsed breakdown (state, holder type, bank code…) and the normalised value.</p>
+					</div>
+					<div class="card">
+						<h3>🧩 Framework integrations</h3>
+						<p>Ready-made Zod schemas, React Hook Form / Yup resolvers and Pydantic types — drop indycheck into the form library you already use.</p>
+					</div>
+					<div class="card">
+						<h3>⌨️ CLI</h3>
+						<p><code>indycheck validate</code>, <code>detect</code> and <code>generate</code> — check a single value or a whole CSV from your terminal.</p>
+					</div>
+				</div>
+			</section>
+
+			<section>
+				<h2>Supported IDs</h2>
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr><th>ID</th><th>Format</th><th>Checksum</th><th>Example</th></tr>
+						</thead>
+						<tbody>
+							<tr><td>PAN</td><td>5 letters + 4 digits + 1 letter</td><td>Format only — entity reported, not enforced</td><td><code>AAAPL1234C</code></td></tr>
+							<tr><td>Aadhaar</td><td>12 digits, first digit 2–9</td><td>Verhoeff</td><td><code>234567890124</code></td></tr>
+							<tr><td>GSTIN</td><td>15 chars: state + PAN + entity + Z + check</td><td>Mod-36 Luhn</td><td><code>27AAAPL1234C1ZE</code></td></tr>
+							<tr><td>IFSC</td><td>4-letter bank code + 0 + 6 chars</td><td>Format only — no public checksum</td><td><code>SBIN0001234</code></td></tr>
+							<tr><td>UPI ID</td><td><code>handle@bank</code></td><td>Format only — no public checksum</td><td><code>9876543210@paytm</code></td></tr>
+							<tr><td>Mobile</td><td>10 digits starting 6–9 (+91 ok)</td><td>Format only — no public checksum</td><td><code>9876543210</code></td></tr>
+							<tr><td>PIN code</td><td>6 digits, first digit 1–9</td><td>Format only — no public checksum</td><td><code>781001</code></td></tr>
+							<tr><td>TAN</td><td>4 letters + 5 digits + 1 letter</td><td>Format only — no public checksum</td><td><code>MUMB12345C</code></td></tr>
+							<tr><td>CIN</td><td>21 chars: L/U + industry + state + year + type + no.</td><td>Format only — no public checksum</td><td><code>U12345DL2025PTC123456</code></td></tr>
+							<tr><td>LLPIN</td><td>3 letters + 4 digits (<code>AAA-1234</code>)</td><td>Format only — no public checksum</td><td><code>AAA-1234</code></td></tr>
+							<tr><td>Voter ID (EPIC)</td><td>3 letters + 7 digits</td><td>Format only — no public checksum</td><td><code>ABC1234567</code></td></tr>
+							<tr><td>Vehicle</td><td>2 letters + district + series + number (8–10 chars)</td><td>Format only — no public checksum</td><td><code>DL01AB1234</code></td></tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+
+			<section>
+				<h2>Error codes — machine-readable, stable across releases</h2>
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr><th>Code</th><th>Means</th><th>Example</th></tr>
+						</thead>
+						<tbody>
+							<tr><td><code>VALID</code></td><td>Fully valid</td><td><code>AAAPL1234C</code></td></tr>
+							<tr><td><code>INVALID_FORMAT</code></td><td>Characters or pattern don't match</td><td><code>ABCDE1234</code> as PAN</td></tr>
+							<tr><td><code>INVALID_LENGTH</code></td><td>Wrong length</td><td><code>AAAPL123C</code> as PAN</td></tr>
+							<tr><td><code>INVALID_CHECKSUM</code></td><td>Verhoeff / Mod-36 Luhn check failed</td><td><code>234567890123</code> as Aadhaar</td></tr>
+							<tr><td><code>INVALID_FIRST_DIGIT</code></td><td>First digit not allowed</td><td><code>5123456789</code> as mobile</td></tr>
+							<tr><td><code>INVALID_STATE_CODE</code></td><td>Unknown state code</td><td><code>99AAAPL1234C1ZE</code> as GSTIN</td></tr>
+							<tr><td><code>INVALID_HANDLE</code></td><td>UPI handle missing or unknown</td><td><code>rahul@</code></td></tr>
+							<tr><td><code>UNKNOWN_TYPE</code></td><td>No known ID format fits (<code>detect</code> only)</td><td><code>hello world</code></td></tr>
+						</tbody>
+					</table>
+				</div>
+				<p style="color: var(--muted); font-size: 0.95rem;">
+					Branch on <code>code</code>, never on the reason text. Every failure also carries
+					a Hindi reason (<code>reason_hi</code>). <a href="/error-codes/">Full error-code table →</a>
+				</p>
+			</section>
+
+			<section class="limits">
+				<h2>⚠️ Honest limits — read this first</h2>
+				<p>
+					indycheck validates <strong>format and checksum only</strong>. It does not — and cannot — tell you
+					whether an ID is real, active, or belongs to the person who typed it.
+				</p>
+				<ul>
+					<li>No UIDAI, NSDL, GSTN, MCA, ECI or bank lookup. A "valid" Aadhaar may still be fake; a "valid" PAN may not exist.</li>
+					<li>It does not verify ownership, KYC status, or whether a bank account / UPI handle is live.</li>
+					<li>Aadhaar numbers are sensitive personal data — never log them, never store them in plain text, and prefer masked values (<code>XXXX XXXX 0124</code>).</li>
+					<li>Use indycheck as a first-pass form check before a real verification provider, not as a replacement for one.</li>
+				</ul>
+			</section>
+
+			<footer>
+				<span>indycheck — open source, by dusmamud.</span>
+				<span><a href="/getting-started/">Docs</a> · <a href="/playground/">Playground</a> · <a href="https://github.com/dusmamud/indycheck">GitHub</a></span>
+			</footer>
+		</div>
+
+		<script>
+			import { validate } from '../lib/validator.js';
+
+			const INSTALL_CMDS = {
+				npm: 'npm install indycheck',
+				pip: 'pip install indycheck',
+				cargo: 'cargo add indycheck',
+			};
+
+			document.querySelectorAll('[data-install]').forEach((btn) => {
+				btn.addEventListener('click', () => {
+					document.querySelectorAll('[data-install]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+					btn.setAttribute('aria-pressed', 'true');
+					document.querySelector('#install-cmd code').textContent = INSTALL_CMDS[/** @type {any} */ (btn).dataset.install];
+				});
+			});
+
+			const typeEl = document.querySelector('#demo-type');
+			const inputEl = document.querySelector('#demo-input');
+			const resultEl = document.querySelector('#demo-result');
+
+			function renderDemo() {
+				const value = inputEl.value;
+				if (!value.trim()) {
+					resultEl.className = 'result';
+					resultEl.innerHTML = '';
+					return;
+				}
+				const r = validate(typeEl.value, value);
+				resultEl.className = `result show ${r.ok ? 'valid' : 'invalid'}`;
+				const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+				resultEl.innerHTML = `
+					<div class="verdict ${r.ok ? 'valid' : 'invalid'}">${r.ok ? '✓ Valid' : '✗ Invalid'} — ${esc(r.code)}</div>
+					<div>${esc(r.reason_en)}</div>
+					<div class="reason-hi">${esc(r.reason_hi)}</div>
+					${r.normalized ? `<div>Normalised: <code>${esc(r.normalized)}</code></div>` : ''}
+					${r.parsed ? `<pre><code>${esc(JSON.stringify(r.parsed, null, 2))}</code></pre>` : ''}`;
+			}
+
+			typeEl.addEventListener('change', renderDemo);
+			inputEl.addEventListener('input', renderDemo);
+			document.querySelectorAll('[data-demo]').forEach((btn) => {
+				btn.addEventListener('click', () => {
+					const [t, v] = /** @type {any} */ (btn).dataset.demo.split('|');
+					typeEl.value = t;
+					inputEl.value = v;
+					renderDemo();
+					inputEl.focus();
+				});
+			});
+			renderDemo();
+		</script>
+	</body>
+</html>
