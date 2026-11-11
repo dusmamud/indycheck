@@ -1,0 +1,97 @@
+---
+title: GSTIN
+description: 'Validate GSTINs — 15 characters: state code, PAN, entity number, Z, and a Mod-36 Luhn check character.'
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates a Goods and Services Tax Identification Number (GSTIN): 15 characters built as state code + PAN + entity number + `Z` + check character, with the last character verified against the **Mod-36 Luhn** checksum.
+
+## Structure
+
+| Positions | Meaning | Example |
+| --- | --- | --- |
+| 1–2 | State/UT code (01–38) | `27` = Maharashtra |
+| 3–12 | PAN of the business | `AAAPL1234C` |
+| 13 | Entity number (1–9, A–Z) | `1` |
+| 14 | Always `Z` | `Z` |
+| 15 | Check character (Mod-36 Luhn) | `E` |
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Length | Exactly 15 characters |
+| Characters | Letters and digits only (lowercase normalised to uppercase) |
+| State code | Must be a valid code, 01–38 |
+| PAN part | Characters 3–12 must match the PAN pattern (5 letters + 4 digits + 1 letter); the 4th character is not checked against the entity list — a failure here is `INVALID_FORMAT` |
+| 14th char | Must be `Z` |
+| Checksum | 15th char must match the Mod-36 Luhn check of the first 14 |
+
+## Usage
+
+```js
+import { validateGstin } from 'indycheck';
+
+validateGstin('27AAAPL1234C1ZE');
+// { valid: true, code: 'VALID',
+//   reason_en: 'GSTIN format, state code and check digit are valid',
+//   reason_hi: 'GSTIN ka format, state code aur check digit sahi hai',
+//   parsed: { pan: 'AAAPL1234C', state: 'Maharashtra', state_code: '27' } }
+```
+
+```python
+from indycheck import validate_gstin
+
+r = validate_gstin("27AAAPL1234C1ZE")
+print(r["parsed"]["state"])  # Maharashtra
+```
+
+```rust
+use indycheck::validate_gstin;
+
+let r = validate_gstin("27AAAPL1234C1ZE");
+assert_eq!(r.parsed.unwrap()["state"], "Maharashtra");
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `27AAAPL1234C1ZE` | ✅ Valid, Maharashtra | `VALID` |
+| `18AAAPL1234C1Z4` | ❌ Invalid — check character wrong for this GSTIN | `INVALID_CHECKSUM` |
+| `99AAAPL1234C1ZE` | ❌ Invalid — no state code 99 | `INVALID_STATE_CODE` |
+| `27ABCDE1234F1ZM` | ❌ Invalid — check digit does not match | `INVALID_CHECKSUM` |
+| `27AAAPL1234C1AM` | ❌ Invalid — 14th character must be Z | `INVALID_FORMAT` |
+| `27AAAPL1234C1Z` | ❌ Invalid — 14 characters | `INVALID_LENGTH` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+Note: the `18…` example above uses the right shape but the wrong check character — compute the check character with the Mod-36 Luhn algorithm (or let indycheck do it) instead of guessing.
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_LENGTH` | Not exactly 15 characters |
+| `INVALID_FORMAT` | Illegal characters, 14th character is not `Z`, or the PAN part (characters 3–12) doesn't match the PAN pattern |
+| `INVALID_STATE_CODE` | First two digits are not a state/UT code |
+| `INVALID_CHECKSUM` | Mod-36 Luhn check character does not match |
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{
+  "pan": "AAAPL1234C",
+  "state": "Maharashtra",
+  "state_code": "27"
+}
+```
+
+Use `state` to show the business's state in an invoice form, and pass the embedded `pan` to `validatePan` if you need holder details.
+
+<Aside type="caution" title="Honest limits">
+  A valid GSTIN format does not mean the business is registered, active, or that the GSTIN belongs to the person who typed it. indycheck never contacts GSTN. For real verification use the GST portal's authorised search/API.
+</Aside>
