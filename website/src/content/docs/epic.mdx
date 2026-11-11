@@ -1,0 +1,73 @@
+---
+title: Voter ID (EPIC)
+description: Validate Voter ID / EPIC numbers — 3 letters + 7 digits in the current series. Format only, no public checksum.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates a Voter ID number — the EPIC (Electors Photo Identity Card) number issued by the Election Commission of India. Cards in the current series carry 10 characters: a 3-letter series (a Functional Unique Serial Number, different for every assembly constituency) followed by 7 digits.
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Format | `^[A-Z]{3}[0-9]{7}$` |
+| Length | Exactly 10 characters |
+| Checksum | **None — format only, no public checksum** |
+| Legacy cards | Older cards used different formats, including ones with slashes (e.g. `XX/01/001/000123`). Those are **not** accepted — this validator covers the current series only |
+
+## Usage
+
+```js
+import { validateEpic } from 'indycheck';
+
+validateEpic('ABC1234567');
+// { ok: true, code: 'VALID', normalized: 'ABC1234567',
+//   parsed: { epic: 'ABC1234567' } }
+```
+
+```python
+from indycheck import validate_epic
+
+validate_epic("ABC1234567").ok  # True
+```
+
+```rust
+use indycheck::validate_epic;
+
+let r = validate_epic("ABC1234567");
+assert!(r.ok);
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `ABC1234567` | ✅ Valid | `VALID` |
+| `XYZ7654321` | ✅ Valid | `VALID` |
+| `abc1234567` | ✅ Valid (normalised) | `VALID` |
+| `AB1234567` | ❌ Invalid — 9 characters | `INVALID_LENGTH` |
+| `ABC123456` | ❌ Invalid — 9 characters | `INVALID_LENGTH` |
+| `ABC123456A` | ❌ Invalid — letter at the end | `INVALID_FORMAT` |
+| `ABC/01/001/000123` | ❌ Invalid — legacy format, not accepted | `INVALID_LENGTH` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_LENGTH` | Not exactly 10 characters |
+| `INVALID_FORMAT` | Doesn't match 3 letters + 7 digits, or is a legacy format |
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{ "epic": "ABC1234567" }
+```
+
+<Aside type="caution" title="Honest limits — format only">
+  An EPIC number has **no public checksum**, so indycheck can only check the shape. A valid-looking number may be unissued, wrong, or belong to someone else — and the same EPIC series was at one point allotted in more than one state. Real verification needs the ECI's electoral search (electoralsearch.eci.gov.in). A Voter ID proves enrolment, not citizenship.
+</Aside>
