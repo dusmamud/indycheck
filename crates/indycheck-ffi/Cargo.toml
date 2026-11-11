@@ -1,0 +1,12 @@
+[package]
+name = "indycheck-ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "C FFI bindings for indycheck (Phase 3 scaffold, not in v0.1)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+indycheck = { path = "../indycheck" }
