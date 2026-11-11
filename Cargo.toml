@@ -1,0 +1,21 @@
+[workspace]
+# NOTE: indycheck-uniffi and indycheck-ffi are Phase 3 scaffolds only.
+# They are deliberately EXCLUDED from workspace members in v0.1 so that
+# `cargo test --workspace` is never broken by unfinished bindings.
+# See crates/indycheck-uniffi/README.md and crates/indycheck-ffi/README.md.
+members = [
+    "crates/indycheck",
+    "crates/indycheck-wasm",
+    "crates/indycheck-py",
+    "crates/indycheck-napi",
+]
+exclude = ["crates/indycheck-uniffi", "crates/indycheck-ffi"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/dusmamud/indycheck"
+homepage = "https://github.com/dusmamud/indycheck"
+authors = ["dusmamud"]
