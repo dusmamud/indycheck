@@ -1,0 +1,120 @@
+---
+title: Options
+description: Control how indycheck normalises input — strict vs lenient mode, spaces, hyphens, +91 handling and uppercasing.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Every validator takes an optional second argument, `options`, that controls how the input is normalised before checking. The same options work in JavaScript, Python and Rust, and in the [playground's options panel](/playground/).
+
+## The options object
+
+```js
+{
+  strict: true,               // default: true
+  allowSpaces: false,         // default: false
+  allowHyphens: false,        // default: false
+  normalizeCountryCode: true, // default: true (mobile only)
+  uppercase: true,            // default: true (letter IDs only)
+}
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `strict` | `true` | `true` = strict mode, `false` = lenient mode (see below) |
+| `allowSpaces` | `false` | Strip all spaces before validating |
+| `allowHyphens` | `false` | Strip all hyphens before validating |
+| `normalizeCountryCode` | `true` | Mobile only: strip `+91`, `91` or `0` prefix before checking |
+| `uppercase` | `true` | Letter IDs only (PAN, GSTIN, IFSC, TAN, CIN, LLPIN, EPIC, vehicle): uppercase the input first |
+
+## Strict mode (default)
+
+In strict mode the input must be (nearly) exactly as specified. The only normalisation that always happens:
+
+- Letter IDs are uppercased (`aaapl1234c` → `AAAPL1234C`).
+- Display separators that are part of the convention are accepted: spaces in Aadhaar (`2345 6789 0124`), spaces/dashes in mobile and PIN codes, the hyphen in LLPIN (`AAA-1234`), and spaces/hyphens in vehicle plates (`DL 01 AB 1234`).
+
+Anything else is rejected with `INVALID_FORMAT`:
+
+```js
+import { validatePan } from 'indycheck';
+
+validatePan('AAAPL 1234C');
+// { ok: false, code: 'INVALID_FORMAT',
+//   reason_en: 'Spaces are not allowed in strict mode — set allowSpaces: true or use lenient mode (strict: false).' }
+
+validatePan('AAAPL-1234C');
+// { ok: false, code: 'INVALID_FORMAT',
+//   reason_en: 'Hyphens are not allowed in strict mode — …' }
+```
+
+Use strict mode for **APIs and stored data** — it guarantees the value you accept is already canonical.
+
+## Lenient mode
+
+Set `strict: false` and every normalisation turns on at once: spaces and hyphens are stripped, letter IDs are uppercased, and `+91` is stripped from mobiles. It is a shortcut for `{ allowSpaces: true, allowHyphens: true, normalizeCountryCode: true, uppercase: true }`.
+
+```js
+validatePan('AAAPL-1234C', { strict: false });  // ok: true
+validatePan('aaapl1234c', { strict: false });   // ok: true
+validateGstin('27AAAPL1234C1Z E', { strict: false }); // ok: true
+```
+
+Use lenient mode for **user-typed form input** — people paste values with spaces, dashes and lowercase letters. Always store the returned `normalized` value, not the raw input.
+
+## Individual flags
+
+You can also turn flags on one at a time in strict mode:
+
+```js
+// Spaces yes, hyphens still no:
+validatePan('AAAPL 1234C', { allowSpaces: true });  // ok: true
+validatePan('AAAPL-1234C', { allowSpaces: true });  // ok: false — INVALID_FORMAT
+
+// Don't uppercase — lowercase input must now fail:
+validatePan('aaapl1234c', { uppercase: false });    // ok: false — INVALID_FORMAT
+validatePan('AAAPL1234C', { uppercase: false });    // ok: true
+
+// Don't strip the country code — the bare 10-digit number is required:
+validateMobile('+91 98765 43210', { normalizeCountryCode: false });
+// { ok: false, code: 'INVALID_FORMAT' }
+validateMobile('9876543210', { normalizeCountryCode: false }); // ok: true
+```
+
+## Which options affect which validator?
+
+| Validator | `uppercase` | `allowSpaces` / `allowHyphens` | `normalizeCountryCode` |
+| --- | --- | --- | --- |
+| PAN | ✅ | ✅ | — |
+| Aadhaar | — | Always allowed | — |
+| GSTIN | ✅ | ✅ | — |
+| IFSC | ✅ | ✅ | — |
+| UPI ID | — (case-sensitive, never changed) | ✅ in lenient mode | — |
+| Mobile | — | Always allowed | ✅ |
+| PIN code | — | Always allowed | — |
+| TAN | ✅ | ✅ | — |
+| CIN | ✅ | ✅ | — |
+| LLPIN | ✅ | Hyphen always allowed | — |
+| Voter ID (EPIC) | ✅ | ✅ | — |
+| Vehicle | ✅ | Always allowed | — |
+
+## Python and Rust
+
+```python
+from indycheck import validate_pan
+
+validate_pan("AAAPL 1234C", {"allow_spaces": True}).ok  # True
+validate_pan("AAAPL-1234C", {"strict": False}).ok       # True
+```
+
+```rust
+use indycheck::{validate_pan, Options};
+
+let opts = Options { strict: false, ..Default::default() };
+let r = validate_pan("AAAPL-1234C", opts);
+assert!(r.ok);
+```
+
+<Aside type="note" title="Normalised output">
+  Whatever the options, a successful result always includes `normalized` — the canonical value (uppercase, separators and country code stripped). Store that, and your database stays consistent no matter how users typed the value.
+</Aside>
