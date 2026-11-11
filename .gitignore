@@ -1,0 +1,12 @@
+target/
+node_modules/
+dist/
+pkg/
+.astro/
+*.whl
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+*.log
