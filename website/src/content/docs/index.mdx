@@ -1,0 +1,146 @@
+---
+title: Getting started
+description: Install indycheck and validate your first Indian ID in under a minute — JavaScript, Python or Rust.
+sidebar:
+  hidden: true
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+indycheck validates 12 Indian IDs — PAN, Aadhaar, GSTIN, IFSC, UPI ID, mobile number, PIN code, TAN, CIN, LLPIN, Voter ID (EPIC) and vehicle numbers — **offline**. No API keys, no network calls, no per-check fees. One Rust core, with bindings for JavaScript/TypeScript, Python and Rust.
+
+> These docs are in English for v0.1. The error messages in the package itself are bilingual: every result carries both `reason_en` and `reason_hi`.
+
+## Install
+
+```bash
+# JavaScript / TypeScript
+npm install indycheck
+
+# Python
+pip install indycheck
+
+# Rust
+cargo add indycheck
+```
+
+Requires Node 18+, Python 3.9+, or Rust 1.70+. There are **zero runtime dependencies** in every binding — the Rust core is compiled in.
+
+## Your first validation
+
+```js
+// JavaScript / TypeScript
+import { validatePan } from 'indycheck';
+
+const r = validatePan('AAAPL1234C');
+console.log(r.ok);        // true
+console.log(r.code);      // 'VALID'
+console.log(r.parsed);    // { entity: 'Individual', entity_code: 'P' }
+```
+
+```python
+# Python
+from indycheck import validate_pan
+
+r = validate_pan("AAAPL1234C")
+print(r.ok)          # True
+print(r.code)        # 'VALID'
+print(r.parsed)      # {'entity': 'Individual', 'entity_code': 'P'}
+```
+
+```rust
+// Rust
+use indycheck::validate_pan;
+
+let r = validate_pan("AAAPL1234C");
+assert!(r.ok);
+println!("{}", r.code); // VALID
+```
+
+## What a result looks like
+
+Every validator returns the same shape:
+
+```json
+{
+  "ok": true,
+  "type": "pan",
+  "value": "AAAPL1234C",
+  "normalized": "AAAPL1234C",
+  "code": "VALID",
+  "reason_en": "Valid format.",
+  "reason_hi": "मान्य प्रारूप।",
+  "parsed": {
+    "entity": "Individual",
+    "entity_code": "P"
+  }
+}
+```
+
+And a failure:
+
+```json
+{
+  "ok": false,
+  "type": "pan",
+  "value": "AAAPL12345",
+  "code": "INVALID_FORMAT",
+  "reason_en": "PAN format must be 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F). PAN has no public checksum, so only the format is checked.",
+  "reason_hi": "PAN ka format 5 akshar, 4 digit, 1 akshar hona chahiye (jaise ABCDE1234F). PAN ka koi public checksum nahi hai, isliye sirf format check hota hai"
+}
+```
+
+Use `code` for branching in your code, and `reason_en` / `reason_hi` for showing errors to users. See [API & error codes](/api/) for the full list.
+
+## All validators
+
+| Function | Checks | Example |
+| --- | --- | --- |
+| `validateMobile` | 10 digits, starts 6–9 | `9876543210` |
+| `validatePan` | Format only (entity reported, not enforced) | `AAAPL1234C` |
+| `validateAadhaar` | 12 digits + Verhoeff checksum | `234567890124` |
+| `validateGstin` | Format + Mod-36 Luhn checksum | `27AAAPL1234C1ZE` |
+| `validateIfsc` | Bank code + `0` + branch code | `SBIN0001234` |
+| `validateUpi` | `handle@bank` format | `9876543210@paytm` |
+| `validatePincode` | 6 digits, first digit 1–9 | `781001` |
+| `validateTan` | 4 letters + 5 digits + 1 letter, format only | `MUMB12345C` |
+| `validateCin` | 21-char company structure, format only | `U12345DL2025PTC123456` |
+| `validateLlpin` | 3 letters + 4 digits, format only | `AAA-1234` |
+| `validateEpic` | 3 letters + 7 digits, format only | `ABC1234567` |
+| `validateVehicle` | 2 letters + district + series + number, 8–10 chars, format only | `DL01AB1234` |
+
+TAN, CIN, LLPIN, Voter ID and vehicle numbers have **no public checksum** — for those, indycheck checks the format only. (IFSC, UPI, mobile and PIN code are format-only too.)
+
+There is also a generic entry point — `validate('pan', value)` — handy when the type comes from user input, plus `detect(value)` to guess the type, `generate(type)` for test data, and `mask()` / `format()` for display. Try everything live in the [playground](/playground/).
+
+## Batch validation
+
+Validators are pure functions with no I/O, so batching is just a loop:
+
+```js
+import { validate } from 'indycheck';
+
+const rows = ['AAAPL1234C', 'AAAPL12345', '9876543210'];
+const results = rows.map((v) => validate('pan', v));
+const bad = results.filter((r) => !r.ok);
+console.log(`${bad.length} of ${rows.length} failed`);
+```
+
+## What indycheck does NOT do
+
+<Aside type="caution" title="Honest limits">
+  indycheck checks **format and checksum only**. It does not verify that an ID exists, is active, or belongs to the person who typed it. It never contacts UIDAI, NSDL, GSTN, MCA, ECI or any bank — a "valid" result means "well-formed", not "real". Do not use it as a KYC or identity-verification replacement. And never log or store raw Aadhaar numbers: prefer the masked value (`XXXX XXXX 0124`) that `validateAadhaar` returns in `parsed.masked`.
+</Aside>
+
+## Next steps
+
+- [Mobile number](/mobile/) — the simplest validator, start here
+- [PAN](/pan/), [Aadhaar](/aadhaar/), [GSTIN](/gstin/), [TAN](/tan/), [CIN](/cin/), [Vehicle](/vehicle/)
+- [Options](/options/) — strict/lenient mode, spaces, hyphens, `+91`
+- [Error codes](/error-codes/) — the full machine-readable table
+- [Masking & formatting](/masking-formatting/) — display IDs safely
+- [Test-data generators](/generators/) — mock IDs for tests
+- [Integrations](/integrations/) — Zod, React Hook Form, Yup, Pydantic
+- [CLI](/cli/) — `validate`, `detect`, `generate` from the terminal
+- [API & error codes](/api/) — full reference
+- [FAQ](/faq/) — common questions and edge cases
