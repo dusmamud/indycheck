@@ -1,0 +1,161 @@
+---
+title: API & error codes
+description: Full API reference for indycheck — every validator, the result shape, and every error code.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+All three bindings — JavaScript/TypeScript, Python and Rust — expose the same functions and the same result shape. The rules live in one Rust core, so results never differ between languages.
+
+## Install
+
+```bash
+npm install indycheck
+pip install indycheck
+cargo add indycheck
+```
+
+## Functions
+
+| Function | JS/TS | Python | Rust |
+| --- | --- | --- | --- |
+| Generic | `validate(type, value, options?)` | `validate(type, value, options=None)` | `validate(type, value, options)` |
+| Detect | `detect(value, options?)` | `detect(value, options=None)` | `detect(value, options)` |
+| Generate | `generate(type)` | `generate(type)` | `generate(type)` |
+| Mask | `mask(type, value)` | `mask(type, value)` | `mask(type, value)` |
+| Format | `format(type, value)` | `format_value(type, value)` | `format_value(type, value)` |
+| Mobile | `validateMobile(value, options?)` | `validate_mobile(value, options=None)` | `validate_mobile(value, options)` |
+| PAN | `validatePan(value, options?)` | `validate_pan(value, options=None)` | `validate_pan(value, options)` |
+| Aadhaar | `validateAadhaar(value, options?)` | `validate_aadhaar(value, options=None)` | `validate_aadhaar(value, options)` |
+| GSTIN | `validateGstin(value, options?)` | `validate_gstin(value, options=None)` | `validate_gstin(value, options)` |
+| IFSC | `validateIfsc(value, options?)` | `validate_ifsc(value, options=None)` | `validate_ifsc(value, options)` |
+| UPI ID | `validateUpi(value, options?)` | `validate_upi(value, options=None)` | `validate_upi(value, options)` |
+| PIN code | `validatePincode(value, options?)` | `validate_pincode(value, options=None)` | `validate_pincode(value, options)` |
+| TAN | `validateTan(value, options?)` | `validate_tan(value, options=None)` | `validate_tan(value, options)` |
+| CIN | `validateCin(value, options?)` | `validate_cin(value, options=None)` | `validate_cin(value, options)` |
+| LLPIN | `validateLlpin(value, options?)` | `validate_llpin(value, options=None)` | `validate_llpin(value, options)` |
+| Voter ID | `validateEpic(value, options?)` | `validate_epic(value, options=None)` | `validate_epic(value, options)` |
+| Vehicle | `validateVehicle(value, options?)` | `validate_vehicle(value, options=None)` | `validate_vehicle(value, options)` |
+
+`type` for the generic function is one of: `'pan'`, `'aadhaar'`, `'gstin'`, `'ifsc'`, `'upi'`, `'mobile'`, `'pincode'`, `'tan'`, `'cin'`, `'llpin'`, `'epic'`, `'vehicle'`.
+
+Every validator accepts an optional `options` object — see [Options](/options/) (`strict`, `allowSpaces`, `allowHyphens`, `normalizeCountryCode`, `uppercase`). `detect()` guesses the type from the shape (see [CLI](/cli/) for the order). `generate()` returns random syntactically-valid test data — see [Test-data generators](/generators/). `mask()` / `format()` are covered in [Masking & formatting](/masking-formatting/).
+
+## Result shape
+
+Every call returns the same object (shown here as JSON; Python returns a dataclass, Rust a struct, with the same fields):
+
+```json
+{
+  "ok": true,
+  "type": "pan",
+  "value": "AAAPL1234C",
+  "normalized": "AAAPL1234C",
+  "code": "VALID",
+  "reason_en": "Valid format.",
+  "reason_hi": "मान्य प्रारूप।",
+  "parsed": { "...": "..." }
+}
+```
+
+| Field | Type | Always present? | Meaning |
+| --- | --- | --- | --- |
+| `ok` | boolean | Yes | `true` only when the value is fully valid |
+| `type` | string | Yes | The validator used (`'pan'`, `'aadhaar'`, …) |
+| `value` | string | Yes | The input exactly as passed in |
+| `normalized` | string | Only on success | Cleaned-up value (uppercase, prefixes/spaces stripped) |
+| `code` | string | Yes | Machine-readable result — see error codes below |
+| `reason_en` | string | Yes | Human-readable reason in English |
+| `reason_hi` | string | Yes | The same reason in Hindi |
+| `parsed` | object | Only on success | Structured fields extracted from the value |
+
+### `parsed` by validator
+
+| Validator | `parsed` fields |
+| --- | --- |
+| Mobile | `normalized` |
+| PAN | `entity`, `entity_code` |
+| Aadhaar | `masked` (e.g. `XXXX XXXX 0124`) |
+| GSTIN | `state`, `state_code`, `pan` |
+| IFSC | `bank_code`, `branch_code` |
+| UPI ID | `handle` |
+| PIN code | `pincode` |
+| TAN | `tan` |
+| CIN | `cin`, `listing`, `industry_code`, `state_code`, `year`, `company_type`, `registration_number` |
+| LLPIN | `llpin` |
+| Voter ID (EPIC) | `epic` |
+| Vehicle | `registration`, `state_code`, `district`, `series`, `number` |
+
+The full machine-readable code table — including `UNKNOWN_TYPE` (from `detect()` / `validate_many()` when no type fits) — lives on the [Error codes](/error-codes/) page.
+
+## Error codes
+
+`code` is stable across releases — branch on it, not on the reason strings.
+
+| Code | Meaning | Validators |
+| --- | --- | --- |
+| `VALID` | Fully valid | all |
+| `EMPTY` | Input was empty / only whitespace | all |
+| `INVALID_LENGTH` | Wrong length | all except mobile, UPI ID |
+| `INVALID_FORMAT` | Characters or pattern don't match (wrong separators, illegal characters, wrong fixed character) | all |
+| `INVALID_CHECKSUM` | Checksum digit fails (Verhoeff for Aadhaar, Mod-36 Luhn for GSTIN) | Aadhaar, GSTIN |
+| `INVALID_FIRST_DIGIT` | First digit not allowed (0/1 for Aadhaar, 0 for PIN, not 6–9 for mobile) | Aadhaar, mobile, PIN |
+| `INVALID_STATE_CODE` | First two digits are not an Indian state/UT code (01–38) | GSTIN |
+| `INVALID_ENTITY` | Reserved in v0.1 — an unlisted PAN 4th character is reported as entity `"Unknown"` instead, and the PAN is still valid | never emitted in v0.1 |
+| `INVALID_HANDLE` | UPI handle is missing or not a known handle | UPI ID |
+| `UNKNOWN_TYPE` | The `type` passed to `validate()` is not a known validator | generic `validate` only |
+| `UNKNOWN_TYPE` | The value matches no known ID format | `detect()` / `validate_many()` only |
+
+### Precedence
+
+When several things are wrong, indycheck reports the first check that fails. The order depends on the validator — for example Aadhaar is `EMPTY` → `INVALID_LENGTH` → `INVALID_FORMAT` → `INVALID_FIRST_DIGIT` → `INVALID_CHECKSUM`, and GSTIN is `EMPTY` → `INVALID_LENGTH` → `INVALID_FORMAT` → `INVALID_STATE_CODE` → `INVALID_FORMAT` (PAN part / `Z` / entity character) → `INVALID_CHECKSUM`. See the [Error codes](/error-codes/) page for the full per-validator orders. So `234567890123` reports `INVALID_CHECKSUM`, not a format error — the shape is right, the digit is wrong.
+
+## Usage patterns
+
+### Branch on `code`, show `reason_hi` / `reason_en`
+
+```js
+import { validatePan } from 'indycheck';
+
+const r = validatePan(userInput);
+if (!r.ok) {
+  // Show Hindi to Hindi-speaking users, English otherwise.
+  showError(lang === 'hi' ? r.reason_hi : r.reason_en);
+}
+```
+
+### Generic dispatch
+
+```js
+import { validate } from 'indycheck';
+
+function checkField(type, value) {
+  const r = validate(type, value);
+  return r.ok ? null : r.code; // null = fine, else a stable error code
+}
+```
+
+### Batch validation
+
+```python
+from indycheck import validate
+
+rows = [("pan", "AAAPL1234C"), ("pan", "AAAPL12345"), ("mobile", "9876543210")]
+bad = [(t, v, r.code) for (t, v) in rows for r in [validate(t, v)] if not r.ok]
+print(bad)  # [('pan', 'AAAPL12345', 'INVALID_FORMAT')]
+```
+
+### Never log Aadhaar
+
+```js
+import { validateAadhaar } from 'indycheck';
+
+const r = validateAadhaar(aadhaarInput);
+if (r.ok) {
+  db.save({ aadhaar_masked: r.parsed.masked }); // XXXX XXXX 0124 — never the full number
+}
+```
+
+<Aside type="caution" title="Honest limits">
+  indycheck validates format and checksum only. A result of `ok: true` never means "this ID exists" or "this ID belongs to this person". There is no network call, no UIDAI/NSDL/GSTN/MCA/ECI lookup, and no database of real IDs anywhere in the package. TAN, CIN, LLPIN, Voter ID and vehicle numbers have no public checksum at all — for those, indycheck checks the format only.
+</Aside>
