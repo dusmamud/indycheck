@@ -1,0 +1,84 @@
+---
+title: PIN code
+description: Validate Indian PIN codes — 6 digits, first digit 1–9.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates an Indian PIN code: exactly 6 digits, first digit 1–9. Spaces and dashes are ignored.
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Length | Exactly 6 digits |
+| First digit | 1–9 (0 is not used) |
+| Characters | Digits only, ignoring spaces and `-` |
+| Checksum | None — PIN codes have no checksum digit |
+
+### What the digits mean
+
+| Digits | Meaning |
+| --- | --- |
+| 1st | Postal circle (1–9, e.g. 7 = East: West Bengal, Odisha, NE states) |
+| 1st–2nd | Postal region / sub-circle |
+| 1st–3rd | Sorting district |
+| Last 3 | Delivery post office |
+
+## Usage
+
+```js
+import { validatePincode } from 'indycheck';
+
+validatePincode('781001');
+// { ok: true, code: 'VALID', normalized: '781001',
+//   parsed: { pincode: '781001' } }
+```
+
+```python
+from indycheck import validate_pincode
+
+validate_pincode("781001").ok  # True
+```
+
+```rust
+use indycheck::validate_pincode;
+
+let r = validate_pincode("781001");
+assert!(r.ok);
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `781001` | ✅ Valid (Guwahati area) | `VALID` |
+| `110001` | ✅ Valid (New Delhi area) | `VALID` |
+| `400001` | ✅ Valid (Mumbai area) | `VALID` |
+| `011001` | ❌ Invalid — starts with 0 | `INVALID_FIRST_DIGIT` |
+| `78100` | ❌ Invalid — 5 digits | `INVALID_LENGTH` |
+| `78100A` | ❌ Invalid — letter inside | `INVALID_FORMAT` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_FORMAT` | Non-digit characters (other than spaces / `-`) |
+| `INVALID_LENGTH` | Not exactly 6 digits |
+| `INVALID_FIRST_DIGIT` | First digit is 0 |
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{
+  "pincode": "781001"
+}
+```
+
+<Aside type="note" title="Honest limits">
+  A valid PIN code format does not mean the PIN code is currently in use — India Post occasionally reorganises codes. indycheck ships no PIN-code directory and makes no network calls; for address autocomplete, pair it with a PIN-code dataset.
+</Aside>
