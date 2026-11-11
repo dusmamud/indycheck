@@ -1,0 +1,81 @@
+---
+title: Aadhaar
+description: Validate Aadhaar numbers — 12 digits with the Verhoeff checksum, first digit 2–9.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates an Aadhaar number: exactly 12 digits, first digit 2–9, and the last digit must satisfy the **Verhoeff checksum** — the same check UIDAI uses. Spaces and dashes are ignored, so `2345 6789 0124` validates the same as `234567890124`.
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Length | Exactly 12 digits |
+| First digit | 2–9 (Aadhaar never starts with 0 or 1) |
+| Characters | Digits only, ignoring spaces and `-` |
+| Checksum | Verhoeff — catches every single-digit typo and most transpositions |
+
+## Usage
+
+```js
+import { validateAadhaar } from 'indycheck';
+
+validateAadhaar('234567890124');
+// { ok: true, code: 'VALID', normalized: '234567890124',
+//   parsed: { masked: 'XXXX XXXX 0124' } }
+
+validateAadhaar('2345 6789 0124'); // ok: true — spaces ignored
+validateAadhaar('234567890123');   // ok: false, code: 'INVALID_CHECKSUM'
+```
+
+```python
+from indycheck import validate_aadhaar
+
+r = validate_aadhaar("234567890124")
+print(r.parsed["masked"])  # XXXX XXXX 0124
+```
+
+```rust
+use indycheck::validate_aadhaar;
+
+let r = validate_aadhaar("234567890124");
+assert!(r.ok);
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `234567890124` | ✅ Valid (Verhoeff passes) | `VALID` |
+| `871366569991` | ✅ Valid | `VALID` |
+| `2345 6789 0124` | ✅ Valid (spaces ignored) | `VALID` |
+| `234567890123` | ❌ Invalid — checksum fails | `INVALID_CHECKSUM` |
+| `123456789012` | ❌ Invalid — starts with 1 | `INVALID_FIRST_DIGIT` |
+| `23456789012` | ❌ Invalid — 11 digits | `INVALID_LENGTH` |
+| `23456789012A` | ❌ Invalid — letter inside | `INVALID_FORMAT` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_FORMAT` | Non-digit characters (other than spaces / `-`) |
+| `INVALID_LENGTH` | Not exactly 12 digits |
+| `INVALID_FIRST_DIGIT` | First digit is 0 or 1 |
+| `INVALID_CHECKSUM` | Verhoeff checksum failed — mistyped or fake number |
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{ "masked": "XXXX XXXX 0124" }
+```
+
+**Use the masked value everywhere** — in logs, in your database, in API responses. You almost never need the full number after validation.
+
+<Aside type="caution" title="Aadhaar is sensitive personal data">
+  Never log, store or transmit a full Aadhaar number unless you have a lawful reason and proper safeguards — it is sensitive personal information under Indian law. indycheck validates entirely offline, so the number never leaves your machine during the check itself; what you do with it afterwards is on you. A "valid" result only means the checksum passes — it does **not** mean the number is issued to anyone, or to the person who typed it. Real verification needs UIDAI's authorised APIs.
+</Aside>
