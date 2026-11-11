@@ -29,5 +29,6 @@ jobs:
           test -f dist/index.html
           test -f dist/sitemap-index.xml
           test -f dist/playground/index.html
-          test -f dist/docs/index.html
+          test -f dist/pan/index.html
+          test -f dist/getting-started/index.html
           echo "website pages OK"
