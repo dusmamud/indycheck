@@ -37,5 +37,7 @@ All crates, npm and PyPI packages share one version in lockstep.
 - PAN, IFSC, TAN, CIN, LLPIN, Voter ID and vehicle registration have no
   public checksum — format only. This is format + checksum validation,
   **not** KYC verification; no UIDAI/NSDL/GSTN connection.
+- Bharat-series vehicle numbers (`22BH1234AA`) are not accepted in v0.1 —
+  the vehicle validator requires a 2-letter state code first.
 - napi-rs npm packaging, UniFFI (Kotlin/Swift) and Go C-API bindings are
   Phase 2/3 scaffolds, not shipped in v0.1. See `shared/spec.md`.
