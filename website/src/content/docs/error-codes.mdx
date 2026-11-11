@@ -1,0 +1,111 @@
+---
+title: Error codes
+description: The full machine-readable error-code table for indycheck — every code, what it means, and which validators use it.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Every indycheck result carries a `code` — a stable, machine-readable string. **Branch on `code`, never on the reason text** (`reason_en` / `reason_hi` are for humans and may be reworded). Codes are a public API: they are never renamed or removed without a major-version change.
+
+These are the exact codes the package returns — the same strings the Rust core emits (`shared/spec.md`, `crates/indycheck/src/`). If a code is not in this table, the package never returns it.
+
+## Result codes
+
+| Code | Meaning | When it is returned |
+| --- | --- | --- |
+| `VALID` | Fully valid | The value passed every check |
+| `EMPTY` | Input was empty or only whitespace | All validators |
+| `INVALID_LENGTH` | Wrong length | PAN, Aadhaar, GSTIN, IFSC, PIN code, TAN, CIN, LLPIN, Voter ID, vehicle (never mobile or UPI ID) |
+| `INVALID_FORMAT` | Characters or pattern don't match | All validators |
+| `INVALID_CHECKSUM` | Checksum digit fails | Aadhaar (Verhoeff), GSTIN (Mod-36 Luhn) |
+| `INVALID_FIRST_DIGIT` | First digit not allowed | Aadhaar (0/1), mobile (not 6–9), PIN (0) |
+| `INVALID_STATE_CODE` | Unknown state/UT code | GSTIN (01–38) |
+| `INVALID_ENTITY` | Reserved — 4th PAN character is not a listed holder type | Never emitted in v0.1 (see below) |
+| `INVALID_HANDLE` | UPI handle is missing or not a known handle | UPI ID |
+| `UNKNOWN_TYPE` | The type could not be identified, or an unknown type was passed to `validate()` | Generic `validate()`, `detect()` / `validate_many()` |
+
+### `INVALID_ENTITY` is reserved, not emitted
+
+A PAN whose 4th character is not in the published entity list (`P` `C` `H` `F` `A` `T` `B` `L` `J` `G`) is reported as entity `"Unknown"` and is still format-valid — the canonical format example `ABCDE1234F` (4th character `D`) is valid. `INVALID_ENTITY` is a reserved stable code for the future; the package never returns it in v0.1.
+
+## Code by validator
+
+| Validator | Codes it can return |
+| --- | --- |
+| Mobile | `VALID`, `EMPTY`, `INVALID_FORMAT`, `INVALID_FIRST_DIGIT` |
+| PAN | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT` |
+| Aadhaar | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT`, `INVALID_FIRST_DIGIT`, `INVALID_CHECKSUM` |
+| GSTIN | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT`, `INVALID_STATE_CODE`, `INVALID_CHECKSUM` |
+| IFSC | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT` |
+| UPI ID | `VALID`, `EMPTY`, `INVALID_FORMAT`, `INVALID_HANDLE` |
+| PIN code | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT`, `INVALID_FIRST_DIGIT` |
+| TAN | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT` |
+| CIN | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT` |
+| LLPIN | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT` |
+| Voter ID (EPIC) | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT` |
+| Vehicle | `VALID`, `EMPTY`, `INVALID_LENGTH`, `INVALID_FORMAT` |
+
+Note that mobile and UPI ID never return `INVALID_LENGTH`: a mobile that fails normalisation (wrong length, non-digit characters) is `INVALID_FORMAT`, and a UPI name longer than 50 characters is `INVALID_FORMAT` too. Vehicle never returns `INVALID_STATE_CODE` — the state code is not checked against a list.
+
+## Precedence — which code wins?
+
+When several things are wrong, indycheck reports the **first** check that fails. The order depends on the validator:
+
+- **Aadhaar:** `EMPTY` → `INVALID_LENGTH` → `INVALID_FORMAT` → `INVALID_FIRST_DIGIT` → `INVALID_CHECKSUM`
+- **GSTIN:** `EMPTY` → `INVALID_LENGTH` → `INVALID_FORMAT` (first two characters not digits) → `INVALID_STATE_CODE` → `INVALID_FORMAT` (PAN part, 13th/14th/15th characters) → `INVALID_CHECKSUM`
+- **PAN / IFSC / TAN / CIN / LLPIN / Voter ID / vehicle:** `EMPTY` → `INVALID_LENGTH` → `INVALID_FORMAT`
+- **Mobile:** `EMPTY` → `INVALID_FORMAT` → `INVALID_FIRST_DIGIT`
+- **UPI ID:** `EMPTY` → `INVALID_FORMAT` (shape / name) → `INVALID_HANDLE`
+
+Examples:
+
+```js
+validateAadhaar('234567890123'); // INVALID_CHECKSUM — 12 digits, right shape, wrong digit
+validateAadhaar('123456789012'); // INVALID_FIRST_DIGIT — starts with 1, checked before the checksum
+validateAadhaar('23456789012');  // INVALID_LENGTH — 11 digits
+validateGstin('99AAAPL1234C1ZE'); // INVALID_STATE_CODE — checked before the PAN part
+validateGstin('27ABCDE1234F1ZM'); // INVALID_CHECKSUM — the PAN part is format-valid (D is an unlisted entity, not an error); the check digit fails
+validateMobile('987654321');      // INVALID_FORMAT — mobiles never return INVALID_LENGTH
+validateUpi('rahul@');            // INVALID_HANDLE — handle missing after @
+```
+
+## Bilingual reasons
+
+Every code comes with two human-readable reasons:
+
+```json
+{
+  "ok": false,
+  "code": "INVALID_CHECKSUM",
+  "reason_en": "Aadhaar checksum failed (Verhoeff) — the number is mistyped or fake.",
+  "reason_hi": "आधार चेकसम गलत है (Verhoeff) — नंबर गलत टाइप हुआ है या नकली है।"
+}
+```
+
+Pick the language from the user's locale:
+
+```js
+const msg = userLang === 'hi' ? result.reason_hi : result.reason_en;
+```
+
+## Using codes in forms
+
+```js
+import { validatePan } from 'indycheck';
+
+const FIELD_ERRORS = {
+  INVALID_LENGTH: 'PAN must be exactly 10 characters.',
+  INVALID_FORMAT: 'PAN looks like ABCDE1234F — 5 letters, 4 digits, 1 letter.',
+};
+
+function panError(value) {
+  const r = validatePan(value);
+  return r.ok ? null : (FIELD_ERRORS[r.code] ?? r.reason_en);
+}
+```
+
+For the full result shape these codes sit in, see [API & error codes](/api/).
+
+<Aside type="note" title="What a code does not mean">
+  `VALID` means "well-formed" — never "real" or "belongs to this person". indycheck checks format and checksum only; it never contacts UIDAI, NSDL, GSTN, MCA, ECI or any bank.
+</Aside>
