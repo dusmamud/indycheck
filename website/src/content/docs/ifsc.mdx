@@ -1,0 +1,73 @@
+---
+title: IFSC
+description: Validate Indian Financial System Codes — 4-letter bank code, 0, and a 6-character branch code.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates an Indian Financial System Code (IFSC): 11 characters — a 4-letter bank code, the digit `0`, then a 6-character branch code of letters and digits. Lowercase input is accepted and normalised to uppercase.
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Format | `^[A-Z]{4}0[A-Z0-9]{6}$` |
+| Length | Exactly 11 characters |
+| 5th character | Always `0` (reserved) |
+| Checksum | None — IFSC has no checksum digit |
+
+## Usage
+
+```js
+import { validateIfsc } from 'indycheck';
+
+validateIfsc('SBIN0001234');
+// { ok: true, code: 'VALID', normalized: 'SBIN0001234',
+//   parsed: { bank_code: 'SBIN', branch_code: '001234' } }
+```
+
+```python
+from indycheck import validate_ifsc
+
+r = validate_ifsc("SBIN0001234")
+print(r.parsed["bank_code"])  # SBIN
+```
+
+```rust
+use indycheck::validate_ifsc;
+
+let r = validate_ifsc("SBIN0001234");
+assert!(r.ok);
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `SBIN0001234` | ✅ Valid | `VALID` |
+| `HDFC0001234` | ✅ Valid (format-wise) | `VALID` |
+| `sbin0001234` | ✅ Valid (normalised) | `VALID` |
+| `SBIN1001234` | ❌ Invalid — 5th char must be 0 | `INVALID_FORMAT` |
+| `SBIN001234` | ❌ Invalid — 10 characters | `INVALID_LENGTH` |
+| `SB1N0001234` | ❌ Invalid — digit in bank code | `INVALID_FORMAT` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_LENGTH` | Not exactly 11 characters |
+| `INVALID_FORMAT` | Doesn't match 4 letters + `0` + 6 letters/digits |
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{ "bank_code": "SBIN", "branch_code": "001234" }
+```
+
+<Aside type="caution" title="Honest limits">
+  indycheck checks the shape of an IFSC, not whether the bank code or branch exists. `HDFC0001234` passes because it is well-formed — whether that branch is real needs the RBI's IFSC directory or your bank's data. indycheck ships no bank list and makes no network calls.
+</Aside>
