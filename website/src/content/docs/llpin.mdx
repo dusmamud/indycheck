@@ -1,0 +1,78 @@
+---
+title: LLPIN
+description: Validate LLPIN (LLP Identification Number) — 3 letters + 4 digits, usually written AAA-1234. Format only, no public checksum.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates an LLP Identification Number (LLPIN): the 7-character code the Registrar of Companies (MCA) allots to every Limited Liability Partnership at incorporation. It is 3 letters (the registration series) + 4 digits (the serial), usually written with a hyphen: `AAA-1234`.
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Format | `^[A-Z]{3}[0-9]{4}$` (7 alphanumeric characters) |
+| Display form | `AAA-1234` — the hyphen is a separator and is accepted even in strict mode |
+| Length | Exactly 7 characters ignoring the hyphen |
+| Checksum | **None — format only, no public checksum** |
+
+## Usage
+
+```js
+import { validateLlpin } from 'indycheck';
+
+validateLlpin('AAA-1234');
+// { ok: true, code: 'VALID', normalized: 'AAA1234',
+//   parsed: { llpin: 'AAA1234' } }
+
+validateLlpin('AAA1234'); // ok: true — hyphen is optional
+```
+
+```python
+from indycheck import validate_llpin
+
+r = validate_llpin("AAA-1234")
+print(r.parsed["llpin"])  # AAA1234
+```
+
+```rust
+use indycheck::validate_llpin;
+
+let r = validate_llpin("AAA-1234");
+assert!(r.ok);
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `AAA-1234` | ✅ Valid | `VALID` |
+| `AAA1234` | ✅ Valid (same number) | `VALID` |
+| `AAB-5678` | ✅ Valid | `VALID` |
+| `aaa-1234` | ✅ Valid (normalised) | `VALID` |
+| `AA12345` | ❌ Invalid — 2 letters + 5 digits | `INVALID_FORMAT` |
+| `AAAA1234` | ❌ Invalid — 8 characters | `INVALID_LENGTH` |
+| `AAA-123` | ❌ Invalid — 6 characters | `INVALID_LENGTH` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_LENGTH` | Not 7 characters (ignoring the hyphen) |
+| `INVALID_FORMAT` | Doesn't match 3 letters + 4 digits |
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{ "llpin": "AAA1234" }
+```
+
+Store `normalized` (`AAA1234`) in your database and use the `AAA-1234` display form (via `formatLlpin` / `format_value`) when showing it to users.
+
+<Aside type="caution" title="Honest limits — format only">
+  LLPIN has **no public checksum**, so indycheck can only check the shape. It does not confirm the LLP exists or is active — for that, search MCA master data on mca.gov.in. Companies get a [CIN](/cin/), not an LLPIN.
+</Aside>
