@@ -1,0 +1,30 @@
+name: WASM
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  wasm:
+    name: wasm-pack build + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: build (web)
+        run: wasm-pack build --target web crates/indycheck-wasm
+      - name: build (bundler)
+        run: wasm-pack build --target bundler crates/indycheck-wasm
+      - name: check wasm exports
+        run: |
+          grep -q "validate_pan" crates/indycheck-wasm/pkg/indycheck_wasm.d.ts
+          grep -q "validate_gstin" crates/indycheck-wasm/pkg/indycheck_wasm.d.ts
+          grep -q "validate_many" crates/indycheck-wasm/pkg/indycheck_wasm.d.ts
+          ls -lh crates/indycheck-wasm/pkg/*.wasm
