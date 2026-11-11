@@ -1,0 +1,146 @@
+---
+title: CLI
+description: The indycheck command line — validate, detect and generate Indian IDs from your terminal, with JSON output for scripts.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The CLI is the `indycheck` binary from the Rust crate — the same offline
+engine as the library. It prints a `ValidationResult` as JSON, so it is
+easy to use from shell scripts. There are no `--json` or `--lenient`
+flags in v0.1: output is always JSON, and validation always uses the
+default (strict) options. Options, `--lenient` and CSV mode are planned
+for a later release — see the notes at the bottom of this page.
+
+## Install
+
+```bash
+# via cargo (from the indycheck crate)
+cargo install indycheck
+
+# or build it from the repo
+cargo run -p indycheck -- validate pan ABCDE1234F
+```
+
+## `validate` — check one value
+
+```bash
+$ indycheck validate pan AAAPL1234C
+{
+  "valid": true,
+  "code": "VALID",
+  "reason_en": "PAN format is valid. PAN has no public checksum, so this only checks the format",
+  "reason_hi": "PAN ka format sahi hai. PAN ka koi public checksum nahi hai, isliye sirf format check hua hai",
+  "parsed": {
+    "entity": "Individual",
+    "entity_code": "P"
+  }
+}
+
+$ indycheck validate aadhaar 234567890123
+{
+  "valid": false,
+  "code": "INVALID_CHECKSUM",
+  "reason_en": "Aadhaar checksum is invalid (Verhoeff check failed)",
+  "reason_hi": "Aadhaar ka checksum galat hai (Verhoeff check fail hua)"
+}
+
+$ indycheck validate mobile 5123456789
+{
+  "valid": false,
+  "code": "INVALID_FIRST_DIGIT",
+  "reason_en": "Indian mobile numbers start with 6, 7, 8 or 9",
+  "reason_hi": "Bharat ke mobile number 6, 7, 8 ya 9 se shuru hote hain"
+}
+
+$ indycheck validate gstin 27AAAPL1234C1ZE
+{
+  "valid": true,
+  "code": "VALID",
+  "reason_en": "GSTIN format, state code and check digit are valid",
+  "reason_hi": "GSTIN ka format, state code aur check digit sahi hai",
+  "parsed": {
+    "pan": "AAAPL1234C",
+    "state": "Maharashtra",
+    "state_code": "27"
+  }
+}
+```
+
+Types for `validate`: `pan`, `aadhaar`, `gstin`, `ifsc`, `upi`, `mobile`,
+`pincode`, `tan`, `cin`, `llpin`, `voter` (or `epic`), `vehicle`.
+
+Exit codes: `0` for valid, `1` for invalid, `2` for a usage error (unknown type, missing value).
+
+## `detect` — what type is this?
+
+```bash
+$ indycheck detect AAAPL1234C
+{"input":"AAAPL1234C","type":"pan"}
+
+$ indycheck detect 234567890124
+{"input":"234567890124","type":"aadhaar"}
+
+$ indycheck detect 27AAAPL1234C1ZE
+{"input":"27AAAPL1234C1ZE","type":"gstin"}
+
+$ indycheck detect "hello world"
+{"input":"hello world","type":"unknown"}
+
+$ indycheck detect DL01AB1234
+{"input":"DL01AB1234","type":"vehicle"}
+```
+
+`detect` returns the first matching type, or `"unknown"`. If you know
+the type, use `validate` instead.
+
+The order `detect` tries is fixed (see `detect()` in
+`crates/indycheck/src/lib.rs`):
+
+1. Anything containing `@` → `upi`
+2. A 12-digit number that passes the Verhoeff checksum (spaces/hyphens ignored) → `aadhaar`
+3. A normalisable mobile number → `mobile` (this wins over the length-15 GSTIN branch — `"+91 98765 43210"` is 15 characters long but detects as `mobile`)
+4. A 21-character CIN pattern → `cin`
+5. By length: 15 → `gstin`; 12 digits → `aadhaar`; 11 with the IFSC pattern → `ifsc`; 10 with the PAN pattern → `pan`; 10 with the TAN pattern → `tan`; 10 with the voter pattern → `voter`; 10 digits → `mobile`; 7 with the LLPIN pattern → `llpin`; 6 digits → `pincode`
+6. A normalisable mobile in formatted form → `mobile`
+7. PAN, TAN, voter, IFSC, then LLPIN patterns, then the vehicle pattern → `vehicle`
+8. Anything else → `"unknown"`
+
+So GSTIN is tried before PAN, and Aadhaar before mobile — a 12-digit Verhoeff-valid number is an Aadhaar even if it could also be read as a `91`-prefixed mobile.
+
+## `generate` — test data (TEST DATA ONLY)
+
+```bash
+$ indycheck generate pan
+{"type":"pan","value":"IRZPY1622G"}
+
+$ indycheck generate aadhaar
+{"type":"aadhaar","value":"747336882464"}
+
+$ indycheck generate gstin 18
+{"type":"gstin","value":"18REDPE3536V1ZG"}
+
+$ indycheck generate mobile
+{"type":"mobile","value":"9348088845"}
+```
+
+Generated values are syntactically valid and pass validation — but they
+are **not real IDs**. Never present them as real, and never use them
+against a real verification provider. See [Test-data generators](/generators/).
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Valid (or success) |
+| `1` | Invalid input |
+| `2` | Usage error — unknown type, missing value, unknown command |
+
+## Planned, not in v0.1
+
+- `--lenient` / `--strict` flags and per-option flags on `validate`
+- `--file` / `--csv` batch validation of a file or CSV column
+
+<Aside type="caution" title="Honest limits">
+  The CLI is the same offline engine as the library — it checks format and checksum only, and it never contacts UIDAI, NSDL, GSTN, MCA, ECI or any bank. Validating a file full of Aadhaar numbers? Those numbers are sensitive personal data: don't leave the file (or its results) lying around.
+</Aside>
