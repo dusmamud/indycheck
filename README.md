@@ -23,7 +23,7 @@ Offline Indian ID validator — one Rust core, every language.
 | CIN | 21 chars, company identity number | **No checksum** — format only |
 | LLPIN | 3 letters + 4 digits | **No checksum** — format only |
 | Voter ID (EPIC) | 3 letters + 7 digits | **No checksum** — format only |
-| Vehicle registration | e.g. `DL01AB1234`, Bharat series `22BH1234AA` | **No checksum** — format only |
+| Vehicle registration | e.g. `DL01AB1234` | **No checksum** — format only |
 
 Every validator returns a `ValidationResult` — never throws on bad input:
 
