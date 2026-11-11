@@ -1,0 +1,48 @@
+---
+title: FAQ
+description: Frequently asked questions about indycheck — what it checks, what it doesn't, and how to use it.
+---
+
+## Does indycheck verify that an ID is real?
+
+**No.** indycheck checks format and checksum only — for example, that an Aadhaar number is 12 digits with a correct Verhoeff checksum. A well-formed number can still be fake, unissued, or belong to someone else. Real verification needs an authorised provider (UIDAI for Aadhaar, NSDL for PAN, GSTN for GSTIN, the bank for IFSC/UPI). Use indycheck as a first-pass form check, before that real verification.
+
+## Does indycheck call any API or send my data anywhere?
+
+No. It is fully offline — there are no network calls, no API keys, no telemetry. Everything runs in your process or in the visitor's browser. (The playground on this site runs entirely client-side; nothing you type leaves the page.)
+
+## My PAN's 4th character isn't P, C, H, F, A, T, B, L, J or G — is it invalid?
+
+No. indycheck only checks the PAN's format (5 letters, 4 digits, 1 letter) and reports the 4th character as the entity in `parsed`. A 4th character that is not in the published list is reported as entity `"Unknown"` and the PAN is still valid — the common example `ABCDE1234F` (4th character `D`) is valid with entity `"Unknown"`. `INVALID_ENTITY` is a reserved code that the package does not emit in v0.1.
+
+## Why does a "valid" GSTIN need the right check character? Can't I just guess one?
+
+The 15th character is a Mod-36 Luhn check over the first 14. If you are generating test GSTINs, compute it — don't guess. The [GSTIN page](/gstin/) shows the algorithm's inputs, and the playground computes a valid example for you.
+
+## Is `234567890124` a real person's Aadhaar?
+
+No — it is a syntactically valid example used across these docs (it passes Verhoeff). Never use documentation examples as real data, and never use a stranger's real Aadhaar in tests.
+
+## Should I store the full Aadhaar number after validation?
+
+Prefer not to. Store the masked value (`XXXX XXXX 0124`, available as `parsed.masked`) and only keep the full number if you have a lawful reason and proper safeguards. Never put full Aadhaar numbers in logs.
+
+## Does indycheck work in the browser?
+
+Yes. The npm package ships a WebAssembly build of the same Rust core, and this site's [playground](/playground/) runs it. The landing-page demo uses a small pure-JS version of the same rules.
+
+## Which languages are supported?
+
+JavaScript/TypeScript (npm), Python (pip) and Rust (crates.io) in v0.1 — all from the same Rust core, so results are identical. Other languages are on the roadmap; tell us which you need in a GitHub issue.
+
+## Why are error messages in Hindi and English?
+
+So form errors make sense to users across India. Every result has `reason_en` and `reason_hi`; pick based on the user's language. The docs themselves are in English for v0.1.
+
+## Is it free?
+
+Yes — open source, free for commercial and personal use. There are no per-check fees because there is no server to pay for.
+
+## I found a value indycheck gets wrong. What do I do?
+
+Open an issue on [GitHub](https://github.com/dusmamud/indycheck) with the value (never a real person's Aadhaar/PAN), what indycheck returned, and what you expected. If you can, include the official rule it should follow.
