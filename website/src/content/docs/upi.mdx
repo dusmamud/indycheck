@@ -1,0 +1,79 @@
+---
+title: UPI ID
+description: Validate UPI IDs (VPAs) — handle@bank format, for handles, mobile numbers and merchant IDs.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Validates a UPI ID (also called a VPA — Virtual Payment Address): `name@handle`, where the name is 2–50 characters (letters, digits, `.`, `_`, `-`) and the handle must be a known handle from the package's maintained list (for example `paytm`, `okaxis`, `okicici`, `ybl`). The handle is matched case-insensitively; the name is checked exactly as typed.
+
+## Rules
+
+| Rule | Detail |
+| --- | --- |
+| Format | `name@handle` — exactly one `@` |
+| Name | 2–50 characters: `A–Z a–z 0–9 . _ -` |
+| Handle | Must be a known handle from the maintained list (`paytm`, `okaxis`, `okhdfcbank`, `okicici`, `oksbi`, `ybl`, … — 37 handles), matched case-insensitively |
+| Checksum | None — UPI IDs have no checksum |
+
+## Usage
+
+```js
+import { validateUpi } from 'indycheck';
+
+validateUpi('9876543210@paytm');
+// { ok: true, code: 'VALID',
+//   parsed: { handle: 'paytm' } }
+
+validateUpi('rahul@okicici');  // ok: true
+validateUpi('rahul@');         // ok: false, code: 'INVALID_HANDLE'
+```
+
+```python
+from indycheck import validate_upi
+
+validate_upi("9876543210@paytm").ok  # True
+```
+
+```rust
+use indycheck::validate_upi;
+
+let r = validate_upi("9876543210@paytm");
+assert!(r.ok);
+```
+
+## Examples
+
+| Input | Result | Code |
+| --- | --- | --- |
+| `9876543210@paytm` | ✅ Valid | `VALID` |
+| `rahul@okicici` | ✅ Valid | `VALID` |
+| `rahul.sharma@okhdfcbank` | ✅ Valid | `VALID` |
+| `rahul@` | ❌ Invalid — empty handle | `INVALID_HANDLE` |
+| `@paytm` | ❌ Invalid — empty name | `INVALID_FORMAT` |
+| `r@paytm` | ❌ Invalid — name too short | `INVALID_FORMAT` |
+| `rahul@ok icici` | ❌ Invalid — unknown handle | `INVALID_HANDLE` |
+| `rahul@unknownhandle` | ❌ Invalid — handle not in the maintained list | `INVALID_HANDLE` |
+| *(empty)* | ❌ Invalid | `EMPTY` |
+
+## Error codes
+
+| Code | Means |
+| --- | --- |
+| `EMPTY` | Nothing was passed in |
+| `INVALID_FORMAT` | Not `name@handle`, or the name is not 2–50 characters of letters, digits, `.`, `_`, `-` |
+| `INVALID_HANDLE` | Handle is missing after `@`, or not in the maintained list of known handles |
+
+The core never emits `INVALID_LENGTH` for UPI IDs: a name longer than 50 characters is reported as `INVALID_FORMAT`.
+
+## Parsed output
+
+On success, `parsed` contains:
+
+```json
+{ "handle": "paytm" }
+```
+
+<Aside type="caution" title="Honest limits">
+  A valid UPI ID format does not mean the handle exists, is linked to a bank account, or can receive money. indycheck checks the handle against a maintained list of common handles — a listed handle does not prove a particular UPI ID exists, and a new handle may be missing from the list. indycheck never contacts any UPI app or bank. To confirm a UPI ID, you need a collect request or the payee's confirmation.
+</Aside>
