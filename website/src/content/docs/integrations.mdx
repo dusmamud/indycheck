@@ -1,0 +1,196 @@
+---
+title: Integrations
+description: Use indycheck with Zod, React Hook Form, Yup and Pydantic — drop-in validation for the form library you already use.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+indycheck validators are plain functions, so they drop into any form library. These patterns are the recommended ones; the snippets are complete and copy-pasteable.
+
+## Zod (TypeScript)
+
+```ts
+import { z } from 'zod';
+import { validatePan, validateAadhaar, validateMobile } from 'indycheck';
+
+// A Zod schema that reuses indycheck's bilingual reasons:
+const panSchema = z
+  .string()
+  .refine((v) => validatePan(v).ok, (v) => ({
+    message: validatePan(v).reason_en,
+  }));
+
+const signupSchema = z.object({
+  pan: panSchema,
+  mobile: z.string().refine((v) => validateMobile(v, { strict: false }).ok, {
+    message: 'Enter a valid 10-digit mobile number.',
+  }),
+  aadhaar: z.string().refine((v) => validateAadhaar(v).ok, {
+    message: 'Enter a valid 12-digit Aadhaar number.',
+  }),
+});
+
+// Normalise on parse: store the canonical value, not the raw input.
+const parsed = signupSchema.parse({ pan: 'aaapl1234c', mobile: '+91 98765 43210', aadhaar: '2345 6789 0124' });
+console.log(validatePan(parsed.pan).normalized); // 'AAAPL1234C'
+```
+
+```ts
+// Reusable helper: one schema factory per ID type.
+import { validate } from 'indycheck';
+
+function indycheckSchema(type: 'pan' | 'aadhaar' | 'gstin' | 'mobile' | 'pincode') {
+  return z.string().refine((v) => validate(type, v, { strict: false }).ok, (v) => ({
+    message: validate(type, v).reason_en,
+  }));
+}
+
+const gstinSchema = indycheckSchema('gstin');
+```
+
+## React Hook Form
+
+```tsx
+import { useForm } from 'react-hook-form';
+import { validatePan, validateMobile } from 'indycheck';
+
+type FormValues = { pan: string; mobile: string };
+
+export function KycForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>();
+
+  return (
+    <form onSubmit={handleSubmit((data) => console.log(data))}>
+      <input
+        {...register('pan', {
+          validate: (v) => {
+            const r = validatePan(v, { strict: false });
+            return r.ok || r.reason_en;
+          },
+        })}
+        placeholder="AAAPL1234C"
+      />
+      {errors.pan && <p>{errors.pan.message}</p>}
+
+      <input
+        {...register('mobile', {
+          validate: (v) => {
+            const r = validateMobile(v, { strict: false });
+            return r.ok || r.reason_en;
+          },
+        })}
+        placeholder="9876543210"
+      />
+      {errors.mobile && <p>{errors.mobile.message}</p>}
+
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+Use `strict: false` in forms — users paste values with spaces and lowercase letters. Show `reason_hi` instead of `reason_en` when the user's language is Hindi.
+
+## Yup
+
+```js
+import * as yup from 'yup';
+import { validateGstin, validatePincode } from 'indycheck';
+
+const vendorSchema = yup.object({
+  gstin: yup
+    .string()
+    .required('GSTIN is required.')
+    .test('gstin', (value) => {
+      const r = validateGstin(value ?? '');
+      return r.ok || r.reason_en;
+    }),
+  pincode: yup
+    .string()
+    .required('PIN code is required.')
+    .test('pincode', (value) => {
+      const r = validatePincode(value ?? '');
+      return r.ok || r.reason_en;
+    }),
+});
+```
+
+## Pydantic (Python)
+
+```python
+from pydantic import BaseModel, field_validator
+from indycheck import validate_pan, validate_mobile, validate_gstin
+
+class Vendor(BaseModel):
+    pan: str
+    mobile: str
+    gstin: str | None = None
+
+    @field_validator("pan")
+    @classmethod
+    def check_pan(cls, v: str) -> str:
+        r = validate_pan(v, {"strict": False})
+        if not r.ok:
+            raise ValueError(r.reason_en)
+        return r.normalized  # store the canonical value
+
+    @field_validator("mobile")
+    @classmethod
+    def check_mobile(cls, v: str) -> str:
+        r = validate_mobile(v, {"strict": False})
+        if not r.ok:
+            raise ValueError(r.reason_en)
+        return r.normalized
+
+    @field_validator("gstin")
+    @classmethod
+    def check_gstin(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        r = validate_gstin(v, {"strict": False})
+        if not r.ok:
+            raise ValueError(r.reason_en)
+        return r.normalized
+```
+
+```python
+# The parsed breakdown is available for business logic:
+from indycheck import validate_gstin
+
+r = validate_gstin("27AAAPL1234C1ZE")
+if r.ok and r.parsed["state"] != "Maharashtra":
+    print("Vendor is outside Maharashtra — different tax handling.")
+```
+
+## FastAPI (Python)
+
+```python
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from indycheck import validate
+
+app = FastAPI()
+
+class CheckRequest(BaseModel):
+    type: str
+    value: str
+
+@app.post("/check")
+def check(req: CheckRequest):
+    r = validate(req.type, req.value, {"strict": False})
+    if not r.ok:
+        raise HTTPException(status_code=422, detail={
+            "code": r.code,
+            "reason_en": r.reason_en,
+            "reason_hi": r.reason_hi,
+        })
+    return {"ok": True, "normalized": r.normalized, "parsed": r.parsed}
+```
+
+<Aside type="caution" title="Still format-only">
+  These integrations make your forms reject mistyped IDs instantly — they do not verify that an ID is real. Keep the real verification step (OTP, authorised APIs) behind the form.
+</Aside>
