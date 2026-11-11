@@ -1,0 +1,15 @@
+[package]
+name = "indycheck-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Python bindings for indycheck — thin PyO3 wrappers over the Rust core"
+
+[lib]
+name = "indycheck"
+crate-type = ["cdylib"]
+
+[dependencies]
+indycheck = { path = "../indycheck" }
+pyo3 = { version = "0.22", features = ["abi3-py310", "extension-module"] }
+serde_json = "1"
