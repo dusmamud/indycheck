@@ -1,0 +1,365 @@
+---
+/**
+ * indycheck playground — try every validator in the browser.
+ *
+ * 12 validators: PAN, Aadhaar, GSTIN, IFSC, UPI, Mobile, PIN, TAN, CIN,
+ * LLPIN, Voter ID (EPIC), Vehicle. Plus the options panel (strict/lenient,
+ * spaces/hyphens, +91 normalisation, uppercase) and a "Generate test data"
+ * button that fills in a random syntactically-valid value (TEST DATA ONLY).
+ *
+ * WASM: this is the ONLY page that loads the WASM build, and only lazily —
+ * on first validation, via a dynamic import. The WASM build lives at
+ * `crates/indycheck-wasm/pkg/` (built with wasm-pack) and is copied to
+ * `public/wasm/` when it exists.
+ *
+ * TODO: swap the pure-JS fallback below for the real WASM build once
+ * `crates/indycheck-wasm/pkg/indycheck_wasm.js` exists — copy the pkg
+ * output into `public/wasm/` and the dynamic import in `loadWasm()`
+ * will pick it up automatically. The WASM binding should accept the same
+ * options object (as JSON) as its 3rd argument. Until then the playground
+ * uses the small pure-JS validator in `src/lib/validator.js`, which
+ * implements the exact same rules (Verhoeff for Aadhaar, Mod-36 Luhn for
+ * GSTIN). Results are never faked: both paths run the real validation logic.
+ */
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Playground — indycheck</title>
+		<meta
+			name="description"
+			content="Try indycheck in your browser: validate PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN, TAN, CIN, LLPIN, Voter ID and vehicle numbers offline, with Hindi + English reasons."
+		/>
+		<meta property="og:title" content="Playground — indycheck" />
+		<meta property="og:description" content="Validate Indian IDs in your browser. No data leaves the page." />
+		<meta property="og:url" content="https://indycheck.dev/playground/" />
+		<meta property="og:image" content="https://indycheck.dev/og.svg" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="canonical" href="https://indycheck.dev/playground/" />
+		<style>
+			:root { --bg: #0f172a; --card: #1e293b; --ink: #f8fafc; --muted: #94a3b8; --green: #22c55e; --red: #f87171; --amber: #fbbf24; --line: #334155; }
+			* { box-sizing: border-box; }
+			body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; }
+			a { color: #4ade80; }
+			.wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 64px; }
+			header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+			.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.25rem; color: var(--ink); text-decoration: none; }
+			.logo img { width: 32px; height: 32px; }
+			nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-weight: 600; }
+			nav a:hover { color: var(--ink); }
+			h1 { font-size: 2rem; margin: 24px 0 4px; }
+			.sub { color: var(--muted); margin: 0 0 24px; }
+			.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+			.tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 9px 18px; cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+			.tabs button[aria-pressed="true"] { background: var(--green); color: #052e12; border-color: var(--green); }
+			.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+			.input-row { display: flex; gap: 10px; flex-wrap: wrap; }
+			.input-row input { flex: 1 1 300px; background: #020617; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 13px; font-size: 1.05rem; font-family: ui-monospace, monospace; }
+			.btn { border: none; border-radius: 8px; padding: 13px 22px; font-weight: 700; cursor: pointer; font-size: 1rem; }
+			.btn-primary { background: var(--green); color: #052e12; }
+			.btn-ghost { background: #020617; color: var(--ink); border: 1px solid var(--line); }
+			.presets { margin: 14px 0 0; color: var(--muted); font-size: 0.9rem; }
+			.presets button { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 4px 12px; cursor: pointer; margin: 2px 4px 2px 0; font-size: 0.85rem; }
+			.presets button:hover { border-color: var(--green); }
+			.options { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+			.options h2 { font-size: 1rem; margin: 0 0 10px; }
+			.options .row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+			.options label { display: flex; align-items: center; gap: 6px; font-size: 0.95rem; cursor: pointer; }
+			.options select { background: #020617; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 0.95rem; }
+			.options input[type="checkbox"] { accent-color: var(--green); width: 16px; height: 16px; }
+			.options .hint { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; }
+			.result { margin-top: 16px; border-radius: 10px; padding: 16px; display: none; }
+			.result.show { display: block; }
+			.result.valid { background: #052e12; border: 1px solid #166534; }
+			.result.invalid { background: #450a0a; border: 1px solid #991b1b; }
+			.result .verdict { font-weight: 800; font-size: 1.1rem; }
+			.result .verdict.valid { color: var(--green); }
+			.result .verdict.invalid { color: var(--red); }
+			.result .reason-hi { color: var(--muted); }
+			.result .code-line { margin-top: 8px; font-size: 0.95rem; }
+			.result .code-line code { background: rgba(2, 6, 23, 0.6); border-radius: 6px; padding: 2px 8px; font-weight: 700; }
+			.result .testdata { display: inline-block; margin-left: 8px; background: var(--amber); color: #451a03; font-size: 0.75rem; font-weight: 800; border-radius: 6px; padding: 2px 8px; vertical-align: middle; }
+			.result pre { background: rgba(2, 6, 23, 0.6); border-radius: 8px; padding: 12px; overflow-x: auto; margin: 12px 0 0; }
+			.result pre code { color: #e2e8f0; font-size: 0.9rem; }
+			.engine { font-size: 0.85rem; color: var(--muted); margin-top: 12px; }
+			.share { margin-top: 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+			.share button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+			.share span { color: var(--muted); font-size: 0.9rem; }
+			.share code { color: #e2e8f0; font-size: 0.85rem; word-break: break-all; }
+			.note { background: #451a03; border: 1px solid #92400e; border-radius: 12px; padding: 16px 18px; margin-top: 32px; color: #fde68a; font-size: 0.95rem; }
+			.note a { color: #fcd34d; }
+			footer { margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 0.9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<header>
+				<a class="logo" href="/"><img src="/favicon.svg" alt="" /> indycheck</a>
+				<nav>
+					<a href="/getting-started/">Docs</a>
+					<a href="/playground/">Playground</a>
+					<a href="https://github.com/dusmamud/indycheck">GitHub</a>
+				</nav>
+			</header>
+
+			<h1>Playground</h1>
+			<p class="sub">
+				All 12 validators, live in your browser. Nothing you type is sent anywhere —
+				validation runs on-device. Share a result with the URL:
+				<code>?type=pan&amp;value=AAAPL1234C</code>
+			</p>
+
+			<div class="tabs" role="group" aria-label="ID type" id="tabs"></div>
+
+			<div class="panel">
+				<div class="input-row">
+					<input id="value-input" type="text" autocomplete="off" spellcheck="false" aria-label="Value to validate" placeholder="AAAPL1234C" />
+					<button type="button" class="btn btn-primary" id="validate-btn">Validate</button>
+					<button type="button" class="btn btn-ghost" id="generate-btn" title="Fill in a random syntactically-valid value for testing only">🎲 Generate test data</button>
+				</div>
+				<p class="presets" id="presets"></p>
+
+				<div class="options">
+					<h2>Options</h2>
+					<div class="row">
+						<label>
+							Mode
+							<select id="opt-mode" aria-label="Validation mode">
+								<option value="strict" selected>Strict</option>
+								<option value="lenient">Lenient</option>
+							</select>
+						</label>
+						<label><input type="checkbox" id="opt-spaces" /> Allow spaces</label>
+						<label><input type="checkbox" id="opt-hyphens" /> Allow hyphens</label>
+						<label><input type="checkbox" id="opt-cc" checked /> Normalise +91</label>
+						<label><input type="checkbox" id="opt-upper" checked /> Uppercase</label>
+					</div>
+					<p class="hint">
+						Strict rejects spaces/hyphens (except the usual display forms: Aadhaar groups, LLPIN's <code>AAA-1234</code>, vehicle plates).
+						Lenient turns every normalisation on. <a href="/options/">How options work →</a>
+					</p>
+				</div>
+
+				<div id="result" class="result" aria-live="polite"></div>
+				<p class="engine" id="engine">Engine: not loaded yet.</p>
+				<div class="share">
+					<button type="button" id="copy-link">Copy shareable link</button>
+					<span id="share-status"></span>
+					<code id="share-url"></code>
+				</div>
+			</div>
+
+			<div class="note">
+				<strong>Honest limits:</strong> a "valid" result means the format and checksum check out —
+				it does <em>not</em> mean the ID exists or belongs to someone. Generated values are
+				<strong>TEST DATA ONLY</strong> — syntactically valid, not real. indycheck never contacts
+				UIDAI, NSDL, GSTN, MCA, ECI or any bank. <a href="/faq/">Read the FAQ →</a>
+			</div>
+
+			<footer>
+				<span>indycheck — open source, by dusmamud.</span>
+				<span><a href="/getting-started/">Docs</a> · <a href="/">Home</a> · <a href="https://github.com/dusmamud/indycheck">GitHub</a></span>
+			</footer>
+		</div>
+
+		<script>
+			import { validate as validateJs, generate as generateJs } from '../lib/validator.js';
+
+			const TYPES = [
+				{ id: 'pan', label: 'PAN', placeholder: 'AAAPL1234C', valid: 'AAAPL1234C', invalid: 'AAAPL12345' },
+				{ id: 'aadhaar', label: 'Aadhaar', placeholder: '234567890124', valid: '234567890124', invalid: '234567890123' },
+				{ id: 'gstin', label: 'GSTIN', placeholder: '27AAAPL1234C1ZE', valid: '27AAAPL1234C1ZE', invalid: '27AAAPL1234C1Z5' },
+				{ id: 'ifsc', label: 'IFSC', placeholder: 'SBIN0001234', valid: 'SBIN0001234', invalid: 'SBIN1001234' },
+				{ id: 'upi', label: 'UPI ID', placeholder: '9876543210@paytm', valid: '9876543210@paytm', invalid: 'rahul@' },
+				{ id: 'mobile', label: 'Mobile', placeholder: '9876543210', valid: '9876543210', invalid: '5123456789' },
+				{ id: 'pincode', label: 'PIN code', placeholder: '781001', valid: '781001', invalid: '011001' },
+				{ id: 'tan', label: 'TAN', placeholder: 'MUMB12345C', valid: 'MUMB12345C', invalid: 'MUMB1234C' },
+				{ id: 'cin', label: 'CIN', placeholder: 'U12345DL2025PTC123456', valid: 'U12345DL2025PTC123456', invalid: 'X12345DL2025PTC123456' },
+				{ id: 'llpin', label: 'LLPIN', placeholder: 'AAA-1234', valid: 'AAA-1234', invalid: 'AA12345' },
+				{ id: 'epic', label: 'Voter ID', placeholder: 'ABC1234567', valid: 'ABC1234567', invalid: 'AB1234567' },
+				{ id: 'vehicle', label: 'Vehicle', placeholder: 'DL01AB1234', valid: 'DL01AB1234', invalid: 'DL01AB12345' },
+			];
+
+			const tabsEl = document.querySelector('#tabs');
+			const inputEl = document.querySelector('#value-input');
+			const resultEl = document.querySelector('#result');
+			const presetsEl = document.querySelector('#presets');
+			const engineEl = document.querySelector('#engine');
+			const shareUrlEl = document.querySelector('#share-url');
+			const shareStatusEl = document.querySelector('#share-status');
+			const modeEl = document.querySelector('#opt-mode');
+			const spacesEl = document.querySelector('#opt-spaces');
+			const hyphensEl = document.querySelector('#opt-hyphens');
+			const ccEl = document.querySelector('#opt-cc');
+			const upperEl = document.querySelector('#opt-upper');
+
+			let currentType = 'pan';
+			let generatedValue = false; // true when the input came from "Generate test data"
+
+			// ------------------------------------------------------------ WASM
+			// Lazy-loaded ONLY on this page, ONLY on first validation.
+			// TODO: once `crates/indycheck-wasm/pkg/` is built (wasm-pack) and
+			// copied to `public/wasm/`, this dynamic import resolves to the real
+			// Rust/WASM build. Until then it 404s, we catch it, and fall back
+			// to the pure-JS validator (same rules, real validation).
+			let wasmModule = undefined; // undefined = not tried yet, null = unavailable
+			async function loadWasm() {
+				if (wasmModule !== undefined) return wasmModule;
+				try {
+					const mod = await import(/* @vite-ignore */ '/wasm/indycheck_wasm.js');
+					await mod.default();
+					wasmModule = mod;
+					engineEl.textContent = 'Engine: WASM (Rust core, compiled to WebAssembly).';
+				} catch {
+					wasmModule = null;
+					engineEl.textContent = 'Engine: pure-JS fallback (same rules as the Rust core). WASM build not present yet — see TODO in page source.';
+				}
+				return wasmModule;
+			}
+
+			// WASM exports are expected to mirror the JS API: validate(type, value, optionsJson)
+			// returning the same result shape. If the export is missing, fall back.
+			async function validateValue(type, value, opts) {
+				const wasm = await loadWasm();
+				if (wasm && typeof wasm.validate === 'function') {
+					try {
+						return JSON.parse(wasm.validate(type, value, JSON.stringify(opts)));
+					} catch {
+						// fall through to the JS validator
+					}
+				}
+				return validateJs(type, value, opts);
+			}
+
+			// ----------------------------------------------------------- options
+			function currentOptions() {
+				const lenient = modeEl.value === 'lenient';
+				return {
+					strict: !lenient,
+					allowSpaces: lenient ? true : spacesEl.checked,
+					allowHyphens: lenient ? true : hyphensEl.checked,
+					normalizeCountryCode: lenient ? true : ccEl.checked,
+					uppercase: lenient ? true : upperEl.checked,
+				};
+			}
+
+			function syncOptionControls() {
+				const lenient = modeEl.value === 'lenient';
+				for (const el of [spacesEl, hyphensEl, ccEl, upperEl]) {
+					el.disabled = lenient;
+					if (lenient) el.checked = true;
+				}
+			}
+
+			// -------------------------------------------------------------- UI
+			function renderTabs() {
+				tabsEl.innerHTML = '';
+				for (const t of TYPES) {
+					const b = document.createElement('button');
+					b.type = 'button';
+					b.textContent = t.label;
+					b.setAttribute('aria-pressed', String(t.id === currentType));
+					b.addEventListener('click', () => setType(t.id, ''));
+					tabsEl.appendChild(b);
+				}
+			}
+
+			function renderPresets() {
+				const t = TYPES.find((x) => x.id === currentType);
+				presetsEl.innerHTML = '';
+				presetsEl.appendChild(document.createTextNode('Try: '));
+				for (const [label, v] of [['✓ valid example', t.valid], ['✗ invalid example', t.invalid]]) {
+					const b = document.createElement('button');
+					b.type = 'button';
+					b.textContent = `${label}: ${v}`;
+					b.addEventListener('click', () => {
+						generatedValue = false;
+						inputEl.value = v;
+						runValidation();
+					});
+					presetsEl.appendChild(b);
+				}
+			}
+
+			function updateShareUrl() {
+				const url = new URL(window.location.href);
+				url.searchParams.set('type', currentType);
+				if (inputEl.value) url.searchParams.set('value', inputEl.value);
+				else url.searchParams.delete('value');
+				shareUrlEl.textContent = url.toString();
+				return url.toString();
+			}
+
+			const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+			async function runValidation() {
+				const value = inputEl.value;
+				updateShareUrl();
+				if (!value.trim()) {
+					resultEl.className = 'result';
+					resultEl.innerHTML = '';
+					return;
+				}
+				const r = await validateValue(currentType, value, currentOptions());
+				resultEl.className = `result show ${r.ok ? 'valid' : 'invalid'}`;
+				resultEl.innerHTML = `
+					<div class="verdict ${r.ok ? 'valid' : 'invalid'}">${r.ok ? '✓ Valid' : '✗ Invalid'}${generatedValue ? '<span class="testdata">TEST DATA ONLY</span>' : ''}</div>
+					<div class="code-line">Error code: <code>${esc(r.code)}</code> · <a href="/error-codes/">all error codes →</a></div>
+					<div>${esc(r.reason_en)}</div>
+					<div class="reason-hi">${esc(r.reason_hi)}</div>
+					${r.normalized ? `<div>Normalised: <code>${esc(r.normalized)}</code></div>` : ''}
+					<pre><code>${esc(JSON.stringify(r, null, 2))}</code></pre>`;
+			}
+
+			function setType(type, value) {
+				currentType = TYPES.some((t) => t.id === type) ? type : 'pan';
+				const t = TYPES.find((x) => x.id === currentType);
+				inputEl.placeholder = t.placeholder;
+				inputEl.value = value ?? '';
+				generatedValue = false;
+				renderTabs();
+				renderPresets();
+				runValidation();
+			}
+
+			document.querySelector('#validate-btn').addEventListener('click', () => {
+				generatedValue = false;
+				runValidation();
+			});
+			document.querySelector('#generate-btn').addEventListener('click', () => {
+				generatedValue = true;
+				inputEl.value = generateJs(currentType);
+				runValidation();
+				inputEl.focus();
+			});
+			inputEl.addEventListener('input', () => {
+				generatedValue = false;
+				runValidation();
+			});
+			for (const el of [modeEl, spacesEl, hyphensEl, ccEl, upperEl]) {
+				el.addEventListener('change', () => {
+					syncOptionControls();
+					runValidation();
+				});
+			}
+			syncOptionControls();
+			document.querySelector('#copy-link').addEventListener('click', async () => {
+				const url = updateShareUrl();
+				try {
+					await navigator.clipboard.writeText(url);
+					shareStatusEl.textContent = 'Copied!';
+				} catch {
+					shareStatusEl.textContent = 'Copy failed — copy the URL shown.';
+				}
+				setTimeout(() => (shareStatusEl.textContent = ''), 2500);
+			});
+
+			// Shareable URL: ?type=pan&value=AAAPL1234C
+			const params = new URLSearchParams(window.location.search);
+			setType(params.get('type') || 'pan', params.get('value') || '');
+		</script>
+	</body>
+</html>
