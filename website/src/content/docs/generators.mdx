@@ -1,0 +1,113 @@
+---
+title: Test-data generators
+description: Generate syntactically-valid mock Indian IDs for tests, demos and seed data — clearly labelled TEST DATA ONLY, never real IDs.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Writing tests against validators needs valid inputs — but you must never use a real person's PAN or Aadhaar in a test. indycheck's generators produce random values that pass validation, for tests, demos, screenshots and seed data.
+
+## Usage
+
+```js
+import { generate } from 'indycheck';
+
+generate('pan');     // e.g. 'HMSTC9464C'  — random every time
+generate('aadhaar'); // e.g. '262200939149' — passes Verhoeff
+generate('gstin');   // e.g. '13NFAPJ0888B1ZM' — passes Mod-36 Luhn
+generate('mobile');  // e.g. '6308893624'
+generate('vehicle'); // e.g. 'TN02D6788'
+```
+
+Direct helpers exist for every type: `generatePan()`, `generateAadhaar()`, `generateGstin()`, `generateIfsc()`, `generateUpi()`, `generateMobile()`, `generatePincode()`, `generateTan()`, `generateCin()`, `generateLlpin()`, `generateEpic()`, `generateVehicle()`.
+
+```python
+from indycheck import generate
+
+generate("pan")      # e.g. 'HMSTC9464C'
+generate("aadhaar")  # e.g. '262200939149'
+```
+
+```rust
+use indycheck::generate;
+
+let pan = generate("pan"); // e.g. "HMSTC9464C"
+```
+
+## What the generators produce
+
+| Type | Example output | Guarantee |
+| --- | --- | --- |
+| PAN | `HMSTC9464C` | Valid format (entity reported) |
+| Aadhaar | `262200939149` | Passes the Verhoeff checksum |
+| GSTIN | `13NFAPJ0888B1ZM` | Valid state, valid PAN part, correct Mod-36 Luhn check char |
+| IFSC | `BARB0MXS12A` | Valid shape (bank code from a small list) |
+| UPI ID | `user1261@okaxis` | Valid `handle@bank` shape |
+| Mobile | `6308893624` | 10 digits, starts 6–9 |
+| PIN code | `568558` | 6 digits, first digit 1–9 |
+| TAN | `MHGG52003Q` | Valid shape |
+| CIN | `L43942WB2014PTC185493` | Valid 21-char structure |
+| LLPIN | `BQB-8732` | Valid shape, hyphenated display form |
+| Voter ID (EPIC) | `GKZ3453234` | Valid shape |
+| Vehicle | `TN02D6788` | Valid standard shape (state + district + series + number) |
+
+Every generated value passes its own validator — this is covered by tests in the package.
+
+## Patterns for tests
+
+```js
+import { describe, it, expect } from 'vitest';
+import { generate, validate } from 'indycheck';
+
+describe('signup form', () => {
+  it('accepts a generated PAN', () => {
+    const pan = generate('pan');
+    expect(validate('pan', pan).ok).toBe(true);
+  });
+
+  it('rejects a PAN with a broken format', () => {
+    // Flip the last character of a valid PAN to a digit — the shape
+    // no longer matches 5 letters + 4 digits + 1 letter. (PAN has no
+    // checksum, and the 4th character is reported, not enforced — so
+    // corrupting the holder-type character would still validate.)
+    const pan = generate('pan');
+    const bad = pan.slice(0, 9) + '5';
+    expect(validate('pan', bad).code).toBe('INVALID_FORMAT');
+  });
+});
+```
+
+```python
+from indycheck import generate, validate
+
+def test_generated_aadhaar_is_valid():
+    assert validate("aadhaar", generate("aadhaar")).ok
+
+def test_generated_gstin_round_trips():
+    gstin = generate("gstin")
+    assert validate("gstin", gstin).parsed["state"]
+```
+
+## Seeding a demo database
+
+```js
+import { generate } from 'indycheck';
+
+const demoCustomers = Array.from({ length: 20 }, (_, i) => ({
+  id: i + 1,
+  name: `Demo Customer ${i + 1}`,
+  pan: generate('pan'),
+  mobile: generate('mobile'),
+  // Label the row so nobody mistakes it for real data:
+  is_test_data: true,
+}));
+```
+
+## ⚠️ TEST DATA ONLY — read this
+
+<Aside type="caution" title="Generated values are not real IDs">
+  - **Never present a generated value as a real person's ID** — not in a demo, not in a screenshot, not in a support ticket. A generated PAN looks exactly like a real one; that is the point, and the risk.
+  - **Never use generated values to impersonate anyone** or to test a real verification provider — providers will (correctly) reject them, and repeated attempts can look like fraud.
+  - **Mark test data clearly** — in the UI (`TEST DATA ONLY` badge, as the [playground](/playground/) does), in the database (`is_test_data: true`), and in screenshots.
+  - A generated value **could in principle collide** with a real issued number. Treat every generated value as untrusted dummy data and delete it when the test is done.
+</Aside>
