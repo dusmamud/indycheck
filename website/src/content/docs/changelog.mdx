@@ -5,6 +5,20 @@ description: What changed in each indycheck release — new validators, fixes, a
 
 All notable changes to indycheck, newest first. The full changelog lives in [`CHANGELOG.md`](https://github.com/dusmamud/indycheck/blob/main/CHANGELOG.md) in the repo. All crates, npm and PyPI packages share one version in lockstep.
 
+## [0.2.1] - 2026-11-12
+
+### Fixed
+
+- **Python wheel: validators no longer throw on non-string input.** `validate_pan(None)` or `validate_pan(123)` used to raise `TypeError`; they now return a `ValidationResult` with code `INVALID_TYPE`, like the JS wrapper.
+- **Python wheel: Options support.** `validate_*_with_options` and the `Options` class (`default_options()`, `lenient_options()`, `no_spaces_hyphens_options()`) now exist, matching the Rust core and JS package.
+- **Python wheel: `generate_pan()` and `generate_gstin()` work with no argument** (defaults: entity `P` / state code `18`).
+- **Python wheel: `indycheck.pydantic` now ships in the wheel**, with a `pydantic` extra (`pip install 'indycheck[pydantic]'`).
+- **README Rust snippet did not compile** — `validate_pan_with_options(..., &opts)` took the options by reference; the function takes them by value.
+
+### Added
+
+- **CLI: `indycheck --version`** (also `version` and `-V`) prints `indycheck <version>`.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added
