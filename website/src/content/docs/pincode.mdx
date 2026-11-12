@@ -52,13 +52,13 @@ assert!(r.ok);
 
 | Input | Result | Code |
 | --- | --- | --- |
-| `781001` | ✅ Valid (Guwahati area) | `VALID` |
-| `110001` | ✅ Valid (New Delhi area) | `VALID` |
-| `400001` | ✅ Valid (Mumbai area) | `VALID` |
-| `011001` | ❌ Invalid — starts with 0 | `INVALID_FIRST_DIGIT` |
-| `78100` | ❌ Invalid — 5 digits | `INVALID_LENGTH` |
-| `78100A` | ❌ Invalid — letter inside | `INVALID_FORMAT` |
-| *(empty)* | ❌ Invalid | `EMPTY` |
+| `781001` | Valid (Guwahati area) | `VALID` |
+| `110001` | Valid (New Delhi area) | `VALID` |
+| `400001` | Valid (Mumbai area) | `VALID` |
+| `011001` | Invalid — starts with 0 | `INVALID_FIRST_DIGIT` |
+| `78100` | Invalid — 5 digits | `INVALID_LENGTH` |
+| `78100A` | Invalid — letter inside | `INVALID_FORMAT` |
+| *(empty)* | Invalid | `EMPTY` |
 
 ## Error codes
 
