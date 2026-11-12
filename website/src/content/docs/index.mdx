@@ -9,7 +9,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 indycheck validates 12 Indian IDs — PAN, Aadhaar, GSTIN, IFSC, UPI ID, mobile number, PIN code, TAN, CIN, LLPIN, Voter ID (EPIC) and vehicle numbers — **offline**. No API keys, no network calls, no per-check fees. One Rust core, with bindings for JavaScript/TypeScript, Python and Rust.
 
-> These docs are in English for v0.1. The error messages in the package itself are bilingual: every result carries both `reason_en` and `reason_hi`.
+> These docs are in English for v0.2.0. The error messages in the package itself are bilingual: every result carries both `reason_en` and `reason_hi`.
 
 ## Install
 
@@ -24,7 +24,7 @@ pip install indycheck
 cargo add indycheck
 ```
 
-Requires Node 18+, Python 3.9+, or Rust 1.70+. There are **zero runtime dependencies** in every binding — the Rust core is compiled in.
+Requires Node 18+, Python 3.9+, or Rust 1.85+. There are **zero runtime dependencies** in every binding — the Rust core is compiled in.
 
 ## Your first validation
 
@@ -107,7 +107,7 @@ Use `code` for branching in your code, and `reason_en` / `reason_hi` for showing
 | `validateCin` | 21-char company structure, format only | `U12345DL2025PTC123456` |
 | `validateLlpin` | 3 letters + 4 digits, format only | `AAA-1234` |
 | `validateEpic` | 3 letters + 7 digits, format only | `ABC1234567` |
-| `validateVehicle` | 2 letters + district + series + number, 8–10 chars, format only | `DL01AB1234` |
+| `validateVehicle` | State format (8–10 chars) or Bharat (BH) series `YYBH####XX`, format only | `DL01AB1234` / `22BH1234AA` |
 
 TAN, CIN, LLPIN, Voter ID and vehicle numbers have **no public checksum** — for those, indycheck checks the format only. (IFSC, UPI, mobile and PIN code are format-only too.)
 
