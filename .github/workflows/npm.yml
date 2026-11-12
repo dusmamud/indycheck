@@ -1,0 +1,45 @@
+name: Publish to npm
+
+# Manual only — it never runs on push, so it can never turn CI red by itself.
+# Publishes the indycheck JS package to npm via Trusted Publishing (GitHub
+# OIDC): no npm token is stored anywhere, and no staged publish + passkey
+# approval is needed anymore. The trusted publisher must be configured once
+# on npmjs.com (package indycheck > Settings > Trusted Publishers > GitHub
+# Actions): owner dusmamud, repo indycheck, workflow file npm.yml, no
+# environment. Do NOT add a NODE_AUTH_TOKEN — that would disable OIDC.
+# Requires npm >= 11.5.1 (Node 22 ships it); `npm publish --provenance`
+# exchanges the GitHub OIDC token for a short-lived npm token itself.
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: build + publish to npm (OIDC)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: build dist
+        working-directory: packages/js
+        run: |
+          npm ci
+          npm run build
+          npm pack --dry-run
+      - name: check version is new
+        working-directory: packages/js
+        run: |
+          version=$(node -e "console.log(require('./package.json').version)")
+          if npm view "indycheck@$version" version 2>/dev/null; then
+            echo "indycheck@$version is already on npm — nothing to publish"
+            exit 1
+          fi
+          echo "publishing indycheck@$version"
+      - name: publish to npm
+        working-directory: packages/js
+        run: npm publish --provenance --access public
