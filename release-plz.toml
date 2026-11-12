@@ -1,0 +1,11 @@
+# release-plz configuration.
+# `git_release_body = "{{ changelog }}"` puts the CHANGELOG.md entry for
+# the new version into the GitHub release page — without it, release-plz
+# creates the release with only the release commit message ("chore: Release
+# package indycheck version X") as the body, which is why the releases
+# page used to show no readable notes.
+
+[workspace]
+git_release_enable = true
+git_release_name = "indycheck-v{{ version }}"
+git_release_body = "{{ changelog }}"
