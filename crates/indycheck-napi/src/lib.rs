@@ -5,18 +5,18 @@
 //! build config) is not finished yet — see README.md in this crate.
 
 use indycheck::{
-    detect as core_detect, format_gstin as core_format_gstin, format_mobile as core_format_mobile,
-    format_pan as core_format_pan, generate_aadhaar as core_generate_aadhaar,
-    generate_gstin as core_generate_gstin, generate_mobile as core_generate_mobile,
-    generate_pan as core_generate_pan, mask_aadhaar as core_mask_aadhaar,
-    mask_mobile as core_mask_mobile, mask_pan as core_mask_pan,
+    ValidationResult, detect as core_detect, format_gstin as core_format_gstin,
+    format_mobile as core_format_mobile, format_pan as core_format_pan,
+    generate_aadhaar as core_generate_aadhaar, generate_gstin as core_generate_gstin,
+    generate_mobile as core_generate_mobile, generate_pan as core_generate_pan,
+    mask_aadhaar as core_mask_aadhaar, mask_mobile as core_mask_mobile, mask_pan as core_mask_pan,
     validate_aadhaar as core_validate_aadhaar, validate_cin as core_validate_cin,
     validate_gstin as core_validate_gstin, validate_ifsc as core_validate_ifsc,
     validate_llpin as core_validate_llpin, validate_many as core_validate_many,
     validate_mobile as core_validate_mobile, validate_pan as core_validate_pan,
     validate_pincode as core_validate_pincode, validate_tan as core_validate_tan,
     validate_upi as core_validate_upi, validate_vehicle as core_validate_vehicle,
-    validate_voter_id as core_validate_voter_id, ValidationResult,
+    validate_voter_id as core_validate_voter_id,
 };
 use napi_derive::napi;
 
