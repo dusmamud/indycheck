@@ -1,0 +1,41 @@
+# Flutter binding CI — pure-Dart package in packages/flutter, which loads
+# the Rust C library via dart:ffi (INDYCHECK_NATIVE_LIB). No Android
+# emulator or iOS simulator is needed: `flutter test` on Linux exercises
+# the FFI bindings directly against the freshly built .so.
+name: Flutter
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/flutter/**'
+      - 'crates/indycheck-ffi/**'
+      - 'crates/indycheck/**'
+      - '.github/workflows/flutter.yml'
+
+jobs:
+  flutter:
+    name: Flutter (dart:ffi) package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build C library
+        run: cargo build -p indycheck-ffi --release
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Get dependencies
+        working-directory: packages/flutter
+        run: flutter pub get
+      - name: Analyze
+        working-directory: packages/flutter
+        run: flutter analyze
+      - name: Test
+        working-directory: packages/flutter
+        env:
+          INDYCHECK_NATIVE_LIB: ${{ github.workspace }}/target/release/libindycheck_ffi.so
+        run: flutter test
