@@ -341,6 +341,77 @@ pub unsafe extern "C" fn indycheck_validate_many(inputs_json: *const c_char) -> 
     into_c_string(serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string()))
 }
 
+/// Generate a syntactically valid PAN for testing. `entity` is the
+/// entity character string (`"P"`, `"C"`, …); a null, empty or unknown
+/// value falls back to `"P"` (Individual). Returns a heap-allocated
+/// string — free it with `indycheck_free_string`. TEST DATA ONLY —
+/// not a real issued PAN.
+///
+/// # Safety
+///
+/// `entity` must be null or point to a valid NUL-terminated C string
+/// that stays alive for the duration of the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn indycheck_generate_pan(entity: *const c_char) -> *mut c_char {
+    // SAFETY: `input_str` upholds the C-string contract.
+    let ch = unsafe { input_str(entity) }
+        .and_then(|s| s.chars().next())
+        .unwrap_or('P');
+    into_c_string(indycheck::generate_pan(ch))
+}
+
+/// Generate a syntactically valid 12-digit Aadhaar number (correct
+/// Verhoeff check digit). Returns a heap-allocated string — free it
+/// with `indycheck_free_string`. TEST DATA ONLY — not a real issued
+/// Aadhaar number.
+#[unsafe(no_mangle)]
+pub extern "C" fn indycheck_generate_aadhaar() -> *mut c_char {
+    into_c_string(indycheck::generate_aadhaar())
+}
+
+/// Generate a syntactically valid GSTIN for the given 2-digit state
+/// code (`"18"` for Assam). A null, empty or unknown state code falls
+/// back to `"18"`. Returns a heap-allocated string — free it with
+/// `indycheck_free_string`. TEST DATA ONLY — not a real issued GSTIN.
+///
+/// # Safety
+///
+/// `state_code` must be null or point to a valid NUL-terminated C
+/// string that stays alive for the duration of the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn indycheck_generate_gstin(state_code: *const c_char) -> *mut c_char {
+    // SAFETY: `input_str` upholds the C-string contract.
+    let code = unsafe { input_str(state_code) }.unwrap_or("18");
+    into_c_string(indycheck::generate_gstin(code))
+}
+
+/// Generate a syntactically valid Indian mobile number (10 digits,
+/// first digit 6-9). Returns a heap-allocated string — free it with
+/// `indycheck_free_string`. TEST DATA ONLY — not a real person's
+/// number.
+#[unsafe(no_mangle)]
+pub extern "C" fn indycheck_generate_mobile() -> *mut c_char {
+    into_c_string(indycheck::generate_mobile())
+}
+
+/// Generate a syntactically valid state-format vehicle registration
+/// number (`DL01AB1234`). Returns a heap-allocated string — free it
+/// with `indycheck_free_string`. TEST DATA ONLY — not a real issued
+/// registration number.
+#[unsafe(no_mangle)]
+pub extern "C" fn indycheck_generate_vehicle() -> *mut c_char {
+    into_c_string(indycheck::generate_vehicle())
+}
+
+/// Generate a syntactically valid Bharat (BH) series vehicle number
+/// (`22BH1234AA`). Returns a heap-allocated string — free it with
+/// `indycheck_free_string`. TEST DATA ONLY — not a real issued
+/// registration number.
+#[unsafe(no_mangle)]
+pub extern "C" fn indycheck_generate_vehicle_bharat() -> *mut c_char {
+    into_c_string(indycheck::generate_vehicle_bharat())
+}
+
 /// Return the indycheck core version (e.g. `"0.2.0"`) as a
 /// heap-allocated string — free it with `indycheck_free_string`.
 #[unsafe(no_mangle)]
