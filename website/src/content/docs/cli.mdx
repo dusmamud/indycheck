@@ -8,7 +8,7 @@ import { Aside } from '@astrojs/starlight/components';
 The CLI is the `indycheck` binary from the Rust crate — the same offline
 engine as the library. It prints a `ValidationResult` as JSON, so it is
 easy to use from shell scripts. There are no `--json` or `--lenient`
-flags in v0.1: output is always JSON, and validation always uses the
+flags in v0.2.0: output is always JSON, and validation always uses the
 default (strict) options. Options, `--lenient` and CSV mode are planned
 for a later release — see the notes at the bottom of this page.
 
@@ -136,7 +136,7 @@ against a real verification provider. See [Test-data generators](/generators/).
 | `1` | Invalid input |
 | `2` | Usage error — unknown type, missing value, unknown command |
 
-## Planned, not in v0.1
+## Planned, not in v0.2.0
 
 - `--lenient` / `--strict` flags and per-option flags on `validate`
 - `--file` / `--csv` batch validation of a file or CSV column
