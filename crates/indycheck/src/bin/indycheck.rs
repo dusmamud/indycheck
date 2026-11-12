@@ -6,24 +6,27 @@
 //! indycheck validate <type> <value>   # prints a ValidationResult as JSON
 //! indycheck detect <value>            # prints {"input": ..., "type": ...}
 //! indycheck generate <type> [arg]     # prints {"type": ..., "value": ...}
-//! indycheck --version                 # prints "indycheck 0.2.0"
+//! indycheck --version                 # prints "indycheck 0.2.1"
+//! indycheck update                    # checks crates.io for a newer version
 //! ```
 //!
 //! `<type>` for validate/detect: pan, aadhaar, gstin, ifsc, upi, mobile,
 //! pincode, tan, cin, llpin, voter (or epic), vehicle.
-//! `<type>` for generate: pan [entity], aadhaar, gstin [state-code], mobile.
+//! `<type>` for generate: pan [entity], aadhaar, gstin [state-code], mobile,
+//! vehicle, vehicle-bharat.
 //! Generated values are TEST DATA ONLY — syntactically valid, not real IDs.
 //!
 //! Exit codes: 0 = valid / success, 1 = invalid input, 2 = usage error.
 
 use indycheck::{
     ValidationResult, detect, generate_aadhaar, generate_gstin, generate_mobile, generate_pan,
-    validate_aadhaar, validate_cin, validate_gstin, validate_ifsc, validate_llpin, validate_mobile,
-    validate_pan, validate_pincode, validate_tan, validate_upi, validate_vehicle,
-    validate_voter_id,
+    generate_vehicle, generate_vehicle_bharat, validate_aadhaar, validate_cin, validate_gstin,
+    validate_ifsc, validate_llpin, validate_mobile, validate_pan, validate_pincode, validate_tan,
+    validate_upi, validate_vehicle, validate_voter_id,
 };
+use std::cmp::Ordering;
 use std::env;
-use std::process::ExitCode;
+use std::process::{Command, ExitCode};
 
 fn print_result(result: &ValidationResult) -> ExitCode {
     match serde_json::to_string_pretty(result) {
@@ -56,8 +59,86 @@ fn validate(kind: &str, value: &str) -> Result<ValidationResult, String> {
 }
 
 fn usage() -> String {
-    "Usage:\n  indycheck validate <type> <value>\n  indycheck detect <value>\n  indycheck generate <type> [arg]\n  indycheck --version\n\nTypes for validate: pan, aadhaar, gstin, ifsc, upi, mobile, pincode, tan, cin, llpin, voter, vehicle\nTypes for generate: pan [entity-char], aadhaar, gstin [state-code], mobile\n\nExit codes: 0 = valid/success, 1 = invalid input, 2 = usage error."
+    "Usage:\n  indycheck validate <type> <value>\n  indycheck detect <value>\n  indycheck generate <type> [arg]\n  indycheck --version\n  indycheck update\n\nTypes for validate: pan, aadhaar, gstin, ifsc, upi, mobile, pincode, tan, cin, llpin, voter, vehicle\nTypes for generate: pan [entity-char], aadhaar, gstin [state-code], mobile, vehicle, vehicle-bharat\n\nExit codes: 0 = valid/success, 1 = invalid input, 2 = usage error."
         .to_string()
+}
+
+/// Compare two dotted versions ("0.2.1") numerically, segment by segment.
+fn cmp_versions(a: &str, b: &str) -> Ordering {
+    let parse = |v: &str| {
+        v.split('.')
+            .map(|s| s.parse::<u64>().unwrap_or(0))
+            .collect::<Vec<_>>()
+    };
+    parse(a).cmp(&parse(b))
+}
+
+/// Latest indycheck version on crates.io, or `None` when it cannot be
+/// reached. The CLI deliberately has no HTTP/TLS dependency of its own, so
+/// this shells out to `curl` (10s timeout), falling back to `cargo search`.
+/// Either tool missing (or offline) just means "unknown", never an error.
+fn latest_version() -> Option<String> {
+    // Route 1: crates.io API via curl.
+    if let Ok(output) = Command::new("curl")
+        .args([
+            "-s",
+            "--max-time",
+            "10",
+            "https://crates.io/api/v1/crates/indycheck",
+        ])
+        .output()
+        .map(|o| o.stdout)
+    {
+        if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&output) {
+            if let Some(v) = json
+                .get("crate")
+                .and_then(|c| c.get("max_version"))
+                .and_then(|v| v.as_str())
+            {
+                return Some(v.to_string());
+            }
+        }
+    }
+    // Route 2: `cargo search` output looks like: indycheck = "0.2.1" # ...
+    if let Ok(output) = Command::new("cargo")
+        .args(["search", "indycheck", "--limit", "1"])
+        .output()
+    {
+        let text = String::from_utf8_lossy(&output.stdout);
+        for line in text.lines() {
+            if let Some(rest) = line.strip_prefix("indycheck = \"") {
+                if let Some(version) = rest.split('"').next() {
+                    return Some(version.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn update() -> ExitCode {
+    let installed = env!("CARGO_PKG_VERSION");
+    println!("indycheck {installed} (installed)");
+    match latest_version() {
+        Some(latest) => {
+            println!("latest: {latest} (crates.io)");
+            match cmp_versions(&latest, installed) {
+                Ordering::Greater => {
+                    println!("Update available. Run:");
+                    println!("  cargo install indycheck --force");
+                }
+                _ => println!("You're up to date."),
+            }
+        }
+        None => {
+            println!(
+                "Could not reach crates.io to check for updates (no network, curl, or cargo)."
+            );
+            println!("To update anyway, run:");
+            println!("  cargo install indycheck --force");
+        }
+    }
+    ExitCode::from(0)
 }
 
 fn main() -> ExitCode {
@@ -112,9 +193,11 @@ fn main() -> ExitCode {
                     generate_gstin(state)
                 }
                 "mobile" => generate_mobile(),
+                "vehicle" => generate_vehicle(),
+                "vehicle-bharat" => generate_vehicle_bharat(),
                 other => {
                     eprintln!(
-                        "cannot generate '{other}' (try pan, aadhaar, gstin, mobile)\n{}",
+                        "cannot generate '{other}' (try pan, aadhaar, gstin, mobile, vehicle, vehicle-bharat)\n{}",
                         usage()
                     );
                     return ExitCode::from(2);
@@ -130,6 +213,13 @@ fn main() -> ExitCode {
         "version" | "--version" | "-V" => {
             println!("indycheck {}", env!("CARGO_PKG_VERSION"));
             ExitCode::from(0)
+        }
+        "update" => {
+            if args.len() != 1 {
+                eprintln!("update takes no arguments\n{}", usage());
+                return ExitCode::from(2);
+            }
+            update()
         }
         other => {
             eprintln!("unknown command '{other}'\n{}", usage());
