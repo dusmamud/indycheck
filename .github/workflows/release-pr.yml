@@ -36,9 +36,13 @@ jobs:
         # as its `command` — `update` is silently ignored (the action runs
         # neither), which is why the first version of this workflow opened
         # no PR at all. Install the CLI directly and run `update` ourselves.
+        # Pinned to 0.4.3: 0.4.2 has a changelog-template regression
+        # ("Template parse error ... stack limit reached" on `# Changelog`)
+        # that breaks `release-plz update`; 0.4.3 (and 0.3.153) work.
+        # Do NOT go back to `@latest` without re-running `update` locally.
         uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b
         with:
-          tool: release-plz
+          tool: release-plz@0.4.3
       - name: Update versions and changelog
         run: release-plz update
       - name: Sync JS/Python/docs versions with the Rust workspace
