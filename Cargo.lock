@@ -71,7 +71,7 @@ dependencies = [
 
 [[package]]
 name = "indycheck"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -79,7 +79,7 @@ dependencies = [
 
 [[package]]
 name = "indycheck-napi"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "indycheck",
  "napi",
@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "indycheck-py"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "indycheck",
  "pyo3",
@@ -98,7 +98,7 @@ dependencies = [
 
 [[package]]
 name = "indycheck-wasm"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "indycheck",
  "serde_json",
