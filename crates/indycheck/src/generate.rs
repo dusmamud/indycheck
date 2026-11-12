@@ -52,6 +52,16 @@ impl SimpleRng {
     fn letter(&mut self) -> char {
         (b'A' + (self.next_u64() % 26) as u8) as char
     }
+
+    /// A letter excluding `I` and `O` (they look like digits on a plate).
+    fn letter_no_io(&mut self) -> char {
+        const LETTERS: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ";
+        LETTERS[(self.next_u64() % 24) as usize] as char
+    }
+
+    fn number_range(&mut self, low: u64, high: u64) -> u64 {
+        low + (self.next_u64() % (high - low + 1))
+    }
 }
 
 /// Generates a syntactically valid PAN for the given entity character
@@ -121,4 +131,41 @@ pub fn generate_mobile() -> String {
         mobile.push(rng.digit());
     }
     mobile
+}
+
+/// Common state codes, so generated numbers look like real plates instead
+/// of random letter pairs. The validator does not check state codes
+/// against a list — this is only for realism.
+const VEHICLE_STATE_CODES: &[&str] = &[
+    "DL", "MH", "UP", "KA", "TN", "GJ", "RJ", "WB", "KL", "PB", "HR", "AP", "TS", "MP", "BR",
+];
+
+/// Generates a syntactically valid state-format vehicle registration
+/// number (`DL01AB1234`: state code + district + series + number).
+/// TEST DATA ONLY — not a real issued registration number.
+pub fn generate_vehicle() -> String {
+    let mut rng = SimpleRng::new();
+    let state = VEHICLE_STATE_CODES[(rng.next_u64() % VEHICLE_STATE_CODES.len() as u64) as usize];
+    let district = rng.number_range(1, 99);
+    let series_len = if rng.next_u64() % 2 == 0 { 1 } else { 2 };
+    let mut series = String::with_capacity(2);
+    for _ in 0..series_len {
+        series.push(rng.letter_no_io());
+    }
+    let number = rng.number_range(1, 9999);
+    format!("{state}{district:02}{series}{number:04}")
+}
+
+/// Generates a syntactically valid Bharat (BH) series vehicle number
+/// (`22BH1234AA`: year 21-26, `BH`, number 0001-9999, suffix without
+/// `I`/`O`). TEST DATA ONLY — not a real issued registration number.
+pub fn generate_vehicle_bharat() -> String {
+    let mut rng = SimpleRng::new();
+    let year = rng.number_range(21, 26);
+    let number = rng.number_range(1, 9999);
+    let mut suffix = String::with_capacity(2);
+    for _ in 0..2 {
+        suffix.push(rng.letter_no_io());
+    }
+    format!("{year:02}BH{number:04}{suffix}")
 }
