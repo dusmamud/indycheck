@@ -5,6 +5,27 @@ All notable changes to indycheck are documented here. The format is based on
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 All crates, npm and PyPI packages share one version in lockstep.
 
+## [Unreleased]
+
+### Fixed
+- Python wheel: validators no longer throw `TypeError` on non-string input
+  (`None`, `int`, ...) — they return a `ValidationResult` with code
+  `INVALID_TYPE`, like the JS wrapper always did.
+- Python wheel: `validate_*_with_options` and the `Options` class now exist
+  (`default_options()`, `lenient_options()`, `no_spaces_hyphens_options()`),
+  matching the Rust core and JS package.
+- Python wheel: `generate_pan()` and `generate_gstin()` work with no
+  argument (defaults: entity `P` / state code `18`).
+- Python wheel: `indycheck.pydantic` now ships in the wheel, with a
+  `pydantic` extra (`pip install 'indycheck[pydantic]'`). Added the missing
+  `validate_epic` / `validate_vehicle_registration` aliases the module needs.
+- README Rust snippet: `validate_pan_with_options(..., &opts)` did not
+  compile — the options argument is by value, not a reference.
+
+### Added
+- CLI: `indycheck --version` (also `version` and `-V`) prints
+  `indycheck <version>`.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added
