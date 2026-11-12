@@ -3,11 +3,11 @@
  *
  * Layers:
  *  1. Inline cases (100+) — always run, using the Rust codes / reasons.
- *  2. shared/test-vectors.json (245 cases) — read directly and asserted
+ *  2. shared/test-vectors.json (254 cases) — read directly and asserted
  *     in full, including the `options` entries (run through
  *     `validate*WithOptions`) and the `generator` entries (freshly
  *     generated values must re-validate as VALID). As of the last check
- *     the Rust code and the vectors agree on all 245 entries (verified
+ *     the Rust code and the vectors agree on all 254 entries (verified
  *     by emulating the Rust source over the file), so there are no
  *     exceptions: if the Rust side drifts again, this test fails loudly
  *     instead of silently picking a side.
@@ -374,9 +374,10 @@ describe("parsed shapes (shared/spec.md)", () => {
     expect(validateEpic("ABC1234567")).toEqual(validateVoterId("ABC1234567"));
   });
 
-  it("vehicle parsed is { registration, state_code, district, series, number }", () => {
+  it("vehicle parsed is { registration, series_type, state_code, district, series, number }", () => {
     expect(validateVehicle("DL01AB1234").parsed).toEqual({
       registration: "DL01AB1234",
+      series_type: "state",
       state_code: "DL",
       district: "01",
       series: "AB",
@@ -385,12 +386,33 @@ describe("parsed shapes (shared/spec.md)", () => {
     expect(validateVehicle("DL 01 AB 1234").parsed?.registration).toBe("DL01AB1234");
     expect(validateVehicle("DL0AB1234").parsed).toEqual({
       registration: "DL0AB1234",
+      series_type: "state",
       state_code: "DL",
       district: "0",
       series: "AB",
       number: "1234",
     });
     expect(validateVehicleRegistration("DL01A1234")).toEqual(validateVehicle("DL01A1234"));
+  });
+
+  it("bharat (BH) series vehicle parses as { registration, series_type, year, series, number, suffix }", () => {
+    expect(validateVehicle("22BH1234AA").parsed).toEqual({
+      registration: "22BH1234AA",
+      series_type: "bharat",
+      year: "22",
+      series: "BH",
+      number: "1234",
+      suffix: "AA",
+    });
+    expect(validateVehicle("22 BH 1234 AA").valid).toBe(true);
+    expect(validateVehicle("22bh1234aa").valid).toBe(true);
+    expect(validateVehicle("20BH1234AA").code).toBe("INVALID_FORMAT");
+    expect(validateVehicle("22BH0000AA").code).toBe("INVALID_FORMAT");
+    expect(validateVehicle("22BH1234AI").code).toBe("INVALID_FORMAT");
+    expect(validateVehicle("22BH1234AO").code).toBe("INVALID_FORMAT");
+    expect(validateVehicle("22BH1234A").code).toBe("INVALID_FORMAT");
+    expect(detect("22BH1234AA").parsed?.type).toBe("vehicle");
+    expect(detectType("22BH1234AA")).toBe("vehicle");
   });
 });
 
@@ -651,7 +673,7 @@ describe("zod schemas", () => {
 
 // ---------------------------------------------------------------------------
 // shared/test-vectors.json — asserted in full, no exceptions.
-// As of the last check the Rust code and the vectors agree on all 245
+// As of the last check the Rust code and the vectors agree on all 254
 // entries (verified by emulating crates/indycheck/src over the file).
 // `options` entries run through validate*WithOptions, `generator`
 // entries generate a fresh value and validate it (like
@@ -670,14 +692,14 @@ interface VectorEntry {
 
 describe("shared/test-vectors.json", () => {
   const vectorsPath = join(__dirname, "..", "..", "..", "shared", "test-vectors.json");
-  it("all 245 vectors match the Rust code", () => {
+  it("all 254 vectors match the Rust code", () => {
     if (!existsSync(vectorsPath)) {
       // Vectors not written yet — inline cases above are the contract.
       expect(true).toBe(true);
       return;
     }
     const vectors = JSON.parse(readFileSync(vectorsPath, "utf8")) as VectorEntry[];
-    expect(vectors.length).toBe(245);
+    expect(vectors.length).toBe(254);
     const failures: string[] = [];
     for (const v of vectors) {
       let result: ValidationResult;
