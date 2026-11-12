@@ -31,7 +31,7 @@ Validates an Indian Permanent Account Number (PAN): 10 characters — 5 letters,
 | `J` | Artificial Juridical Person |
 | `G` | Government |
 
-Any other 4th character is reported as entity `"Unknown"` and the PAN is still format-valid — `ABCDE1234F` (4th character `D`) is valid. `INVALID_ENTITY` is a reserved code for this case and is not emitted in v0.1.
+Any other 4th character is reported as entity `"Unknown"` and the PAN is still format-valid — `ABCDE1234F` (4th character `D`) is valid. `INVALID_ENTITY` is a reserved code for this case and is not emitted as of v0.2.0.
 
 ## Usage
 
@@ -80,7 +80,7 @@ assert_eq!(r.parsed.unwrap()["entity_code"], "P");
 | `INVALID_LENGTH` | Not exactly 10 characters |
 | `INVALID_FORMAT` | Doesn't match 5 letters + 4 digits + 1 letter |
 
-`INVALID_ENTITY` is a reserved code for an unlisted 4th character — it is **not emitted in v0.1**: an unlisted 4th character is reported as entity `"Unknown"` and the PAN is still valid.
+`INVALID_ENTITY` is a reserved code for an unlisted 4th character — it is **not emitted as of v0.2.0**: an unlisted 4th character is reported as entity `"Unknown"` and the PAN is still valid.
 
 ## Parsed output
 
