@@ -23,11 +23,11 @@ const description =
 		<meta property="og:site_name" content="indycheck" />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
-		<meta property="og:url" content="https://indycheck.dev/" />
-		<meta property="og:image" content="https://indycheck.dev/og.svg" />
+		<meta property="og:url" content="https://indycheck.pages.dev/" />
+		<meta property="og:image" content="https://indycheck.pages.dev/og.svg" />
 		<meta name="twitter:card" content="summary_large_image" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="canonical" href="https://indycheck.dev/" />
+		<link rel="canonical" href="https://indycheck.pages.dev/" />
 		<script type="application/ld+json" set:html={JSON.stringify({
 			'@context': 'https://schema.org',
 			'@type': 'SoftwareApplication',
@@ -38,15 +38,17 @@ const description =
 			author: { '@type': 'Person', name: 'dusmamud' },
 			offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
 			softwareVersion: '0.2.0',
-			url: 'https://indycheck.dev/',
+			url: 'https://indycheck.pages.dev/',
 		})} />
 		<style>
-			:root { --bg: #0f172a; --card: #1e293b; --ink: #f8fafc; --muted: #94a3b8; --green: #22c55e; --red: #f87171; --amber: #fbbf24; --line: #334155; }
+			:root { --bg: #0a0f1e; --card: #141f3a; --ink: #f1f5f9; --muted: #a7b4c9; --green: #22c55e; --green-bright: #4ade80; --red: #f87171; --amber: #fbbf24; --line: #263449; --ring: #4ade80; }
 			* { box-sizing: border-box; }
 			body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; }
+			::selection { background: rgba(34, 197, 94, 0.35); }
+			a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 			a { color: #4ade80; }
 			.wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 64px; }
-			header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+			header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; position: sticky; top: 0; z-index: 20; background: rgba(10, 15, 30, 0.88); backdrop-filter: blur(12px); }
 			.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.25rem; color: var(--ink); text-decoration: none; }
 			.logo img { width: 32px; height: 32px; }
 			nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-weight: 600; }
@@ -56,7 +58,11 @@ const description =
 			.hero h1 span { color: var(--green); }
 			.hero p { font-size: 1.2rem; color: var(--muted); max-width: 640px; margin: 0 0 24px; }
 			.cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
-			.btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-weight: 700; text-decoration: none; }
+			.btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-weight: 700; text-decoration: none; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+			.btn:hover { transform: translateY(-1px); }
+			.btn:active { transform: translateY(0); }
+			.btn-primary:hover { background: #16a34a; }
+			.btn-ghost:hover { border-color: var(--green); color: var(--green-bright); }
 			.btn-primary { background: var(--green); color: #052e12; }
 			.btn-ghost { border: 1px solid var(--line); color: var(--ink); }
 			h2 { margin: 48px 0 12px; font-size: 1.5rem; }
@@ -65,6 +71,12 @@ const description =
 			.install-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
 			.install-tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 600; }
 			.install-tabs button[aria-pressed="true"] { border-color: var(--green); color: var(--green); }
+			.install-tabs button:hover { border-color: var(--green); }
+			.install-box { position: relative; }
+			.copy-btn { position: absolute; top: 8px; right: 8px; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+			.copy-btn:hover { border-color: var(--green); color: var(--green-bright); }
+			.pill { display: inline-block; margin: 0 0 16px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+			.pill::before { content: '● '; color: var(--green); font-size: 0.7rem; }
 			.demo { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
 			.demo-row { display: flex; gap: 10px; flex-wrap: wrap; }
 			.demo select, .demo input { background: #020617; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-size: 1rem; }
@@ -83,7 +95,8 @@ const description =
 			.result .reason-hi { color: var(--muted); }
 			.result pre { background: rgba(2, 6, 23, 0.6); margin-top: 10px; }
 			.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-			.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+			.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; transition: transform .18s ease, border-color .18s ease; }
+			.card:hover { transform: translateY(-2px); border-color: #33507a; }
 			.card h3 { margin: 0 0 6px; font-size: 1.05rem; }
 			.card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
 			table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
@@ -95,6 +108,23 @@ const description =
 			.limits h2 { margin-top: 0; color: var(--amber); }
 			.limits p, .limits li { color: #fde68a; }
 			footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 0.9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+			@media (max-width: 640px) {
+				.wrap { padding: 0 16px 48px; }
+				header { padding: 14px 0; }
+				nav a { margin-left: 12px; font-size: 0.92rem; }
+				.logo { font-size: 1.1rem; }
+				.hero { padding: 32px 0 4px; }
+				.hero p { font-size: 1.05rem; }
+				h2 { margin: 36px 0 10px; font-size: 1.3rem; }
+				.demo { padding: 16px; }
+				.demo select { flex: 1 1 100%; }
+				.demo input { flex: 1 1 100%; }
+				.demo .demo-clear { flex: 1 1 100%; }
+				.btn { padding: 11px 18px; }
+				table { font-size: 0.88rem; }
+				th, td { padding: 8px; }
+			}
+			@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 		</style>
 	</head>
 	<body>
@@ -109,6 +139,7 @@ const description =
 			</header>
 
 			<section class="hero">
+				<p class="pill">Rust core · Zero dependencies · Fully offline</p>
 				<h1>indycheck — <span>Offline Indian ID validator</span></h1>
 				<p>
 					Validate PAN, Aadhaar, GSTIN, IFSC, UPI IDs, mobile numbers, PIN codes,
@@ -134,7 +165,10 @@ const description =
 					<button type="button" data-install="pip" aria-pressed="false">pip</button>
 					<button type="button" data-install="cargo" aria-pressed="false">cargo</button>
 				</div>
-				<pre id="install-cmd"><code>npm install indycheck</code></pre>
+				<div class="install-box">
+					<pre id="install-cmd"><code>npm install indycheck</code></pre>
+					<button type="button" class="copy-btn" id="copy-install">Copy</button>
+				</div>
 				<pre><code>import &#123; validatePan &#125; from 'indycheck';
 
 const r = validatePan('AAAPL1234C');
@@ -162,6 +196,7 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 							<option value="vehicle">Vehicle</option>
 						</select>
 						<input id="demo-input" type="text" placeholder="AAAPL1234C" autocomplete="off" spellcheck="false" aria-label="Value to validate" />
+						<button type="button" class="btn btn-ghost demo-clear" id="demo-clear">Clear</button>
 					</div>
 					<p class="hint">
 						Try:
@@ -322,6 +357,12 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 				});
 			});
 
+			document.querySelector('#copy-install').addEventListener('click', async (e) => {
+				const btn = e.currentTarget;
+				try { await navigator.clipboard.writeText(document.querySelector('#install-cmd code').textContent); btn.textContent = 'Copied ✓'; } catch { btn.textContent = 'Copy failed'; }
+				setTimeout(() => (btn.textContent = 'Copy'), 2000);
+			});
+
 			const typeEl = document.querySelector('#demo-type');
 			const inputEl = document.querySelector('#demo-input');
 			const resultEl = document.querySelector('#demo-result');
@@ -356,6 +397,7 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 				});
 			});
 			renderDemo();
+			document.querySelector('#demo-clear').addEventListener('click', () => { inputEl.value = ''; renderDemo(); inputEl.focus(); });
 		</script>
 	</body>
 </html>
