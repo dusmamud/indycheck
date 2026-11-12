@@ -1,4 +1,4 @@
-use crate::options::{maybe_uppercase, spaces_hyphens_ok, strip_spaces_hyphens, Options};
+use crate::options::{Options, maybe_uppercase, spaces_hyphens_ok, strip_spaces_hyphens};
 use crate::types::ValidationResult;
 use serde_json::json;
 
