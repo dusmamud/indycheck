@@ -122,7 +122,7 @@ indycheck/
 ├── crates/indycheck-ffi/    # C API → Go (last, scaffold)
 ├── packages/js/             # TS wrapper + Zod
 ├── packages/python/         # thin Python wrapper + Pydantic
-├── shared/test-vectors.json # 245 cases — the contract every language must pass
+├── shared/test-vectors.json # 254 cases — the contract every language must pass
 ├── shared/spec.md           # API + error-code spec
 └── website/                 # Astro 5 + Starlight docs + landing + playground
 ```
