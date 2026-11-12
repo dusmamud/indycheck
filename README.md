@@ -90,7 +90,7 @@ validate_gstin("18ABCDE1234F1ZZ")["parsed"]["state"]  # "Assam"
 use indycheck::{Options, validate_pan_with_options};
 
 let opts = Options::lenient(); // skip checksum checks, allow spaces/hyphens
-let r = validate_pan_with_options("abcde 1234 f", &opts);
+let r = validate_pan_with_options("abcde 1234 f", opts);
 ```
 
 - **Options:** `strict` / `lenient`, `allow_spaces_hyphens`, `normalise_plus91`, `uppercase` — see [docs](https://indycheck.dev/docs/options/).
