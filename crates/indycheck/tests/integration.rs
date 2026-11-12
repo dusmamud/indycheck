@@ -1,10 +1,11 @@
 use indycheck::{
     Options, ValidationResult, detect, format_gstin, format_mobile, format_pan, generate_aadhaar,
-    generate_gstin, generate_mobile, generate_pan, mask_aadhaar, mask_mobile, mask_pan,
-    validate_aadhaar, validate_aadhaar_with_options, validate_cin, validate_gstin,
-    validate_gstin_with_options, validate_ifsc, validate_llpin, validate_many, validate_mobile,
-    validate_mobile_with_options, validate_pan, validate_pan_with_options, validate_pincode,
-    validate_tan, validate_upi, validate_vehicle, validate_voter_id,
+    generate_gstin, generate_mobile, generate_pan, generate_vehicle, generate_vehicle_bharat,
+    mask_aadhaar, mask_mobile, mask_pan, validate_aadhaar, validate_aadhaar_with_options,
+    validate_cin, validate_gstin, validate_gstin_with_options, validate_ifsc, validate_llpin,
+    validate_many, validate_mobile, validate_mobile_with_options, validate_pan,
+    validate_pan_with_options, validate_pincode, validate_tan, validate_upi, validate_vehicle,
+    validate_voter_id,
 };
 use serde::Deserialize;
 
@@ -589,6 +590,20 @@ fn generators_produce_valid_values() {
         assert!(validate_gstin(&generate_gstin("27")).valid);
         assert!(validate_gstin(&generate_gstin("99")).valid); // falls back to 18
         assert!(validate_mobile(&generate_mobile()).valid);
+        let vehicle = generate_vehicle();
+        let parsed = validate_vehicle(&vehicle);
+        assert!(parsed.valid, "{vehicle}");
+        assert_eq!(
+            parsed.parsed.as_ref().unwrap()["series_type"],
+            serde_json::Value::String("state".into())
+        );
+        let bharat = generate_vehicle_bharat();
+        let bparsed = validate_vehicle(&bharat);
+        assert!(bparsed.valid, "{bharat}");
+        assert_eq!(
+            bparsed.parsed.as_ref().unwrap()["series_type"],
+            serde_json::Value::String("bharat".into())
+        );
     }
 }
 
