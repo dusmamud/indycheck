@@ -18,6 +18,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: install wasm-opt (Binaryen)
+        # wasm-pack runs wasm-opt automatically when it is on PATH, shrinking
+        # the playground WASM. Without it, wasm-pack silently skips the step.
+        run: |
+          curl -sL -o /tmp/binaryen.tar.gz https://github.com/WebAssembly/binaryen/releases/download/version_124/binaryen-version_124-x86_64-linux.tar.gz
+          tar -xzf /tmp/binaryen.tar.gz -C /tmp
+          echo "/tmp/binaryen-version_124/bin" >> "$GITHUB_PATH"
+          /tmp/binaryen-version_124/bin/wasm-opt --version
       - name: build (web)
         run: wasm-pack build --target web crates/indycheck-wasm
       - name: build (bundler)
