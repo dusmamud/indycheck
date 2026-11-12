@@ -101,7 +101,7 @@ The full machine-readable code table — including `UNKNOWN_TYPE` (from `detect(
 | `INVALID_CHECKSUM` | Checksum digit fails (Verhoeff for Aadhaar, Mod-36 Luhn for GSTIN) | Aadhaar, GSTIN |
 | `INVALID_FIRST_DIGIT` | First digit not allowed (0/1 for Aadhaar, 0 for PIN, not 6–9 for mobile) | Aadhaar, mobile, PIN |
 | `INVALID_STATE_CODE` | First two digits are not an Indian state/UT code (01–38) | GSTIN |
-| `INVALID_ENTITY` | Reserved in v0.1 — an unlisted PAN 4th character is reported as entity `"Unknown"` instead, and the PAN is still valid | never emitted in v0.1 |
+| `INVALID_ENTITY` | Reserved — an unlisted PAN 4th character is reported as entity `"Unknown"` instead, and the PAN is still valid | never emitted as of v0.2.0 |
 | `INVALID_HANDLE` | UPI handle is missing or not a known handle | UPI ID |
 | `UNKNOWN_TYPE` | The `type` passed to `validate()` is not a known validator | generic `validate` only |
 | `UNKNOWN_TYPE` | The value matches no known ID format | `detect()` / `validate_many()` only |
