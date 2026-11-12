@@ -31,12 +31,16 @@ jobs:
           fetch-depth: 0
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: Update versions and changelog
-        uses: release-plz/action@v0.5
+      - name: Install release-plz
+        # NOTE: release-plz/action only accepts `release-pr` or `release`
+        # as its `command` — `update` is silently ignored (the action runs
+        # neither), which is why the first version of this workflow opened
+        # no PR at all. Install the CLI directly and run `update` ourselves.
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b
         with:
-          command: update
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tool: release-plz
+      - name: Update versions and changelog
+        run: release-plz update
       - name: Sync JS/Python/docs versions with the Rust workspace
         run: bash scripts/sync-versions.sh
       - name: Refresh Cargo.lock
