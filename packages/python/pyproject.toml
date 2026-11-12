@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "indycheck"
-version = "0.2.1"
+version = "0.2.2"
 description = "Offline Indian ID validator — mobile, PAN, Aadhaar, GSTIN, IFSC, UPI and PIN code. Format + checksum only, no network, no government database."
 readme = "README.md"
 license = { text = "MIT" }
