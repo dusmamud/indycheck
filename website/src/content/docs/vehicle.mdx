@@ -1,13 +1,13 @@
 ---
 title: Vehicle registration
-description: Validate Indian vehicle numbers — 2 letters + district + series + number, 8–10 characters. Format only, no public checksum.
+description: Validate Indian vehicle numbers — state format 2 letters + district + series + number, and Bharat (BH) series YYBH####XX. Format only, no public checksum.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-Validates an Indian vehicle registration number: 2 state-code letters + 1–2 digit district code + 1–2 letter series + 1–4 digit number, 8–10 characters after stripping spaces and hyphens (for example `DL01AB1234` or `DL01AB123`). Spaces and hyphens between segments are accepted — plates are printed that way.
+Validates an Indian vehicle registration number in two shapes: the state format (2 state-code letters + 1–2 digit district code + 1–2 letter series + 1–4 digit number, 8–10 characters, for example `DL01AB1234`) and the Bharat (BH) series (`YYBH####XX`, for example `22BH1234AA`). Spaces and hyphens between segments are accepted — plates are printed that way.
 
-## Format — `SS NN XX(X) NNN(N)`
+## Format — state: `SS NN XX(X) NNN(N)`
 
 | Part | Meaning | Example |
 | --- | --- | --- |
@@ -16,15 +16,28 @@ Validates an Indian vehicle registration number: 2 state-code letters + 1–2 di
 | `XX(X)` | Series, 1–2 letters | `AB` |
 | `NNNN` | Unique number (1–4 digits) | `1234` |
 
+## Format — Bharat (BH) series: `YY BH #### XX`
+
+MoRTH notified the BH series on 26 August 2021 (effective 15 September 2021) for owners who move between states — no state code, no re-registration on relocation.
+
+| Part | Meaning | Example |
+| --- | --- | --- |
+| `YY` | Registration year, 21 or later | `22` = 2022 |
+| `BH` | Bharat series code | `BH` |
+| `####` | 4-digit number, 0001–9999 | `1234` |
+| `XX` | 2 suffix letters, excluding `I` and `O` | `AA` |
+
 ## Rules
 
 | Rule | Detail |
 | --- | --- |
 | Length | 8–10 characters ignoring spaces/hyphens |
-| Separators | Spaces and hyphens accepted even in strict mode (`DL 01 AB 1234`, `DL-01-AB-1234`) |
+| Separators | Spaces and hyphens accepted even in strict mode (`DL 01 AB 1234`, `22 BH 1234 AA`) |
 | State code | **Not** checked against a list of states — any 2 letters pass (for example `XX01AB1234` is valid) |
 | Series letters | Any letters — there is no rule against `I` or `O` (for example `DL01IB1234` is valid) |
-| Bharat (BH) series | **Not** a separate shape — `22BH1234AA` does not validate (it starts with digits) |
+| BH year | Must be 21 or later — the BH series did not exist before 2021 (`20BH1234AA` is invalid) |
+| BH number | Must be 0001–9999 (`22BH0000AA` is invalid) |
+| BH suffix | `I` and `O` are excluded — they look like digits on a plate (`22BH1234AI` is invalid) |
 | Checksum | **None — format only, no public checksum** |
 
 ## Usage
@@ -34,8 +47,15 @@ import { validateVehicle } from 'indycheck';
 
 validateVehicle('DL01AB1234');
 // { ok: true, code: 'VALID',
-//   parsed: { registration: 'DL01AB1234', state_code: 'DL',
-//             district: '01', series: 'AB', number: '1234' } }
+//   parsed: { registration: 'DL01AB1234', series_type: 'state',
+//             state_code: 'DL', district: '01', series: 'AB',
+//             number: '1234' } }
+
+validateVehicle('22BH1234AA');
+// { ok: true, code: 'VALID',
+//   parsed: { registration: '22BH1234AA', series_type: 'bharat',
+//             year: '22', series: 'BH', number: '1234',
+//             suffix: 'AA' } }
 
 validateVehicle('DL 01 AB 1234'); // ok: true — spaces accepted
 ```
@@ -64,7 +84,13 @@ assert_eq!(r.parsed.unwrap()["state_code"], "DL");
 | `DL01AB123` | ✅ Valid (9 characters, 3-digit number) | `VALID` |
 | `XX01AB1234` | ✅ Valid — the state code is not checked against a list | `VALID` |
 | `DL01IB1234` | ✅ Valid — series letters may be `I` or `O` | `VALID` |
-| `22BH1234AA` | ❌ Invalid — must start with 2 letters | `INVALID_FORMAT` |
+| `22BH1234AA` | ✅ Valid — Bharat (BH) series, year 22 | `VALID` |
+| `26BH9876AB` | ✅ Valid — Bharat (BH) series, year 26 | `VALID` |
+| `22 BH 1234 AA` | ✅ Valid — BH, spaces accepted | `VALID` |
+| `20BH1234AA` | ❌ Invalid — BH series started in 2021 | `INVALID_FORMAT` |
+| `22BH0000AA` | ❌ Invalid — BH number must be 0001–9999 | `INVALID_FORMAT` |
+| `22BH1234AI` | ❌ Invalid — BH suffix cannot be `I` or `O` | `INVALID_FORMAT` |
+| `22BH1234A` | ❌ Invalid — BH needs 2 suffix letters | `INVALID_FORMAT` |
 | `DLAB1234` | ❌ Invalid — no district digits | `INVALID_FORMAT` |
 | `DL01AB12345` | ❌ Invalid — 11 characters | `INVALID_LENGTH` |
 | *(empty)* | ❌ Invalid | `EMPTY` |
@@ -79,15 +105,27 @@ assert_eq!(r.parsed.unwrap()["state_code"], "DL");
 
 ## Parsed output
 
-On success, `parsed` contains:
+On success, `parsed` contains `series_type` (`"state"` or `"bharat"`) plus the parts of that shape:
 
 ```json
 {
   "registration": "DL01AB1234",
+  "series_type": "state",
   "state_code": "DL",
   "district": "01",
   "series": "AB",
   "number": "1234"
+}
+```
+
+```json
+{
+  "registration": "22BH1234AA",
+  "series_type": "bharat",
+  "year": "22",
+  "series": "BH",
+  "number": "1234",
+  "suffix": "AA"
 }
 ```
 
