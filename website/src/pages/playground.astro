@@ -35,17 +35,19 @@
 		/>
 		<meta property="og:title" content="Playground — indycheck" />
 		<meta property="og:description" content="Validate Indian IDs in your browser. No data leaves the page." />
-		<meta property="og:url" content="https://indycheck.dev/playground/" />
-		<meta property="og:image" content="https://indycheck.dev/og.svg" />
+		<meta property="og:url" content="https://indycheck.pages.dev/playground/" />
+		<meta property="og:image" content="https://indycheck.pages.dev/og.svg" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="canonical" href="https://indycheck.dev/playground/" />
+		<link rel="canonical" href="https://indycheck.pages.dev/playground/" />
 		<style>
-			:root { --bg: #0f172a; --card: #1e293b; --ink: #f8fafc; --muted: #94a3b8; --green: #22c55e; --red: #f87171; --amber: #fbbf24; --line: #334155; }
+			:root { --bg: #0a0f1e; --card: #141f3a; --ink: #f1f5f9; --muted: #a7b4c9; --green: #22c55e; --green-bright: #4ade80; --red: #f87171; --amber: #fbbf24; --line: #263449; --ring: #4ade80; }
 			* { box-sizing: border-box; }
 			body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; }
+			::selection { background: rgba(34, 197, 94, 0.35); }
+			a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 			a { color: #4ade80; }
 			.wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 64px; }
-			header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+			header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; position: sticky; top: 0; z-index: 20; background: rgba(10, 15, 30, 0.88); backdrop-filter: blur(12px); }
 			.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.25rem; color: var(--ink); text-decoration: none; }
 			.logo img { width: 32px; height: 32px; }
 			nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-weight: 600; }
@@ -55,10 +57,14 @@
 			.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 			.tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 9px 18px; cursor: pointer; font-weight: 600; font-size: 0.95rem; }
 			.tabs button[aria-pressed="true"] { background: var(--green); color: #052e12; border-color: var(--green); }
+			.tabs button:hover { border-color: var(--green); }
 			.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
 			.input-row { display: flex; gap: 10px; flex-wrap: wrap; }
 			.input-row input { flex: 1 1 300px; background: #020617; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 13px; font-size: 1.05rem; font-family: ui-monospace, monospace; }
-			.btn { border: none; border-radius: 8px; padding: 13px 22px; font-weight: 700; cursor: pointer; font-size: 1rem; }
+			.btn { border: none; border-radius: 8px; padding: 13px 22px; font-weight: 700; cursor: pointer; font-size: 1rem; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+			.btn:hover { transform: translateY(-1px); }
+			.btn-primary:hover { background: #16a34a; }
+			.btn-ghost:hover { border-color: var(--green); color: var(--green-bright); }
 			.btn-primary { background: var(--green); color: #052e12; }
 			.btn-ghost { background: #020617; color: var(--ink); border: 1px solid var(--line); }
 			.presets { margin: 14px 0 0; color: var(--muted); font-size: 0.9rem; }
@@ -87,11 +93,26 @@
 			.engine { font-size: 0.85rem; color: var(--muted); margin-top: 12px; }
 			.share { margin-top: 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 			.share button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+			.share button:hover { border-color: var(--green); color: var(--green-bright); }
 			.share span { color: var(--muted); font-size: 0.9rem; }
 			.share code { color: #e2e8f0; font-size: 0.85rem; word-break: break-all; }
 			.note { background: #451a03; border: 1px solid #92400e; border-radius: 12px; padding: 16px 18px; margin-top: 32px; color: #fde68a; font-size: 0.95rem; }
 			.note a { color: #fcd34d; }
 			footer { margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 0.9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+			@media (max-width: 640px) {
+				.wrap { padding: 0 16px 48px; }
+				header { padding: 14px 0; }
+				nav a { margin-left: 12px; font-size: 0.92rem; }
+				.logo { font-size: 1.1rem; }
+				h1 { font-size: 1.6rem; margin: 16px 0 4px; }
+				.panel { padding: 16px; }
+				.input-row input { flex: 1 1 100%; }
+				.input-row .btn { flex: 1 1 100%; }
+				.tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+				.tabs button { flex: 0 0 auto; }
+				.options .row { gap: 12px; }
+			}
+			@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 		</style>
 	</head>
 	<body>
@@ -147,6 +168,7 @@
 				<p class="engine" id="engine">Engine: not loaded yet.</p>
 				<div class="share">
 					<button type="button" id="copy-link">Copy shareable link</button>
+					<button type="button" id="copy-json">Copy result JSON</button>
 					<span id="share-status"></span>
 					<code id="share-url"></code>
 				</div>
@@ -197,6 +219,7 @@
 			const upperEl = document.querySelector('#opt-upper');
 
 			let currentType = 'pan';
+			let lastResult = null; // last validation result, for "Copy result JSON"
 			let generatedValue = false; // true when the input came from "Generate test data"
 
 			// ------------------------------------------------------------ WASM
@@ -304,6 +327,7 @@
 					return;
 				}
 				const r = await validateValue(currentType, value, currentOptions());
+				lastResult = r;
 				resultEl.className = `result show ${r.ok ? 'valid' : 'invalid'}`;
 				resultEl.innerHTML = `
 					<div class="verdict ${r.ok ? 'valid' : 'invalid'}">${r.ok ? '✓ Valid' : '✗ Invalid'}${generatedValue ? '<span class="testdata">TEST DATA ONLY</span>' : ''}</div>
@@ -354,6 +378,12 @@
 				} catch {
 					shareStatusEl.textContent = 'Copy failed — copy the URL shown.';
 				}
+				setTimeout(() => (shareStatusEl.textContent = ''), 2500);
+			});
+
+			document.querySelector('#copy-json').addEventListener('click', async () => {
+				if (!lastResult) { shareStatusEl.textContent = 'Validate something first.'; setTimeout(() => (shareStatusEl.textContent = ''), 2500); return; }
+				try { await navigator.clipboard.writeText(JSON.stringify(lastResult, null, 2)); shareStatusEl.textContent = 'Result JSON copied!'; } catch { shareStatusEl.textContent = 'Copy failed.'; }
 				setTimeout(() => (shareStatusEl.textContent = ''), 2500);
 			});
 
