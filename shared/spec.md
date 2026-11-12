@@ -97,6 +97,8 @@ generate_pan(entity: char) -> String       // e.g. generate_pan('P')
 generate_aadhaar() -> String               // 12 digits, valid Verhoeff digit
 generate_gstin(state_code: &str) -> String // e.g. generate_gstin("18"); unknown code falls back to "18"
 generate_mobile() -> String                // 10 digits, first digit 6-9
+generate_vehicle() -> String               // e.g. DL01AB1234 (state format)
+generate_vehicle_bharat() -> String        // e.g. 22BH1234AA (Bharat format)
 ```
 
 **Warning: generated values are syntactically valid, not real issued IDs.**
@@ -115,8 +117,10 @@ indycheck generate <type> [arg]     # prints {"type": ..., "value": ...}
 
 Types for validate: `pan, aadhaar, gstin, ifsc, upi, mobile, pincode, tan,
 cin, llpin, voter, vehicle`. Types for generate: `pan [entity-char],
-aadhaar, gstin [state-code], mobile`. Exit codes: 0 = valid/success,
-1 = invalid input, 2 = usage error. No extra dependencies — plain
+aadhaar, gstin [state-code], mobile, vehicle, vehicle-bharat`.
+`update` prints the installed version, checks crates.io for a newer one
+(via `curl`, falling back to `cargo search`) and prints the update command.
+Exit codes: 0 = valid/success, 1 = invalid input, 2 = usage error. No extra dependencies — plain
 `std::env::args` parsing. Run with
 `cargo run -p indycheck -- validate pan ABCDE1234F`.
 
