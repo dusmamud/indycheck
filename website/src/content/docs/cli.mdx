@@ -146,6 +146,26 @@ indycheck 0.2.0
 `indycheck version` and `indycheck -V` print the same line. Useful in scripts
 to check the installed version before calling `validate`.
 
+## `update` — is there a newer version?
+
+```bash
+$ indycheck update
+indycheck 0.2.1 (installed)
+latest: 0.2.1 (crates.io)
+You're up to date.
+```
+
+The check goes to crates.io (via `curl`, falling back to `cargo search`);
+it never installs anything by itself. If a newer version exists, it prints:
+
+```bash
+Update available. Run:
+  cargo install indycheck --force
+```
+
+Offline (or with neither `curl` nor `cargo` available) it says so and prints
+the same update command. `update` takes no arguments.
+
 ## Planned, not in v0.2.0
 
 - `--lenient` / `--strict` flags and per-option flags on `validate`
