@@ -18,7 +18,7 @@
  * `code` is one of the exact codes the Rust core returns — see
  * /error-codes/ and `shared/spec.md`: VALID, EMPTY, INVALID_LENGTH,
  * INVALID_FORMAT, INVALID_CHECKSUM, INVALID_FIRST_DIGIT,
- * INVALID_STATE_CODE, INVALID_ENTITY (reserved in v0.1, never emitted),
+ * INVALID_STATE_CODE, INVALID_ENTITY (reserved, never emitted as of v0.2.0),
  * INVALID_HANDLE, UNKNOWN_TYPE.
  * `parsed` holds the structured fields extracted from a valid value,
  * with exactly the keys the core returns for that type.
@@ -151,7 +151,7 @@ function prepare(type, raw, opts) {
 // them (crates/indycheck/src/pan.rs). A 4th character that is not in
 // this list is reported as entity "Unknown" and the PAN is STILL valid —
 // the canonical format example ABCDE1234F itself has 4th character D.
-// INVALID_ENTITY is a reserved stable code, not emitted in v0.1.
+// INVALID_ENTITY is a reserved stable code, not emitted as of v0.2.0.
 const PAN_ENTITY_NAMES = {
 	P: 'Individual',
 	C: 'Company',
@@ -574,11 +574,13 @@ export function validateEpic(input, opts) {
 
 // ------------------------------------------------------------------ Vehicle
 // Indian vehicle registration, exactly as the Rust core checks it
-// (crates/indycheck/src/vehicle.rs): 2 state-code letters + 1–2 digit
-// district + 1–2 letter series + 1–4 digit number, 8–10 characters
-// after stripping spaces/hyphens. Format only — the 2-letter state code
-// is NOT checked against a list of states, there is no Bharat (BH)
-// series, series letters may be I or O, and there is no checksum.
+// (crates/indycheck/src/vehicle.rs): two shapes since v0.2.0 —
+// state format: 2 state-code letters + 1–2 digit district + 1–2 letter
+// series + 1–4 digit number (8–10 chars), and Bharat (BH) series:
+// YYBH####XX, year 21+, number 0001–9999, suffix excludes I/O.
+// Spaces/hyphens stripped first. Format only — the 2-letter state code
+// is NOT checked against a list of states, state series letters may be
+// I or O, and there is no checksum.
 export function validateVehicle(input, opts) {
 	const raw = String(input ?? '');
 	const prep = prepare('vehicle', raw, opts);
@@ -593,6 +595,9 @@ export function validateVehicle(input, opts) {
 			'Vehicle number must be 8–10 characters (e.g. DL01AB1234).',
 			'वाहन नंबर 8–10 अक्षरों का होना चाहिए (जैसे DL01AB1234)।',
 		);
+	// Bharat (BH) series: starts with 2 digits (the registration year),
+	// so check it before the state format, which needs 2 leading letters.
+	if (/^[0-9]{2}/.test(value)) return validateBharatVehicle(raw, value);
 	if (!/^[A-Z]{2}/.test(value))
 		return fail(
 			'vehicle',
@@ -622,10 +627,55 @@ export function validateVehicle(input, opts) {
 		);
 	return pass('vehicle', raw, value, {
 		registration: value,
+		series_type: 'state',
 		state_code: value.slice(0, 2),
 		district,
 		series,
 		number,
+	});
+}
+
+// Bharat (BH) series: `YYBH####XX` — mirror of validate_bharat in
+// crates/indycheck/src/vehicle.rs. Called only when the cleaned input
+// starts with 2 digits.
+function validateBharatVehicle(raw, value) {
+	const notBharat = (en, hi) => fail('vehicle', raw, 'INVALID_FORMAT', en, hi);
+	// Shape: exactly 10 chars, `BH` at 2–3, 4 digits, 2 letters.
+	const shapeOk =
+		value.length === 10 &&
+		value.slice(2, 4) === 'BH' &&
+		/^[0-9]{4}$/.test(value.slice(4, 8)) &&
+		/^[A-Z]{2}$/.test(value.slice(8, 10));
+	if (!shapeOk)
+		return notBharat(
+			'Vehicle registration number must start with 2 state-code letters (e.g. DL01AB1234), or be a Bharat series number (e.g. 22BH1234AA)',
+			'वाहन नंबर 2 राज्य-कोड अक्षरों से शुरू होना चाहिए (जैसे DL01AB1234), या भारत सीरीज़ नंबर होना चाहिए (जैसे 22BH1234AA)',
+		);
+	const year = value.slice(0, 2);
+	if (Number(year) < 21)
+		return notBharat(
+			'Bharat (BH) series numbers start from 2021 — the year must be 21 or later (e.g. 22BH1234AA)',
+			'Bharat (BH) series number 2021 se shuru hue hain — saal 21 ya usse baad ka hona chahiye (jaise 22BH1234AA)',
+		);
+	const number = value.slice(4, 8);
+	if (number === '0000')
+		return notBharat(
+			'Bharat (BH) series number must be 0001-9999 (e.g. 22BH1234AA)',
+			'Bharat (BH) series number 0001 se 9999 ke beech hona chahiye (jaise 22BH1234AA)',
+		);
+	const suffix = value.slice(8, 10);
+	if (suffix.includes('I') || suffix.includes('O'))
+		return notBharat(
+			'Bharat (BH) series suffix letters cannot be I or O (e.g. 22BH1234AA)',
+			'Bharat (BH) series ke aakhiri akshar I ya O nahi ho sakte (jaise 22BH1234AA)',
+		);
+	return pass('vehicle', raw, value, {
+		registration: value,
+		series_type: 'bharat',
+		year,
+		series: 'BH',
+		number,
+		suffix,
 	});
 }
 
@@ -683,6 +733,8 @@ export function formatMobile(value) {
 export function formatVehicle(value) {
 	const r = validateVehicle(value);
 	if (!r.ok) return null;
+	if (r.parsed.series_type === 'bharat')
+		return `${r.parsed.year} ${r.parsed.series} ${r.parsed.number} ${r.parsed.suffix}`;
 	return `${r.parsed.state_code} ${r.parsed.district} ${r.parsed.series} ${r.parsed.number}`;
 }
 export function formatPan(value) {
