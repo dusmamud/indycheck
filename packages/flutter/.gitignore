@@ -1,0 +1,10 @@
+# Dart / Flutter build artefacts
+.dart_tool/
+build/
+pubspec.lock
+
+# Native libraries are build artefacts, never committed — build with:
+# cargo build -p indycheck-ffi --release
+*.so
+*.dylib
+*.dll
