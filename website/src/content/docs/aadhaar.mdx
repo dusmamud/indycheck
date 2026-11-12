@@ -47,14 +47,14 @@ assert!(r.ok);
 
 | Input | Result | Code |
 | --- | --- | --- |
-| `234567890124` | ✅ Valid (Verhoeff passes) | `VALID` |
-| `871366569991` | ✅ Valid | `VALID` |
-| `2345 6789 0124` | ✅ Valid (spaces ignored) | `VALID` |
-| `234567890123` | ❌ Invalid — checksum fails | `INVALID_CHECKSUM` |
-| `123456789012` | ❌ Invalid — starts with 1 | `INVALID_FIRST_DIGIT` |
-| `23456789012` | ❌ Invalid — 11 digits | `INVALID_LENGTH` |
-| `23456789012A` | ❌ Invalid — letter inside | `INVALID_FORMAT` |
-| *(empty)* | ❌ Invalid | `EMPTY` |
+| `234567890124` | Valid (Verhoeff passes) | `VALID` |
+| `871366569991` | Valid | `VALID` |
+| `2345 6789 0124` | Valid (spaces ignored) | `VALID` |
+| `234567890123` | Invalid — checksum fails | `INVALID_CHECKSUM` |
+| `123456789012` | Invalid — starts with 1 | `INVALID_FIRST_DIGIT` |
+| `23456789012` | Invalid — 11 digits | `INVALID_LENGTH` |
+| `23456789012A` | Invalid — letter inside | `INVALID_FORMAT` |
+| *(empty)* | Invalid | `EMPTY` |
 
 ## Error codes
 
