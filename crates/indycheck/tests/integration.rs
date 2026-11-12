@@ -1,10 +1,10 @@
 use indycheck::{
-    detect, format_gstin, format_mobile, format_pan, generate_aadhaar, generate_gstin,
-    generate_mobile, generate_pan, mask_aadhaar, mask_mobile, mask_pan, validate_aadhaar,
-    validate_aadhaar_with_options, validate_cin, validate_gstin, validate_gstin_with_options,
-    validate_ifsc, validate_llpin, validate_many, validate_mobile, validate_mobile_with_options,
-    validate_pan, validate_pan_with_options, validate_pincode, validate_tan, validate_upi,
-    validate_vehicle, validate_voter_id, Options, ValidationResult,
+    Options, ValidationResult, detect, format_gstin, format_mobile, format_pan, generate_aadhaar,
+    generate_gstin, generate_mobile, generate_pan, mask_aadhaar, mask_mobile, mask_pan,
+    validate_aadhaar, validate_aadhaar_with_options, validate_cin, validate_gstin,
+    validate_gstin_with_options, validate_ifsc, validate_llpin, validate_many, validate_mobile,
+    validate_mobile_with_options, validate_pan, validate_pan_with_options, validate_pincode,
+    validate_tan, validate_upi, validate_vehicle, validate_voter_id,
 };
 use serde::Deserialize;
 
