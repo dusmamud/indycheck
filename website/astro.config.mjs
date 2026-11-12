@@ -78,7 +78,7 @@ export default defineConfig({
 					label: 'Start here',
 					items: [
 						{ label: 'Getting started', slug: 'getting-started' },
-						{ label: 'Changelog', slug: 'changelog', badge: { text: 'New', variant: 'success' } },
+						{ label: 'Changelog', slug: 'changelog' },
 						{ label: 'FAQ', slug: 'faq' },
 						{ label: 'Contributing', slug: 'contributing' },
 					],
