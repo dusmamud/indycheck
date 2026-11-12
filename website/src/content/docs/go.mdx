@@ -1,0 +1,115 @@
+---
+title: Go
+description: Use indycheck in Go — offline PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN code, TAN, CIN, LLPIN, Voter ID and vehicle validation through a cgo wrapper over the C API.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Go package is a thin [cgo](https://pkg.go.dev/cmd/cgo) wrapper over the C API in `crates/indycheck-ffi`, which itself wraps the Rust core. **No validation logic lives in Go** — every function calls the matching C function and decodes the JSON result it returns, so Go returns the same answer as Rust for the same input.
+
+<Aside type="caution" title="Status — in the repo, no version tag yet">
+  The package lives in `packages/go` in the repo (module `github.com/dusmamud/indycheck-go`) and ships with the **upcoming 0.2.3 release** — but there is **no version tag yet, so `go get github.com/dusmamud/indycheck-go` does not work**. Until a tag exists, use the `replace` directive below. You also need to build the Rust shared library once (see below) — the `.so` is a build artefact, never committed to the repo.
+</Aside>
+
+## Install
+
+From a checkout of the indycheck repo, point your module at the package with a `replace` directive:
+
+```sh
+go mod edit -require=github.com/dusmamud/indycheck-go@v0.0.0 \
+  -replace=github.com/dusmamud/indycheck-go=/path/to/indycheck/packages/go
+go mod tidy
+```
+
+Requires Go 1.22 or later, a Rust toolchain (`cargo`) and a C compiler (`gcc`) — needed once, to build the shared library this package links against.
+
+## Build the native library
+
+From the repo root, build the Rust shared library first:
+
+```sh
+cargo build -p indycheck-ffi --release
+```
+
+That produces `target/release/libindycheck_ffi.so`. The `#cgo` directives in `indycheck.go` point at `../../crates/indycheck-ffi/indycheck.h` and `../../target/release/libindycheck_ffi.so` (with an `rpath` so test and example binaries find the library at run time). If you move the `.so` elsewhere, set `CGO_LDFLAGS` / `LD_LIBRARY_PATH` accordingly — or vendor the header + library next to your own build.
+
+On Windows the package links the system libraries the Rust standard library needs explicitly (`-lws2_32 -luserenv -lbcrypt -lntdll`) — MinGW `gcc` does not link them implicitly the way MSVC's `link.exe` does.
+
+## Example
+
+```go
+package main
+
+import (
+	"fmt"
+
+	indycheck "github.com/dusmamud/indycheck-go"
+)
+
+func main() {
+	r, err := indycheck.ValidatePan("ABCDE1234F")
+	if err != nil {
+		// transport / JSON error — not a validation failure
+		panic(err)
+	}
+	if r.Valid {
+		fmt.Println(r.Code, r.Parsed["entity"], r.Parsed["entity_code"])
+	} else {
+		fmt.Println(r.Code, r.ReasonEN, r.ReasonHI)
+	}
+
+	// Bharat (BH) series vehicle number
+	v, _ := indycheck.ValidateVehicle("22BH1234AA")
+	fmt.Println(v.Valid, v.Parsed["series_type"], v.Parsed["year"], v.Parsed["suffix"])
+
+	// Detect the type first, then validate a batch in one call
+	t, _ := indycheck.Detect("9876543210") // "mobile"
+	fmt.Println(t)
+	batch, _ := indycheck.ValidateMany([]string{"ABCDE1234F", "9876543210", "nope"})
+	fmt.Println(len(batch), batch[2].Valid) // 3 false
+
+	ver, _ := indycheck.Version()
+	fmt.Println(ver) // e.g. "0.2.2"
+}
+```
+
+## API
+
+Every validator returns `(Result, error)`. `error` is only for transport/JSON failures; a failed validation is a normal `Result` with `Valid == false` and a stable `Code` (`INVALID_FORMAT`, `INVALID_LENGTH`, `EMPTY`, …).
+
+```go
+type Result struct {
+    Valid    bool           `json:"valid"`
+    Code     string         `json:"code"`
+    ReasonEN string         `json:"reason_en"`
+    ReasonHI string         `json:"reason_hi"`
+    Parsed   map[string]any `json:"parsed,omitempty"` // extracted fields on success, nil otherwise
+}
+```
+
+| Function | Validates |
+|---|---|
+| `ValidatePan` | PAN, e.g. `ABCDE1234F` |
+| `ValidateAadhaar` | 12-digit Aadhaar (Verhoeff checksum) |
+| `ValidateGstin` | 15-character GSTIN |
+| `ValidateMobile` | Indian mobile (`+91` / `91` / `0` prefix, spaces/hyphens OK) |
+| `ValidateVehicle` / `ValidateVehicleRegistration` | State format (`DL01AB1234`) or Bharat series (`22BH1234AA`) |
+| `ValidateIfsc` | IFSC (11 characters) |
+| `ValidateUpi` | UPI ID (`name@handle`) |
+| `ValidatePincode` | 6-digit PIN code |
+| `ValidateTan` | TAN (format only) |
+| `ValidateCin` | CIN (format only) |
+| `ValidateLlpin` | LLPIN |
+| `ValidateVoterID` / `ValidateEpic` | Voter ID / EPIC |
+| `Detect` | Returns the type string (`"pan"`, `"mobile"`, `"vehicle"`, …, `"unknown"`) |
+| `ValidateMany([]string)` | Batch: detects then validates each input, results in input order |
+| `Version()` | Core version string, e.g. `"0.2.2"` |
+
+All functions are verified in `packages/go/indycheck.go`.
+
+## What is not here yet
+
+- **No version tag, so no `go get`.** The module path is `github.com/dusmamud/indycheck-go`, but until a tag (e.g. `v0.2.3`) is pushed, Go tooling cannot fetch it — use the `replace` directive above.
+- **No prebuilt native library.** You must run the `cargo build` step first.
+- **No test-data generators.** Unlike the Rust core, the JS/Python wrappers, Dart and PHP, the Go package has **no `Generate*` helpers** — the C API has the six `indycheck_generate_*` functions, but they are not wrapped in Go yet. If you need mock test data from Go, call the C API directly or generate it with another wrapper.
+- **No options variants.** There are no `Validate*WithOptions` functions yet — validation always uses the core defaults.
