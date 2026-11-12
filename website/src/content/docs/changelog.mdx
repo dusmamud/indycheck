@@ -1,0 +1,47 @@
+---
+title: Changelog
+description: What changed in each indycheck release — new validators, fixes, and breaking changes. All packages (Rust, npm, PyPI) share one version.
+---
+
+All notable changes to indycheck, newest first. The full changelog lives in [`CHANGELOG.md`](https://github.com/dusmamud/indycheck/blob/main/CHANGELOG.md) in the repo. All crates, npm and PyPI packages share one version in lockstep.
+
+## [0.2.0] - 2026-11-12
+
+### Added
+
+- **Bharat (BH) series vehicle numbers are now accepted: `22BH1234AA`** (`YYBH####XX` — registration year 21+, `BH`, 4-digit number 0001–9999, 2 suffix letters excluding `I`/`O`). `validateVehicle` returns `series_type: "bharat"` with `year`/`suffix` in `parsed`; state-format numbers now also return `series_type: "state"`. Mirrored in the JavaScript and Python wrappers, and in the [playground](/playground/) and the landing-page demo.
+- See the [Vehicle page](/vehicle/) for the full BH rules and examples.
+
+## [0.1.2] - 2026-11-12
+
+### Fixed
+
+- `rust-version` is now inherited by the core crate, so crates.io shows the minimum supported Rust version (1.85) instead of blank.
+- First release published via crates.io Trusted Publishing (GitHub OIDC) instead of a long-lived API token.
+
+## [0.1.1] - 2026-11-12
+
+### Fixed
+
+- crates.io page had no README: core crate now sets `readme = "../../README.md"`, plus `keywords` and `categories`, so the README renders on crates.io.
+- Rust edition upgraded 2021 → 2024 (`rust-version = "1.85"`). No API change.
+
+## [0.1.0] - 2026-11-11
+
+### Added
+
+- Rust core (`indycheck` crate): offline validators for mobile, PAN, Aadhaar (Verhoeff), GSTIN (Mod-36 Luhn), IFSC, UPI, PIN code, TAN, CIN, LLPIN, Voter ID (EPIC) and vehicle registration.
+- `ValidationResult { valid, code, reason_en, reason_hi, parsed }` — never throws on bad input; stable machine-readable error codes.
+- Options (`strict` / `lenient`, `allow_spaces_hyphens`, `normalise_plus91`, `uppercase`) and `validate_*_with_options`.
+- `format_pan`, `format_gstin`, `format_mobile`, `mask_pan`, `mask_mobile`, `mask_aadhaar` (UIDAI-style `XXXX XXXX 0124`).
+- `detect` (auto-detect) and `validate_many` (bulk batch).
+- Mock test-data generators — syntactically valid test data only, never real IDs.
+- CLI binary: `indycheck validate <type> <value>`, `detect`, `generate`.
+- WASM bindings and Python bindings (PyO3 + maturin, abi3 wheel).
+- TypeScript wrapper + Zod schemas; Python wrapper + Pydantic v2 types.
+- Website: Astro 5 + Starlight docs, landing page and in-browser WASM playground (Pagefind search, sitemap).
+
+### Known limitations
+
+- PAN, IFSC, TAN, CIN, LLPIN, Voter ID and vehicle registration have no public checksum — format only. This is format + checksum validation, **not** KYC verification; no UIDAI/NSDL/GSTN connection.
+- Bharat-series vehicle numbers were not accepted in v0.1 — fixed in v0.2.0 above.
