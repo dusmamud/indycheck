@@ -7,6 +7,9 @@ description = "Offline Indian ID validator — PAN, Aadhaar, GSTIN, IFSC, UPI, m
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
+readme = "../../README.md"
+keywords = ["validation", "india", "pan", "aadhaar", "gstin"]
+categories = ["data-structures", "parsing"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
