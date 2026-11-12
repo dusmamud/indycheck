@@ -30,7 +30,12 @@ jobs:
       # not spuriously red.
       - name: Install cbindgen
         run: cargo install cbindgen --version 0.29.4 --locked
+      # The header is platform-independent, so the drift check runs
+      # only on Linux: on Windows the checkout converts line endings
+      # and `diff` fails spuriously on every line even when the header
+      # is correct (the ubuntu job is the canonical check).
       - name: Check committed header is up to date
+        if: runner.os == 'Linux'
         working-directory: crates/indycheck-ffi
         shell: bash
         run: |
