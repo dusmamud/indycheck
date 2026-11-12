@@ -5,6 +5,35 @@ All notable changes to indycheck are documented here. The format is based on
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 All crates, npm and PyPI packages share one version in lockstep.
 
+## [Unreleased]
+
+### Added
+- CLI: `indycheck update` prints the installed version, checks crates.io
+  for a newer one (via `curl`, falling back to `cargo search`) and prints
+  the `cargo install indycheck --force` command. It never installs
+  anything by itself and still exits 0 when offline.
+- Generators: `generate_vehicle()` (state format, e.g. `DL01AB1234`) and
+  `generate_vehicle_bharat()` (Bharat format, e.g. `22BH1234AA`) in the
+  Rust core, JS package, Python package and WASM bindings; `indycheck
+  generate vehicle` / `generate vehicle-bharat` in the CLI.
+- npm Trusted Publishing: new `.github/workflows/npm.yml` publishes to
+  npm via GitHub OIDC (`npm publish --provenance`) — no token, no staged
+  publish, no passkey approval. The trusted publisher must be added once
+  on npmjs.com (package Settings > Trusted Publishers > GitHub Actions,
+  repo `dusmamud/indycheck`, workflow `npm.yml`).
+
+### Changed
+- Python bindings: PyO3 upgraded 0.22 → 0.30; `indycheck-py` now builds
+  on Rust edition 2024 like every other crate (the old edition-2021
+  override is gone).
+- WASM workflow: installs `wasm-opt` (Binaryen) so wasm-pack optimizes
+  the playground WASM instead of silently skipping that step.
+- Docs: the Test-data generators page no longer claims a `generate(type)`
+  dispatcher or `generateIfsc` / `generateUpi` / `generatePincode` /
+  `generateTan` / `generateCin` / `generateLlpin` / `generateEpic`
+  helpers — those never existed in the package. Only the five real
+  generators are documented, with examples that use the real API.
+
 ## [0.2.1] - 2026-11-12
 
 ### Fixed
