@@ -1,14 +1,25 @@
 name: Website
 
+# Build + check on every website change (push + PR). Deploy to Cloudflare
+# Pages only after the build job passes, and only on push to main.
+# Deploy uses the pre-built dist from the build job, so exactly what was
+# tested is what goes live. Secrets CLOUDFLARE_ACCOUNT_ID and
+# CLOUDFLARE_API_TOKEN must exist in the repo's GitHub Actions secrets.
 on:
   push:
     branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/website.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/website.yml'
 
 jobs:
-  website:
-    name: Astro Starlight build
+  build:
+    name: Astro Starlight build + checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +38,33 @@ jobs:
         working-directory: website
         run: |
           test -f dist/index.html
+          test -f dist/changelog/index.html
           test -f dist/sitemap-index.xml
           test -f dist/playground/index.html
           test -f dist/pan/index.html
           test -f dist/getting-started/index.html
           echo "website pages OK"
+      - name: upload dist for deploy
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-dist
+          path: website/dist
+
+  deploy:
+    name: Deploy to Cloudflare Pages
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: website-dist
+          path: website/dist
+      - name: deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy website/dist --project-name indycheck --commit-dirty=true
