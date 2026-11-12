@@ -42,6 +42,14 @@ jobs:
         run: |
           curl -fsSL -o /tmp/jna-5.16.0.jar https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.16.0/jna-5.16.0.jar
           test -s /tmp/jna-5.16.0.jar
+      # The Kotlin stdlib is NOT on the runtime classpath by default:
+      # `kotlinc` compiles against it, but `java -cp ...` must list it
+      # explicitly or MainKt dies with NoClassDefFoundError for
+      # kotlin/jvm/internal/Intrinsics. Same version as the compiler.
+      - name: Download Kotlin stdlib
+        run: |
+          curl -fsSL -o /tmp/kotlin-stdlib-2.1.20.jar https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.1.20/kotlin-stdlib-2.1.20.jar
+          test -s /tmp/kotlin-stdlib-2.1.20.jar
       - name: Build UniFFI native library
         run: cargo build -p indycheck-uniffi --release
       - name: Compile Kotlin bindings
@@ -61,4 +69,4 @@ jobs:
       - name: Compile and run smoke test
         run: |
           kotlinc -cp /tmp/indycheck-uniffi.jar:/tmp/jna-5.16.0.jar -d /tmp/main.jar /tmp/Main.kt
-          java -cp /tmp/main.jar:/tmp/indycheck-uniffi.jar:/tmp/jna-5.16.0.jar -Djna.library.path="$GITHUB_WORKSPACE/target/release" MainKt
+          java -cp /tmp/main.jar:/tmp/indycheck-uniffi.jar:/tmp/jna-5.16.0.jar:/tmp/kotlin-stdlib-2.1.20.jar -Djna.library.path="$GITHUB_WORKSPACE/target/release" MainKt
