@@ -13,7 +13,7 @@ No. It is fully offline — there are no network calls, no API keys, no telemetr
 
 ## My PAN's 4th character isn't P, C, H, F, A, T, B, L, J or G — is it invalid?
 
-No. indycheck only checks the PAN's format (5 letters, 4 digits, 1 letter) and reports the 4th character as the entity in `parsed`. A 4th character that is not in the published list is reported as entity `"Unknown"` and the PAN is still valid — the common example `ABCDE1234F` (4th character `D`) is valid with entity `"Unknown"`. `INVALID_ENTITY` is a reserved code that the package does not emit in v0.1.
+No. indycheck only checks the PAN's format (5 letters, 4 digits, 1 letter) and reports the 4th character as the entity in `parsed`. A 4th character that is not in the published list is reported as entity `"Unknown"` and the PAN is still valid — the common example `ABCDE1234F` (4th character `D`) is valid with entity `"Unknown"`. `INVALID_ENTITY` is a reserved code that the package does not emit as of v0.2.0.
 
 ## Why does a "valid" GSTIN need the right check character? Can't I just guess one?
 
@@ -31,13 +31,17 @@ Prefer not to. Store the masked value (`XXXX XXXX 0124`, available as `parsed.ma
 
 Yes. The npm package ships a WebAssembly build of the same Rust core, and this site's [playground](/playground/) runs it. The landing-page demo uses a small pure-JS version of the same rules.
 
+## Does it support Bharat (BH) series vehicle numbers?
+
+Yes — since v0.2.0. `22BH1234AA` is valid: 2-digit year (21 or later) + `BH` + 4-digit number (0001–9999) + 2 suffix letters (no `I`/`O`). The result carries `parsed.series_type: "bharat"`; state-format numbers carry `"state"`. See the [Vehicle page](/vehicle/).
+
 ## Which languages are supported?
 
-JavaScript/TypeScript (npm), Python (pip) and Rust (crates.io) in v0.1 — all from the same Rust core, so results are identical. Other languages are on the roadmap; tell us which you need in a GitHub issue.
+JavaScript/TypeScript (npm), Python (pip) and Rust (crates.io) in v0.2.0 — all from the same Rust core, so results are identical. Other languages are on the roadmap; tell us which you need in a GitHub issue.
 
 ## Why are error messages in Hindi and English?
 
-So form errors make sense to users across India. Every result has `reason_en` and `reason_hi`; pick based on the user's language. The docs themselves are in English for v0.1.
+So form errors make sense to users across India. Every result has `reason_en` and `reason_hi`; pick based on the user's language. The docs themselves are in English for v0.2.0.
 
 ## Is it free?
 
