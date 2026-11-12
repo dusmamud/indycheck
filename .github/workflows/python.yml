@@ -32,5 +32,40 @@ jobs:
           assert ic.validate_gstin('18ABCDE1234F1ZZ')['parsed']['state'] == 'Assam'
           assert ic.validate_aadhaar('234567890124')['valid']
           assert ic.validate_tan('MUMB12345C')['valid']
+          # Validators never throw on bad input (v0.2.1): non-strings get INVALID_TYPE.
+          assert ic.validate_pan(None)['code'] == 'INVALID_TYPE'
+          assert ic.validate_pan(123)['code'] == 'INVALID_TYPE'
+          assert ic.validate_mobile(None)['code'] == 'INVALID_TYPE'
+          assert ic.format_pan(None) is None
+          assert ic.mask_pan(123) == ''
+          assert ic.detect(None) == 'unknown'
+          assert ic.validate_many(['ABCDE1234F', None])[1]['code'] == 'INVALID_TYPE'
+          # Options support (v0.2.1): strict vs lenient, dict options.
+          assert ic.validate_aadhaar_with_options('234567890125', ic.lenient_options())['valid']
+          assert not ic.validate_aadhaar_with_options('234567890125')['valid']
+          assert ic.validate_pan_with_options('abcde1234f', {'uppercase': False})['code'] == 'INVALID_FORMAT'
+          assert ic.format_mobile_with_options('+91 98765 43210') == '9876543210'
+          # generate_* work with no argument (v0.2.1): defaults P / 18.
+          assert ic.validate_pan(ic.generate_pan())['valid']
+          assert ic.validate_pan(ic.generate_pan())['parsed']['entity'] == 'Individual'
+          assert ic.validate_gstin(ic.generate_gstin())['valid']
+          assert ic.validate_gstin(ic.generate_gstin())['parsed']['state'] == 'Assam'
           print('wheel smoke test OK')
+          "
+      - name: pydantic module ships in the wheel
+        run: |
+          /tmp/wheel-venv/bin/pip install pydantic
+          /tmp/wheel-venv/bin/python -c "
+          from pydantic import BaseModel, ValidationError
+          from indycheck.pydantic import pan_annotated, vehicle_annotated
+          class Signup(BaseModel):
+              pan: pan_annotated()
+              vehicle: vehicle_annotated()
+          assert Signup(pan='ABCDE1234F', vehicle='22BH1234AA')
+          try:
+              Signup(pan='ABCDE12345', vehicle='22BH1234AA')
+              raise SystemExit('invalid PAN was accepted')
+          except ValidationError:
+              pass
+          print('pydantic smoke test OK')
           "
