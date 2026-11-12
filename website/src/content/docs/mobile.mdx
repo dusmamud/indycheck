@@ -47,13 +47,13 @@ assert!(r.ok);
 
 | Input | Result | Code |
 | --- | --- | --- |
-| `9876543210` | ✅ Valid | `VALID` |
-| `+91 98765 43210` | ✅ Valid | `VALID` |
-| `919876543210` | ✅ Valid | `VALID` |
-| `5123456789` | ❌ Invalid — starts with 5 | `INVALID_FIRST_DIGIT` |
-| `987654321` | ❌ Invalid — only 9 digits, not a valid 10-digit number | `INVALID_FORMAT` |
-| `98765 4321a` | ❌ Invalid — letter inside | `INVALID_FORMAT` |
-| *(empty)* | ❌ Invalid | `EMPTY` |
+| `9876543210` | Valid | `VALID` |
+| `+91 98765 43210` | Valid | `VALID` |
+| `919876543210` | Valid | `VALID` |
+| `5123456789` | Invalid — starts with 5 | `INVALID_FIRST_DIGIT` |
+| `987654321` | Invalid — only 9 digits, not a valid 10-digit number | `INVALID_FORMAT` |
+| `98765 4321a` | Invalid — letter inside | `INVALID_FORMAT` |
+| *(empty)* | Invalid | `EMPTY` |
 
 ## Error codes
 
