@@ -5,6 +5,11 @@ name: Release PR
 #    chore/docs -> no bump) and updates CHANGELOG.md. The sync step keeps
 #    the JS/Python packages and the docs site on the same version, and the
 #    job opens (or updates) a `release-plz` PR with all of it.
+#  - release-plz only counts commits touching crates/indycheck, so a batch
+#    of Flutter/PHP/FFI/napi/Go/CI-only commits never triggers a bump.
+#    scripts/release-fallback.sh covers that case: after `release-plz
+#    update` leaves no diff, it patch-bumps and writes the changelog entry
+#    from git log when feat/fix/perf commits exist since the last tag.
 #  - Merging that PR does NOT publish by itself. Publish with a manual
 #    dispatch of the `Release` workflow (release.yml) — it is the only
 #    workflow the crates.io Trusted Publishing config allows (crate
@@ -48,6 +53,15 @@ jobs:
           tool: release-plz@0.4.3
       - name: Update versions and changelog
         run: release-plz update
+      - name: Fallback bump for satellite-only batches
+        # release-plz only counts commits touching crates/indycheck, so
+        # Flutter/PHP/FFI/napi/Go/CI-only batches never open a release PR.
+        # scripts/release-fallback.sh bumps the patch version and writes
+        # the changelog entry from git log when release-plz produced no
+        # diff but feat/fix/perf commits exist since the last tag. It is
+        # a no-op in every other case — including the already-bumped
+        # post-merge state, where local version != latest tag version.
+        run: bash scripts/release-fallback.sh
       - name: Sync JS/Python/docs versions with the Rust workspace
         run: bash scripts/sync-versions.sh
       - name: Refresh Cargo.lock
