@@ -1,0 +1,75 @@
+# Node napi-rs addon CI — builds the native .node addon in
+# crates/indycheck-napi (npm run build = `napi build --platform --release`)
+# and runs the packages/js vitest suite against it. The JS tests discover
+# the addon via INDYCHECK_NATIVE_PATH (see packages/js/src/native.ts) and
+# skip the native suite when it is absent (describe.skipIf) — so this
+# workflow pins the addon path AND fails the job if any native test is
+# skipped, instead of silently passing on the TypeScript fallback.
+name: Node napi-rs addon
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/indycheck-napi/**'
+      - 'packages/js/**'
+      - 'crates/indycheck/**'
+      - '.github/workflows/napi.yml'
+
+jobs:
+  napi:
+    name: napi-rs addon (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build .node addon
+        working-directory: crates/indycheck-napi
+        run: |
+          npm ci
+          npm run build
+      - name: Confirm .node file exists
+        shell: bash
+        run: ls crates/indycheck-napi/*.node
+      - name: Install JS package deps
+        working-directory: packages/js
+        run: npm ci
+      - name: Build + typecheck JS package
+        working-directory: packages/js
+        run: |
+          npm run build
+          npm run typecheck
+      # INDYCHECK_NATIVE_PATH is authoritative in packages/js/src/native.ts:
+      # it makes the tests load crates/indycheck-napi/index.js (which
+      # requires the just-built .node file). The JSON report is then
+      # asserted on: every "indycheck native backend (napi-rs)" assertion
+      # must exist and have passed, and nothing may be pending/skipped.
+      # (Verified locally with vitest 2.1.8: skipped native tests show up
+      # as numPendingTests > 0 and assertion status "skipped".)
+      - name: Run vitest with native backend enforced
+        working-directory: packages/js
+        shell: bash
+        env:
+          INDYCHECK_NATIVE_PATH: ${{ github.workspace }}/crates/indycheck-napi/index.js
+        run: |
+          node -e "const b = require(process.env.INDYCHECK_NATIVE_PATH); if (typeof b.validatePan !== 'function') { console.error('native addon did not load'); process.exit(1); } console.log('native addon loaded')"
+          npx vitest run --reporter=json > vitest-report.json
+          node -e "
+            const fs = require('fs');
+            const r = JSON.parse(fs.readFileSync('vitest-report.json', 'utf8'));
+            const native = (r.testResults || []).flatMap(s => s.assertionResults || [])
+              .filter(a => (a.ancestorTitles || []).includes('indycheck native backend (napi-rs)'));
+            if (native.length === 0) { console.error('native-backend tests did not run'); process.exit(1); }
+            if (native.some(a => a.status !== 'passed')) { console.error('a native-backend test failed or was skipped'); process.exit(1); }
+            if ((r.numPendingTests || 0) !== 0) { console.error(r.numPendingTests + ' test(s) skipped — native tests must run, not skip'); process.exit(1); }
+            console.log('native backend tests passed: ' + native.length + ', skipped: 0');
+          "
