@@ -1,6 +1,10 @@
 [package]
 name = "indycheck-py"
 version.workspace = true
+# Binding crate — never published to crates.io on its own; only the
+# core `indycheck` crate is published. Prevents release-plz from
+# trying to publish it (its path dependency has no version requirement).
+publish = false
 # PyO3 0.22 is not edition-2024 clean (unsafe-op-in-unsafe-fn warnings);
 # keep this binding crate on 2021 until PyO3 is upgraded. The published
 # core crate (indycheck) is edition 2024.
