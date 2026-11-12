@@ -7,31 +7,34 @@ import { Aside } from '@astrojs/starlight/components';
 
 Writing tests against validators needs valid inputs — but you must never use a real person's PAN or Aadhaar in a test. indycheck's generators produce random values that pass validation, for tests, demos, screenshots and seed data.
 
+Generators exist for **PAN, Aadhaar, GSTIN, mobile and vehicle** only. IFSC, UPI, PIN code, TAN, CIN, LLPIN and Voter ID have validators but no generators yet — use fixed test strings from their docs pages (for example `SBIN0000123` for IFSC).
+
 ## Usage
 
 ```js
-import { generate } from 'indycheck';
+import { generatePan, generateAadhaar, generateGstin, generateMobile, generateVehicle, generateVehicleBharat } from 'indycheck';
 
-generate('pan');     // e.g. 'HMSTC9464C'  — random every time
-generate('aadhaar'); // e.g. '262200939149' — passes Verhoeff
-generate('gstin');   // e.g. '13NFAPJ0888B1ZM' — passes Mod-36 Luhn
-generate('mobile');  // e.g. '6308893624'
-generate('vehicle'); // e.g. 'TN02D6788'
+generatePan('P');        // e.g. 'HMSTC9464C'  — random every time
+generateAadhaar();       // e.g. '262200939149' — passes Verhoeff
+generateGstin('18');     // e.g. '13NFAPJ0888B1ZM' — passes Mod-36 Luhn
+generateMobile();        // e.g. '6308893624'
+generateVehicle();       // e.g. 'TN02D6788' — state format
+generateVehicleBharat(); // e.g. '22BH1234AA' — Bharat (BH) format
 ```
 
-Direct helpers exist for every type: `generatePan()`, `generateAadhaar()`, `generateGstin()`, `generateIfsc()`, `generateUpi()`, `generateMobile()`, `generatePincode()`, `generateTan()`, `generateCin()`, `generateLlpin()`, `generateEpic()`, `generateVehicle()`.
-
 ```python
-from indycheck import generate
+from indycheck import generate_pan, generate_vehicle, validate_pan
 
-generate("pan")      # e.g. 'HMSTC9464C'
-generate("aadhaar")  # e.g. '262200939149'
+pan = generate_pan("P")            # e.g. 'HMSTC9464C'
+vehicle = generate_vehicle()       # e.g. 'TN02D6788'
+assert validate_pan(pan)["valid"] is True
 ```
 
 ```rust
-use indycheck::generate;
+use indycheck::{generate_pan, generate_vehicle};
 
-let pan = generate("pan"); // e.g. "HMSTC9464C"
+let pan = generate_pan('P');       // e.g. "HMSTC9464C"
+let vehicle = generate_vehicle();  // e.g. "TN02D6788"
 ```
 
 ## What the generators produce
@@ -41,15 +44,9 @@ let pan = generate("pan"); // e.g. "HMSTC9464C"
 | PAN | `HMSTC9464C` | Valid format (entity reported) |
 | Aadhaar | `262200939149` | Passes the Verhoeff checksum |
 | GSTIN | `13NFAPJ0888B1ZM` | Valid state, valid PAN part, correct Mod-36 Luhn check char |
-| IFSC | `BARB0MXS12A` | Valid shape (bank code from a small list) |
-| UPI ID | `user1261@okaxis` | Valid `handle@bank` shape |
 | Mobile | `6308893624` | 10 digits, starts 6–9 |
-| PIN code | `568558` | 6 digits, first digit 1–9 |
-| TAN | `MHGG52003Q` | Valid shape |
-| CIN | `L43942WB2014PTC185493` | Valid 21-char structure |
-| LLPIN | `BQB-8732` | Valid shape, hyphenated display form |
-| Voter ID (EPIC) | `GKZ3453234` | Valid shape |
-| Vehicle | `TN02D6788` | Valid standard shape (state + district + series + number) |
+| Vehicle (state) | `TN02D6788` | Valid state format (state code + district + series + number) |
+| Vehicle (Bharat) | `22BH1234AA` | Valid Bharat format (year 21+, `BH`, number 0001–9999, suffix without `I`/`O`) |
 
 Every generated value passes its own validator — this is covered by tests in the package.
 
@@ -57,12 +54,12 @@ Every generated value passes its own validator — this is covered by tests in t
 
 ```js
 import { describe, it, expect } from 'vitest';
-import { generate, validate } from 'indycheck';
+import { generatePan, validatePan } from 'indycheck';
 
 describe('signup form', () => {
   it('accepts a generated PAN', () => {
-    const pan = generate('pan');
-    expect(validate('pan', pan).ok).toBe(true);
+    const pan = generatePan('P');
+    expect(validatePan(pan).valid).toBe(true);
   });
 
   it('rejects a PAN with a broken format', () => {
@@ -70,34 +67,34 @@ describe('signup form', () => {
     // no longer matches 5 letters + 4 digits + 1 letter. (PAN has no
     // checksum, and the 4th character is reported, not enforced — so
     // corrupting the holder-type character would still validate.)
-    const pan = generate('pan');
+    const pan = generatePan('P');
     const bad = pan.slice(0, 9) + '5';
-    expect(validate('pan', bad).code).toBe('INVALID_FORMAT');
+    expect(validatePan(bad).code).toBe('INVALID_FORMAT');
   });
 });
 ```
 
 ```python
-from indycheck import generate, validate
+from indycheck import generate_aadhaar, generate_gstin, validate_aadhaar, validate_gstin
 
 def test_generated_aadhaar_is_valid():
-    assert validate("aadhaar", generate("aadhaar")).ok
+    assert validate_aadhaar(generate_aadhaar())["valid"] is True
 
 def test_generated_gstin_round_trips():
-    gstin = generate("gstin")
-    assert validate("gstin", gstin).parsed["state"]
+    gstin = generate_gstin("18")
+    assert validate_gstin(gstin)["parsed"]["state"]
 ```
 
 ## Seeding a demo database
 
 ```js
-import { generate } from 'indycheck';
+import { generatePan, generateMobile } from 'indycheck';
 
 const demoCustomers = Array.from({ length: 20 }, (_, i) => ({
   id: i + 1,
   name: `Demo Customer ${i + 1}`,
-  pan: generate('pan'),
-  mobile: generate('mobile'),
+  pan: generatePan('P'),
+  mobile: generateMobile(),
   // Label the row so nobody mistakes it for real data:
   is_test_data: true,
 }));
