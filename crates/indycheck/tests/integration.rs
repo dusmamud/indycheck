@@ -507,6 +507,25 @@ fn vehicle_valid_and_invalid() {
     assert_eq!(validate_vehicle("DL01ABCD1234").code, "INVALID_LENGTH");
     assert_eq!(validate_vehicle("DL01ABC123").code, "INVALID_FORMAT");
     assert_eq!(validate_vehicle("DL01AB12345").code, "INVALID_LENGTH");
+    // Bharat (BH) series: YYBH####XX.
+    let b = validate_vehicle("22BH1234AA");
+    assert!(b.valid);
+    let bp = b.parsed.unwrap();
+    assert_eq!(bp["series_type"], "bharat");
+    assert_eq!(bp["year"], "22");
+    assert_eq!(bp["series"], "BH");
+    assert_eq!(bp["number"], "1234");
+    assert_eq!(bp["suffix"], "AA");
+    assert!(validate_vehicle("22 BH 1234 AA").valid);
+    assert!(validate_vehicle("22bh1234aa").valid);
+    assert!(validate_vehicle("26BH9876AB").valid);
+    assert_eq!(validate_vehicle("20BH1234AA").code, "INVALID_FORMAT");
+    assert_eq!(validate_vehicle("22BH0000AA").code, "INVALID_FORMAT");
+    assert_eq!(validate_vehicle("22BH1234AI").code, "INVALID_FORMAT");
+    assert_eq!(validate_vehicle("22BH1234AO").code, "INVALID_FORMAT");
+    assert_eq!(validate_vehicle("22BH1234A").code, "INVALID_FORMAT");
+    assert_eq!(validate_vehicle("22BH123AA").code, "INVALID_FORMAT");
+    assert_eq!(detect("22BH1234AA"), "vehicle");
 }
 
 // ---- format_* / mask_* ----
