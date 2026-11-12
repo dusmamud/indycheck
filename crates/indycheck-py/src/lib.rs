@@ -4,18 +4,23 @@
 //! converts results to Python dicts. Build with `maturin develop` /
 //! `maturin build` (from this directory).
 //!
-//! NOTE: clippy 1.99's `useless_conversion` lint is a false positive on
-//! `#[pyfunction]`s returning `PyResult<...>` (PyO3 0.22) — it flags the
-//! `PyResult` return type itself. Allowed crate-wide; the `?` on
-//! `options_from_py` genuinely needs `PyResult`.
+//! NOTE: PyO3 0.30 migration — `ToPyObject::to_object` and the `PyObject`
+//! type alias are gone; use `IntoPyObjectExt::into_bound_py_any` and
+//! `Py<PyAny>` instead. `#[pyclass]` no longer derives `FromPyObject`
+//! by default — `Options` opts back in with `#[pyclass(from_py_object)]`.
+//! `PyList::empty` / `PyDict::new` replace `empty_bound` / `new_bound`;
+//! `Bound::cast` replaces `downcast`.
 #![allow(clippy::useless_conversion)]
 
 use ::indycheck::{
-    detect as core_detect, format_gstin as core_format_gstin, format_mobile as core_format_mobile,
+    Options as CoreOptions, ValidationResult, detect as core_detect,
+    format_gstin as core_format_gstin, format_mobile as core_format_mobile,
     format_mobile_with_options as core_format_mobile_with_options, format_pan as core_format_pan,
     generate_aadhaar as core_generate_aadhaar, generate_gstin as core_generate_gstin,
     generate_mobile as core_generate_mobile, generate_pan as core_generate_pan,
-    mask_aadhaar as core_mask_aadhaar, mask_mobile as core_mask_mobile, mask_pan as core_mask_pan,
+    generate_vehicle as core_generate_vehicle,
+    generate_vehicle_bharat as core_generate_vehicle_bharat, mask_aadhaar as core_mask_aadhaar,
+    mask_mobile as core_mask_mobile, mask_pan as core_mask_pan,
     validate_aadhaar as core_validate_aadhaar,
     validate_aadhaar_with_options as core_validate_aadhaar_with_options,
     validate_cin as core_validate_cin, validate_gstin as core_validate_gstin,
@@ -26,47 +31,56 @@ use ::indycheck::{
     validate_pan as core_validate_pan, validate_pan_with_options as core_validate_pan_with_options,
     validate_pincode as core_validate_pincode, validate_tan as core_validate_tan,
     validate_upi as core_validate_upi, validate_vehicle as core_validate_vehicle,
-    validate_voter_id as core_validate_voter_id, Options as CoreOptions, ValidationResult,
+    validate_voter_id as core_validate_voter_id,
 };
+use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
-use pyo3::ToPyObject;
 
-fn value_to_py(py: Python<'_>, value: &serde_json::Value) -> PyObject {
+/// Convert an infallible Rust primitive (`bool`, `i64`, `u64`, `f64`,
+/// `String`, `&str`) into an owned Python object.
+fn to_py<'py>(py: Python<'py>, value: impl pyo3::IntoPyObject<'py>) -> Py<PyAny> {
+    value
+        .into_bound_py_any(py)
+        .expect("primitive to Python conversion is infallible")
+        .unbind()
+}
+
+fn value_to_py(py: Python<'_>, value: &serde_json::Value) -> Py<PyAny> {
     match value {
         serde_json::Value::Null => py.None(),
-        serde_json::Value::Bool(b) => b.to_object(py),
+        serde_json::Value::Bool(b) => to_py(py, *b),
         serde_json::Value::Number(n) => {
             if let Some(i) = n.as_i64() {
-                i.to_object(py)
+                to_py(py, i)
             } else if let Some(u) = n.as_u64() {
-                u.to_object(py)
+                to_py(py, u)
             } else if let Some(f) = n.as_f64() {
-                f.to_object(py)
+                to_py(py, f)
             } else {
                 py.None()
             }
         }
-        serde_json::Value::String(s) => s.to_object(py),
+        serde_json::Value::String(s) => to_py(py, s),
         serde_json::Value::Array(items) => {
-            let list = PyList::empty_bound(py);
+            let list = PyList::empty(py);
             for item in items {
                 list.append(value_to_py(py, item)).expect("list append");
             }
-            list.into()
+            list.into_any().unbind()
         }
         serde_json::Value::Object(map) => {
-            let dict = PyDict::new_bound(py);
+            let dict = PyDict::new(py);
             for (k, v) in map {
                 dict.set_item(k, value_to_py(py, v)).expect("dict set");
             }
-            dict.into()
+            dict.into_any().unbind()
         }
     }
 }
 
-fn result_to_dict(py: Python<'_>, result: &ValidationResult) -> PyObject {
-    let dict = PyDict::new_bound(py);
+fn result_to_dict(py: Python<'_>, result: &ValidationResult) -> Py<PyAny> {
+    let dict = PyDict::new(py);
     dict.set_item("valid", result.valid).expect("dict set");
     dict.set_item("code", &result.code).expect("dict set");
     dict.set_item("reason_en", &result.reason_en)
@@ -82,7 +96,7 @@ fn result_to_dict(py: Python<'_>, result: &ValidationResult) -> PyObject {
             dict.set_item("parsed", py.None()).expect("dict set");
         }
     }
-    dict.into()
+    dict.into_any().unbind()
 }
 
 /// The `INVALID_TYPE` result for non-string input. The Rust core takes
@@ -106,7 +120,7 @@ fn extract_string(input: &Bound<'_, PyAny>) -> Option<String> {
 /// Validation options, mirroring the Rust core's `Options` and the JS
 /// `Options` interface: `strict`, `allow_spaces_hyphens`,
 /// `normalise_plus91`, `uppercase` — all default to `True`.
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy)]
 struct Options {
     #[pyo3(get, set)]
@@ -169,7 +183,7 @@ fn options_from_py(obj: Option<&Bound<'_, PyAny>>) -> PyResult<CoreOptions> {
     if let Ok(opts) = obj.extract::<Options>() {
         return Ok(opts.into());
     }
-    if let Ok(dict) = obj.downcast::<PyDict>() {
+    if let Ok(dict) = obj.cast::<PyDict>() {
         let get = |key: &str| -> PyResult<bool> {
             match dict.get_item(key)? {
                 Some(v) => match v.extract::<bool>() {
@@ -231,7 +245,7 @@ macro_rules! py_validate_with_options {
             py: Python<'_>,
             input: &Bound<'_, PyAny>,
             options: Option<&Bound<'_, PyAny>>,
-        ) -> PyResult<PyObject> {
+        ) -> PyResult<Py<PyAny>> {
             let opts = options_from_py(options)?;
             Ok(match extract_string(input) {
                 Some(s) => result_to_dict(py, &$func(&s, opts)),
@@ -272,7 +286,7 @@ fn format_mobile_with_options(
 macro_rules! py_validate {
     ($name:ident, $func:ident) => {
         #[pyfunction]
-        fn $name(py: Python<'_>, input: &Bound<'_, PyAny>) -> PyObject {
+        fn $name(py: Python<'_>, input: &Bound<'_, PyAny>) -> Py<PyAny> {
             match extract_string(input) {
                 Some(s) => result_to_dict(py, &$func(&s)),
                 None => result_to_dict(py, &invalid_type_result()),
@@ -295,10 +309,10 @@ py_validate!(validate_voter_id, core_validate_voter_id);
 py_validate!(validate_vehicle, core_validate_vehicle);
 
 #[pyfunction]
-fn format_mobile_py(py: Python<'_>, input: &Bound<'_, PyAny>) -> PyObject {
+fn format_mobile_py(py: Python<'_>, input: &Bound<'_, PyAny>) -> Py<PyAny> {
     match extract_string(input) {
         Some(s) => match core_format_mobile(&s) {
-            Some(s) => s.to_object(py),
+            Some(s) => to_py(py, s),
             None => py.None(),
         },
         None => py.None(),
@@ -322,14 +336,14 @@ fn detect_py(_py: Python<'_>, input: &Bound<'_, PyAny>) -> String {
 }
 
 #[pyfunction]
-fn validate_many_py(py: Python<'_>, inputs: &Bound<'_, PyAny>) -> PyObject {
-    let list = PyList::empty_bound(py);
-    let items: Vec<PyObject> = match inputs.downcast::<PyList>() {
+fn validate_many_py(py: Python<'_>, inputs: &Bound<'_, PyAny>) -> Py<PyAny> {
+    let list = PyList::empty(py);
+    let items: Vec<Py<PyAny>> = match inputs.cast::<PyList>() {
         Ok(list) => list.iter().map(|item| item.unbind()).collect(),
         Err(_) => {
             list.append(result_to_dict(py, &invalid_type_result()))
                 .expect("list append");
-            return list.into();
+            return list.into_any().unbind();
         }
     };
     for item in &items {
@@ -346,18 +360,18 @@ fn validate_many_py(py: Python<'_>, inputs: &Bound<'_, PyAny>) -> PyObject {
             }
         }
     }
-    list.into()
+    list.into_any().unbind()
 }
 
-fn opt_string_to_py(py: Python<'_>, value: Option<String>) -> PyObject {
+fn opt_string_to_py(py: Python<'_>, value: Option<String>) -> Py<PyAny> {
     match value {
-        Some(s) => s.to_object(py),
+        Some(s) => to_py(py, s),
         None => py.None(),
     }
 }
 
 #[pyfunction]
-fn format_pan_py(py: Python<'_>, input: &Bound<'_, PyAny>) -> PyObject {
+fn format_pan_py(py: Python<'_>, input: &Bound<'_, PyAny>) -> Py<PyAny> {
     match extract_string(input) {
         Some(s) => opt_string_to_py(py, core_format_pan(&s)),
         None => py.None(),
@@ -365,7 +379,7 @@ fn format_pan_py(py: Python<'_>, input: &Bound<'_, PyAny>) -> PyObject {
 }
 
 #[pyfunction]
-fn format_gstin_py(py: Python<'_>, input: &Bound<'_, PyAny>) -> PyObject {
+fn format_gstin_py(py: Python<'_>, input: &Bound<'_, PyAny>) -> Py<PyAny> {
     match extract_string(input) {
         Some(s) => opt_string_to_py(py, core_format_gstin(&s)),
         None => py.None(),
@@ -417,6 +431,16 @@ fn generate_mobile_py(_py: Python<'_>) -> String {
     core_generate_mobile()
 }
 
+#[pyfunction]
+fn generate_vehicle_py(_py: Python<'_>) -> String {
+    core_generate_vehicle()
+}
+
+#[pyfunction]
+fn generate_vehicle_bharat_py(_py: Python<'_>) -> String {
+    core_generate_vehicle_bharat()
+}
+
 #[pymodule]
 fn indycheck(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Options>()?;
@@ -448,6 +472,8 @@ fn indycheck(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(generate_aadhaar_py, m)?)?;
     m.add_function(wrap_pyfunction!(generate_gstin_py, m)?)?;
     m.add_function(wrap_pyfunction!(generate_mobile_py, m)?)?;
+    m.add_function(wrap_pyfunction!(generate_vehicle_py, m)?)?;
+    m.add_function(wrap_pyfunction!(generate_vehicle_bharat_py, m)?)?;
     m.add_function(wrap_pyfunction!(format_mobile_py, m)?)?;
     m.add_function(wrap_pyfunction!(mask_aadhaar_py, m)?)?;
     m.add_function(wrap_pyfunction!(detect_py, m)?)?;
@@ -466,6 +492,11 @@ fn indycheck(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("generate_aadhaar", m.getattr("generate_aadhaar_py")?)?;
     m.add("generate_gstin", m.getattr("generate_gstin_py")?)?;
     m.add("generate_mobile", m.getattr("generate_mobile_py")?)?;
+    m.add("generate_vehicle", m.getattr("generate_vehicle_py")?)?;
+    m.add(
+        "generate_vehicle_bharat",
+        m.getattr("generate_vehicle_bharat_py")?,
+    )?;
     // Aliases (EPIC is the name printed on the voter card; the
     // registration alias matches the Rust/JS API).
     m.add("validate_epic", m.getattr("validate_voter_id")?)?;
