@@ -180,7 +180,7 @@
 				{ id: 'cin', label: 'CIN', placeholder: 'U12345DL2025PTC123456', valid: 'U12345DL2025PTC123456', invalid: 'X12345DL2025PTC123456' },
 				{ id: 'llpin', label: 'LLPIN', placeholder: 'AAA-1234', valid: 'AAA-1234', invalid: 'AA12345' },
 				{ id: 'epic', label: 'Voter ID', placeholder: 'ABC1234567', valid: 'ABC1234567', invalid: 'AB1234567' },
-				{ id: 'vehicle', label: 'Vehicle', placeholder: 'DL01AB1234', valid: 'DL01AB1234', invalid: 'DL01AB12345' },
+				{ id: 'vehicle', label: 'Vehicle', placeholder: 'DL01AB1234', valid: 'DL01AB1234', invalid: 'DL01AB12345', extra: [['✓ Bharat (BH) example', '22BH1234AA']] },
 			];
 
 			const tabsEl = document.querySelector('#tabs');
@@ -271,7 +271,7 @@
 				const t = TYPES.find((x) => x.id === currentType);
 				presetsEl.innerHTML = '';
 				presetsEl.appendChild(document.createTextNode('Try: '));
-				for (const [label, v] of [['✓ valid example', t.valid], ['✗ invalid example', t.invalid]]) {
+				for (const [label, v] of [['✓ valid example', t.valid], ['✗ invalid example', t.invalid], ...(t.extra ?? [])]) {
 					const b = document.createElement('button');
 					b.type = 'button';
 					b.textContent = `${label}: ${v}`;
