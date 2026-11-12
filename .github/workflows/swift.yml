@@ -1,0 +1,55 @@
+# Swift binding CI — UniFFI-generated bindings in
+# crates/indycheck-uniffi/bindings/swift (indycheck_uniffi.swift plus the
+# indycheck_uniffiFFI.h header and its modulemap, which the .swift file
+# imports with `#if canImport(indycheck_uniffiFFI)`). Compiles the generated
+# Swift standalone with swiftc (no Xcode project or SwiftPM package) and
+# runs a small main() against the freshly built native library
+# (libindycheck_uniffi.dylib). macOS only: swiftc is only available there.
+name: Swift
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/indycheck-uniffi/**'
+      - 'crates/indycheck/**'
+      - '.github/workflows/swift.yml'
+
+jobs:
+  swift:
+    name: Swift binding (UniFFI)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build UniFFI native library
+        run: cargo build -p indycheck-uniffi --release
+      - name: Write smoke test
+        run: |
+          cat > /tmp/main.swift <<'EOF'
+          import Foundation
+
+          let result = validatePan(input: "ABCDE1234F")
+          guard result.valid else {
+              print("FAIL: validatePan(ABCDE1234F) invalid: \(result.code) \(result.reasonEn)")
+              exit(1)
+          }
+          print("OK: validatePan(ABCDE1234F) -> \(result.code)")
+          EOF
+      # -I points at the directory holding indycheck_uniffiFFI.modulemap so
+      # the `import indycheck_uniffiFFI` in the generated file resolves;
+      # -lindycheck_uniffi links the cdylib, and the rpath makes it
+      # findable at runtime.
+      - name: Compile bindings + smoke test
+        run: |
+          swiftc \
+            -I crates/indycheck-uniffi/bindings/swift \
+            crates/indycheck-uniffi/bindings/swift/indycheck_uniffi.swift /tmp/main.swift \
+            -L "$GITHUB_WORKSPACE/target/release" -lindycheck_uniffi \
+            -Xlinker -rpath -Xlinker "$GITHUB_WORKSPACE/target/release" \
+            -o /tmp/indycheck-swift-smoke
+      - name: Run smoke test
+        run: /tmp/indycheck-swift-smoke
