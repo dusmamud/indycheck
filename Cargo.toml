@@ -1,15 +1,15 @@
 [workspace]
-# NOTE: indycheck-uniffi and indycheck-ffi are Phase 3 scaffolds only.
-# They are deliberately EXCLUDED from workspace members in v0.1 so that
-# `cargo test --workspace` is never broken by unfinished bindings.
-# See crates/indycheck-uniffi/README.md and crates/indycheck-ffi/README.md.
+# Binding crates (napi/uniffi/ffi) are workspace members with
+# `publish = false` in their own Cargo.toml, so release-plz never tries
+# to publish them — only the core `indycheck` crate is published.
 members = [
     "crates/indycheck",
     "crates/indycheck-wasm",
     "crates/indycheck-py",
     "crates/indycheck-napi",
+    "crates/indycheck-uniffi",
+    "crates/indycheck-ffi",
 ]
-exclude = ["crates/indycheck-uniffi", "crates/indycheck-ffi"]
 resolver = "2"
 
 [workspace.package]
