@@ -5,7 +5,7 @@ All notable changes to indycheck are documented here. The format is based on
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 All crates, npm and PyPI packages share one version in lockstep.
 
-## [Unreleased]
+## [0.2.1] - 2026-11-12
 
 ### Fixed
 - Python wheel: validators no longer throw `TypeError` on non-string input
