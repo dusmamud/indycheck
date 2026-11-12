@@ -1,0 +1,64 @@
+# Kotlin binding CI — UniFFI-generated JNA bindings in
+# crates/indycheck-uniffi/bindings/kotlin (package uniffi.indycheck_uniffi,
+# top-level functions such as validatePan). Compiles the generated Kotlin
+# with the standalone kotlinc (no Gradle/Android needed for a JVM smoke
+# test) and runs a small main() against the freshly built native library
+# (libindycheck_uniffi.so, loaded by JNA via -Djna.library.path).
+name: Kotlin
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/indycheck-uniffi/**'
+      - 'crates/indycheck/**'
+      - '.github/workflows/kotlin.yml'
+
+jobs:
+  kotlin:
+    name: Kotlin binding (UniFFI + JNA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      # Official standalone compiler zip from the JetBrains/kotlin release
+      # (kotlin-compiler-2.1.20.zip is a real asset of release v2.1.20).
+      - name: Install Kotlin compiler
+        run: |
+          curl -fsSL -o /tmp/kotlin-compiler.zip https://github.com/JetBrains/kotlin/releases/download/v2.1.20/kotlin-compiler-2.1.20.zip
+          unzip -q /tmp/kotlin-compiler.zip -d /tmp/kotlinc
+          echo "/tmp/kotlinc/kotlinc/bin" >> "$GITHUB_PATH"
+          kotlinc -version
+      # JNA (net.java.dev.jna:jna:5.16.0, on Maven Central since Dec 2024) —
+      # the runtime the generated bindings import (com.sun.jna.*).
+      - name: Download JNA
+        run: |
+          curl -fsSL -o /tmp/jna-5.16.0.jar https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.16.0/jna-5.16.0.jar
+          test -s /tmp/jna-5.16.0.jar
+      - name: Build UniFFI native library
+        run: cargo build -p indycheck-uniffi --release
+      - name: Compile Kotlin bindings
+        run: |
+          kotlinc -cp /tmp/jna-5.16.0.jar -d /tmp/indycheck-uniffi.jar crates/indycheck-uniffi/bindings/kotlin/uniffi/indycheck_uniffi/indycheck_uniffi.kt
+      - name: Write smoke test
+        run: |
+          cat > /tmp/Main.kt <<'EOF'
+          import uniffi.indycheck_uniffi.validatePan
+
+          fun main() {
+              val result = validatePan("ABCDE1234F")
+              check(result.valid) { "validatePan(ABCDE1234F) not valid: ${result.code} ${result.reasonEn}" }
+              println("OK: validatePan(ABCDE1234F) -> ${result.code}")
+          }
+          EOF
+      - name: Compile and run smoke test
+        run: |
+          kotlinc -cp /tmp/indycheck-uniffi.jar:/tmp/jna-5.16.0.jar -d /tmp/main.jar /tmp/Main.kt
+          java -cp /tmp/main.jar:/tmp/indycheck-uniffi.jar:/tmp/jna-5.16.0.jar -Djna.library.path="$GITHUB_WORKSPACE/target/release" MainKt
