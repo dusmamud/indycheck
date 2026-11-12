@@ -5,6 +5,16 @@ All notable changes to indycheck are documented here. The format is based on
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 All crates, npm and PyPI packages share one version in lockstep.
 
+## [Unreleased]
+
+### Added
+- Bharat (BH) series vehicle numbers are now accepted: `22BH1234AA`
+  (`YYBH####XX` — registration year 21+, `BH`, 4-digit number 0001-9999,
+  2 suffix letters excluding `I`/`O`). `validate_vehicle` returns
+  `series_type: "bharat"` with `year`/`suffix` in `parsed`; state-format
+  numbers now also return `series_type: "state"`. Mirrored in the JS and
+  Python wrappers; 9 new test vectors (254 total).
+
 ## [0.1.2] - 2026-11-12
 
 ### Fixed
