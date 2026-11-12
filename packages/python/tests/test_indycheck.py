@@ -30,6 +30,8 @@ from indycheck import (  # noqa: E402
     generate_gstin,
     generate_mobile,
     generate_pan,
+    generate_vehicle,
+    generate_vehicle_bharat,
     lenient_options,
     mask_aadhaar,
     mask_aadhaar_string,
@@ -86,6 +88,8 @@ GENERATORS = {
     "aadhaar": lambda arg: generate_aadhaar(),
     "gstin": lambda arg: generate_gstin(arg),
     "mobile": lambda arg: generate_mobile(),
+    "vehicle": lambda arg: generate_vehicle(),
+    "vehicle-bharat": lambda arg: generate_vehicle_bharat(),
 }
 
 # PAN examples: an unlisted 4th character is reported as entity
@@ -395,6 +399,12 @@ def test_generators():
         assert validate_gstin(generate_gstin("18"))["valid"] is True
         assert validate_gstin(generate_gstin("27"))["parsed"]["state_code"] == "27"
         assert validate_mobile(generate_mobile())["valid"] is True
+        vehicle = generate_vehicle()
+        assert validate_vehicle(vehicle)["valid"] is True
+        assert validate_vehicle(vehicle)["parsed"]["series_type"] == "state"
+        bharat = generate_vehicle_bharat()
+        assert validate_vehicle(bharat)["valid"] is True
+        assert validate_vehicle(bharat)["parsed"]["series_type"] == "bharat"
     # Unknown entity / state code fall back to P / 18, and values vary.
     assert validate_pan(generate_pan("X"))["parsed"]["entity_code"] == "P"
     assert validate_gstin(generate_gstin("99"))["parsed"]["state_code"] == "18"
