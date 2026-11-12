@@ -35,17 +35,9 @@ pub fn normalize_mobile_with_options(input: &str, options: Options) -> Option<St
     let without_plus = cleaned.strip_prefix('+').unwrap_or(&cleaned);
     let digits: &str = if let Some(rest) = without_plus.strip_prefix("91") {
         // Only treat a leading 91 as a country code when it makes 10 digits.
-        if rest.len() == 10 {
-            rest
-        } else {
-            without_plus
-        }
+        if rest.len() == 10 { rest } else { without_plus }
     } else if let Some(rest) = without_plus.strip_prefix('0') {
-        if rest.len() == 10 {
-            rest
-        } else {
-            without_plus
-        }
+        if rest.len() == 10 { rest } else { without_plus }
     } else {
         without_plus
     };
