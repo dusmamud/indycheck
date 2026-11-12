@@ -37,7 +37,7 @@ const description =
 			description,
 			author: { '@type': 'Person', name: 'dusmamud' },
 			offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
-			softwareVersion: '0.1.0',
+			softwareVersion: '0.2.0',
 			url: 'https://indycheck.dev/',
 		})} />
 		<style>
@@ -120,6 +120,11 @@ const description =
 					<a class="btn btn-primary" href="/getting-started/">Get started →</a>
 					<a class="btn btn-ghost" href="/playground/">Try the playground</a>
 				</div>
+				<p style="color: var(--muted);">
+					<strong style="color: var(--green);">New in v0.2.0:</strong> Bharat (BH) series vehicle
+					numbers — <code>22BH1234AA</code> now validates. <a href="/vehicle/">Read the Vehicle docs →</a>
+					· <a href="/changelog/">Full changelog →</a>
+				</p>
 			</section>
 
 			<section>
@@ -165,6 +170,7 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 						<button type="button" data-demo="gstin|27AAAPL1234C1ZE">valid GSTIN</button> ·
 						<button type="button" data-demo="mobile|9876543210">valid mobile</button> ·
 						<button type="button" data-demo="vehicle|DL01AB1234">valid vehicle no.</button> ·
+						<button type="button" data-demo="vehicle|22BH1234AA">valid Bharat (BH) no.</button> ·
 						<button type="button" data-demo="pan|AAAPL12345">invalid PAN</button>
 					</p>
 					<div id="demo-result" class="result" aria-live="polite"></div>
@@ -248,7 +254,7 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 							<tr><td>CIN</td><td>21 chars: L/U + industry + state + year + type + no.</td><td>Format only — no public checksum</td><td><code>U12345DL2025PTC123456</code></td></tr>
 							<tr><td>LLPIN</td><td>3 letters + 4 digits (<code>AAA-1234</code>)</td><td>Format only — no public checksum</td><td><code>AAA-1234</code></td></tr>
 							<tr><td>Voter ID (EPIC)</td><td>3 letters + 7 digits</td><td>Format only — no public checksum</td><td><code>ABC1234567</code></td></tr>
-							<tr><td>Vehicle</td><td>2 letters + district + series + number (8–10 chars)</td><td>Format only — no public checksum</td><td><code>DL01AB1234</code></td></tr>
+							<tr><td>Vehicle</td><td>State format (8–10 chars) or Bharat (BH) series <code>YYBH####XX</code></td><td>Format only — no public checksum</td><td><code>DL01AB1234</code> · <code>22BH1234AA</code></td></tr>
 						</tbody>
 					</table>
 				</div>
