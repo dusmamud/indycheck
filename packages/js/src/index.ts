@@ -1359,6 +1359,16 @@ function randomDigitRange(low: number, high: number): string {
   return String(low + Math.floor(Math.random() * (high - low + 1)));
 }
 
+/** A letter excluding `I` and `O` (they look like digits on a plate). */
+function randomLetterNoIO(): string {
+  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  return letters[Math.floor(Math.random() * letters.length)];
+}
+
+const VEHICLE_STATE_CODES = [
+  "DL", "MH", "UP", "KA", "TN", "GJ", "RJ", "WB", "KL", "PB", "HR", "AP", "TS", "MP", "BR",
+];
+
 /** Generates a syntactically valid PAN for the given entity character
  *  (`P`, `C`, `H`, `F`, `A`, `T`, `B`, `L`, `J` or `G`).
  *  An unknown entity character falls back to `P` (Individual).
@@ -1413,6 +1423,29 @@ export function generateMobile(): string {
   let mobile = randomDigitRange(6, 9);
   for (let i = 0; i < 9; i++) mobile += randomDigit();
   return mobile;
+}
+
+/** Generates a syntactically valid state-format vehicle registration
+ *  number (`DL01AB1234`: state code + district + series + number).
+ *  TEST DATA ONLY — not a real issued registration number. */
+export function generateVehicle(): string {
+  const state = VEHICLE_STATE_CODES[Math.floor(Math.random() * VEHICLE_STATE_CODES.length)];
+  const district = String(1 + Math.floor(Math.random() * 99)).padStart(2, "0");
+  const seriesLength = Math.random() < 0.5 ? 1 : 2;
+  let series = "";
+  for (let i = 0; i < seriesLength; i++) series += randomLetterNoIO();
+  const number = String(1 + Math.floor(Math.random() * 9999)).padStart(4, "0");
+  return `${state}${district}${series}${number}`;
+}
+
+/** Generates a syntactically valid Bharat (BH) series vehicle number
+ *  (`22BH1234AA`: year 21-26, `BH`, number 0001-9999, suffix without
+ *  `I`/`O`). TEST DATA ONLY — not a real issued registration number. */
+export function generateVehicleBharat(): string {
+  const year = String(21 + Math.floor(Math.random() * 6)).padStart(2, "0");
+  const number = String(1 + Math.floor(Math.random() * 9999)).padStart(4, "0");
+  const suffix = randomLetterNoIO() + randomLetterNoIO();
+  return `${year}BH${number}${suffix}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1705,6 +1738,8 @@ export default {
   generateAadhaar,
   generateGstin,
   generateMobile,
+  generateVehicle,
+  generateVehicleBharat,
   defaultOptions,
   lenientOptions,
   noSpacesHyphensOptions,
