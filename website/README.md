@@ -2,7 +2,7 @@
 
 Public website for **indycheck** — the offline Indian ID validator (PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN code, TAN, CIN, LLPIN, Voter ID, vehicle). Built with [Astro](https://astro.build) + [Starlight](https://starlight.astro.build). Fully static: no SSR, no backend, no database.
 
-Live at **https://indycheck.dev** (not deployed from this checkout — see below).
+Live at **https://indycheck.pages.dev** — auto-deployed from `main` by the Website workflow (build, then deploy to Cloudflare Pages) whenever `website/` changes.
 
 ## Run it
 
@@ -36,9 +36,9 @@ The WASM build (`crates/indycheck-wasm/pkg/`, built with wasm-pack) does **not**
 
 ## Docs
 
-Docs are in English for v0.1; the error messages in the package itself are bilingual (`reason_en` + `reason_hi`). Every doc page carries the honest-limits note: indycheck checks **format and checksum only** — it never verifies that an ID exists or belongs to anyone, and it never contacts UIDAI, NSDL, GSTN, MCA, ECI or any bank. TAN, CIN, LLPIN, Voter ID and vehicle numbers have no public checksum — format only.
+Docs are in English for v0.2.1; the error messages in the package itself are bilingual (`reason_en` + `reason_hi`). Every doc page carries the honest-limits note: indycheck checks **format and checksum only** — it never verifies that an ID exists or belongs to anyone, and it never contacts UIDAI, NSDL, GSTN, MCA, ECI or any bank. TAN, CIN, LLPIN, Voter ID and vehicle numbers have no public checksum — format only.
 
 ## Notes
 
 - Do not commit real personal data (real PAN/Aadhaar/GSTIN/mobile numbers) anywhere in this repo. Test values are synthetic, e.g. `AAAPL1234C`, `234567890124`.
-- The `dist/` build output is git-ignored; deploy it to any static host.
+- The `dist/` build output is git-ignored; the Website workflow deploys it to Cloudflare Pages.
