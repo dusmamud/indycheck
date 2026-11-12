@@ -6,6 +6,7 @@
 //! indycheck validate <type> <value>   # prints a ValidationResult as JSON
 //! indycheck detect <value>            # prints {"input": ..., "type": ...}
 //! indycheck generate <type> [arg]     # prints {"type": ..., "value": ...}
+//! indycheck --version                 # prints "indycheck 0.2.0"
 //! ```
 //!
 //! `<type>` for validate/detect: pan, aadhaar, gstin, ifsc, upi, mobile,
@@ -55,7 +56,7 @@ fn validate(kind: &str, value: &str) -> Result<ValidationResult, String> {
 }
 
 fn usage() -> String {
-    "Usage:\n  indycheck validate <type> <value>\n  indycheck detect <value>\n  indycheck generate <type> [arg]\n\nTypes for validate: pan, aadhaar, gstin, ifsc, upi, mobile, pincode, tan, cin, llpin, voter, vehicle\nTypes for generate: pan [entity-char], aadhaar, gstin [state-code], mobile\n\nExit codes: 0 = valid/success, 1 = invalid input, 2 = usage error."
+    "Usage:\n  indycheck validate <type> <value>\n  indycheck detect <value>\n  indycheck generate <type> [arg]\n  indycheck --version\n\nTypes for validate: pan, aadhaar, gstin, ifsc, upi, mobile, pincode, tan, cin, llpin, voter, vehicle\nTypes for generate: pan [entity-char], aadhaar, gstin [state-code], mobile\n\nExit codes: 0 = valid/success, 1 = invalid input, 2 = usage error."
         .to_string()
 }
 
@@ -124,6 +125,10 @@ fn main() -> ExitCode {
         }
         "help" | "--help" | "-h" => {
             println!("{}", usage());
+            ExitCode::from(0)
+        }
+        "version" | "--version" | "-V" => {
+            println!("indycheck {}", env!("CARGO_PKG_VERSION"));
             ExitCode::from(0)
         }
         other => {
