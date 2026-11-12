@@ -93,11 +93,11 @@ let opts = Options::lenient(); // skip checksum checks, allow spaces/hyphens
 let r = validate_pan_with_options("abcde 1234 f", opts);
 ```
 
-- **Options:** `strict` / `lenient`, `allow_spaces_hyphens`, `normalise_plus91`, `uppercase` — see [docs](https://indycheck.pages.dev/options/).
+- **Options:** `strict` / `lenient`, `allow_spaces_hyphens`, `normalise_plus91`, `uppercase` — see [docs](https://indycheck.dev/docs/options/).
 - **Format & mask:** `format_pan`, `format_gstin`, `format_mobile`, `mask_pan` (`ABCDE****F`), `mask_mobile` (`******3210`), `mask_aadhaar` (`XXXX XXXX 0124`).
 - **Auto-detect:** `detect("18ABCDE1234F1ZZ")` → `"gstin"`.
 - **Bulk:** `validate_many(&[...])` — one call for thousands of values (fast across the WASM/FFI boundary).
-- **Test data:** `generate_pan()`, `generate_aadhaar()`, `generate_gstin("18")`, `generate_mobile()` — **syntactically valid test data only, never real IDs**.
+- **Test data:** `generate_pan()`, `generate_aadhaar()`, `generate_gstin("18")`, `generate_mobile()`, `generate_vehicle()`, `generate_vehicle_bharat()` — **syntactically valid test data only, never real IDs**.
 - **CLI:** `cargo run -p indycheck -- validate pan ABCDE1234F` — see [CLI docs](website/src/content/docs/cli.mdx).
 
 ## Framework integrations
@@ -107,8 +107,8 @@ let r = validate_pan_with_options("abcde 1234 f", opts);
 
 ## Docs & playground
 
-- Docs: <https://indycheck.pages.dev/getting-started/>
-- Live playground (in-browser, real WASM, no server): <https://indycheck.pages.dev/playground/>
+- Docs: <https://indycheck.dev/docs/>
+- Live playground (in-browser, real WASM, no server): <https://indycheck.dev/playground>
 
 ## Project structure
 
