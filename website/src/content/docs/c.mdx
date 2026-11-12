@@ -1,0 +1,116 @@
+---
+title: C API
+description: Use indycheck from C and any language with a C FFI — offline PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN code, TAN, CIN, LLPIN, Voter ID and vehicle validation through libindycheck_ffi.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The C API is the shared native foundation of the Dart, PHP and Go packages: a thin wrapper over the Rust core in `crates/indycheck-ffi`. It is the right entry point if you are writing a binding for a language that has no package yet, or calling indycheck from C/C++ directly.
+
+<Aside type="caution" title="Status — built in CI, not distributed as archives yet">
+  The C library is built in CI (workflow `C API`) and the header is checked for drift on Linux — but it is **not distributed as downloadable archives yet**. You build it from the repo (see below). The API ships with the **upcoming 0.2.3 release**, which adds the six `indycheck_generate_*` exports.
+</Aside>
+
+## Build
+
+From the repo root:
+
+```sh
+cargo build -p indycheck-ffi --release
+```
+
+That produces `target/release/libindycheck_ffi.so` (Linux), `libindycheck_ffi.dylib` (macOS) or `indycheck_ffi.dll` (Windows). The header is `crates/indycheck-ffi/indycheck.h`.
+
+## Example
+
+```c
+#include <stdio.h>
+#include "indycheck.h"
+
+int main(void) {
+    char *pan = indycheck_validate_pan("ABCDE1234F");
+    printf("%s\n", pan); /* {"valid":true,"code":"VALID","reason_en":"...","parsed":{"entity":"P",...}} */
+    indycheck_free_string(pan);
+
+    char *vehicle = indycheck_validate_vehicle("22BH1234AA");
+    printf("%s\n", vehicle); /* Bharat (BH) series: parsed.series_type == "bharat" */
+    indycheck_free_string(vehicle);
+
+    char *type = indycheck_detect("9876543210");
+    printf("%s\n", type); /* "mobile" */
+    indycheck_free_string(type);
+
+    char *version = indycheck_version();
+    printf("%s\n", version); /* e.g. "0.2.2" */
+    indycheck_free_string(version);
+    return 0;
+}
+```
+
+Link it, for example:
+
+```sh
+gcc main.c -I crates/indycheck-ffi -L target/release -lindycheck_ffi \
+  -Wl,-rpath,target/release -o main
+```
+
+## API
+
+Every function returning `char *` returns a heap-allocated, NUL-terminated UTF-8 string **owned by the caller**. Release it with `indycheck_free_string()`. Never `free()` it directly, and never free it twice. `indycheck_free_string(NULL)` is safe (does nothing). Validators return JSON:
+
+```json
+{"valid": true, "code": "VALID", "reason_en": "...", "reason_hi": "...", "parsed": {"entity": "P"}}
+```
+
+`parsed` is omitted when there is nothing to report. `indycheck_detect()` returns a plain type string, not JSON. `indycheck_validate_many()` takes a JSON array of strings (e.g. `["ABCDE1234F", "9876543210"]`) and returns a JSON array of results in the same order.
+
+| Function | Behaviour |
+|---|---|
+| `indycheck_validate_pan` | PAN, e.g. `ABCDE1234F` |
+| `indycheck_validate_aadhaar` | 12-digit Aadhaar (Verhoeff checksum) |
+| `indycheck_validate_gstin` | 15-character GSTIN |
+| `indycheck_validate_mobile` | Indian mobile (`+91` / `91` / `0` prefix, spaces/hyphens OK) |
+| `indycheck_validate_vehicle` / `indycheck_validate_vehicle_registration` | State format (`DL01AB1234`) or Bharat series (`22BH1234AA`) |
+| `indycheck_validate_ifsc` | IFSC (11 characters) |
+| `indycheck_validate_upi` | UPI ID (`name@handle`) |
+| `indycheck_validate_pincode` | 6-digit PIN code |
+| `indycheck_validate_tan` | TAN (format only) |
+| `indycheck_validate_cin` | CIN (format only) |
+| `indycheck_validate_llpin` | LLPIN |
+| `indycheck_validate_voter_id` / `indycheck_validate_epic` | Voter ID / EPIC |
+| `indycheck_detect` | Returns `"pan"`, `"aadhaar"`, …, `"vehicle"` or `"unknown"` |
+| `indycheck_validate_many` | Batch: JSON array in, JSON array of results out |
+| `indycheck_version` | Core version string, e.g. `"0.2.0"` |
+| `indycheck_free_string` | Release a string returned by any `indycheck_*` function |
+
+All 24 functions are verified in `crates/indycheck-ffi/indycheck.h`.
+
+## Test-data generators — test data only
+
+The six `generate_*` exports are new in the upcoming 0.2.3 release:
+
+| Function | Generates |
+|---|---|
+| `indycheck_generate_pan(entity)` | Syntactically valid PAN; `entity` is `"P"`, `"C"`, … (null, empty or unknown falls back to `"P"`) |
+| `indycheck_generate_aadhaar(void)` | Syntactically valid 12-digit Aadhaar (correct Verhoeff check digit) |
+| `indycheck_generate_gstin(state_code)` | Syntactically valid GSTIN; `"18"` for Assam (null, empty or unknown falls back to `"18"`) |
+| `indycheck_generate_mobile(void)` | Syntactically valid 10-digit mobile (first digit 6–9) |
+| `indycheck_generate_vehicle(void)` | Syntactically valid state-format vehicle number (`DL01AB1234`) |
+| `indycheck_generate_vehicle_bharat(void)` | Syntactically valid Bharat (BH) series number (`22BH1234AA`) |
+
+Like the other functions, they return heap strings you must free with `indycheck_free_string()`. Generated values are test data only — never real issued IDs.
+
+## The header
+
+`indycheck.h` is generated with [cbindgen](https://github.com/mozilla/cbindgen) from `crates/indycheck-ffi`. **Do not edit it by hand**; re-run:
+
+```sh
+cbindgen --config cbindgen.toml --crate indycheck-ffi --output indycheck.h
+```
+
+CI checks the committed header against a fresh cbindgen run (Linux only) so drift fails loudly.
+
+## What is not here yet
+
+- **No distributed archives.** There are no downloadable `.so` / `.dylib` / `.dll` releases yet — build the library from the repo.
+- **No options variants.** The C API exposes the core defaults only; there are no `*_with_options` entry points yet.
