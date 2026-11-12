@@ -64,13 +64,13 @@ assert_eq!(r.parsed.unwrap()["entity_code"], "P");
 
 | Input | Result | Code |
 | --- | --- | --- |
-| `AAAPL1234C` | ✅ Valid, individual | `VALID` |
-| `ABCPE1234F` | ✅ Valid, individual | `VALID` |
-| `AAAPL1234c` | ✅ Valid (normalised) | `VALID` |
-| `ABCDE1234F` | ✅ Valid, entity `"Unknown"` (`D` is not a listed holder type) | `VALID` |
-| `AAAPL12345` | ❌ Invalid — last char must be a letter | `INVALID_FORMAT` |
-| `AAAPL123C` | ❌ Invalid — 9 characters | `INVALID_LENGTH` |
-| *(empty)* | ❌ Invalid | `EMPTY` |
+| `AAAPL1234C` | Valid, individual | `VALID` |
+| `ABCPE1234F` | Valid, individual | `VALID` |
+| `AAAPL1234c` | Valid (normalised) | `VALID` |
+| `ABCDE1234F` | Valid, entity `"Unknown"` (`D` is not a listed holder type) | `VALID` |
+| `AAAPL12345` | Invalid — last char must be a letter | `INVALID_FORMAT` |
+| `AAAPL123C` | Invalid — 9 characters | `INVALID_LENGTH` |
+| *(empty)* | Invalid | `EMPTY` |
 
 ## Error codes
 
