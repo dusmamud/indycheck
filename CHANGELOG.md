@@ -5,6 +5,15 @@ All notable changes to indycheck are documented here. The format is based on
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 All crates, npm and PyPI packages share one version in lockstep.
 
+## [0.1.1] - 2026-11-12
+
+### Fixed
+- crates.io page had no README: core crate now sets
+  `readme = "../../README.md"`, plus `keywords` and `categories`, so the
+  README renders on crates.io.
+- Rust edition upgraded 2021 -> 2024 (`rust-version = "1.85"`). No API
+  change; all tests still pass.
+
 ## [0.1.0] - 2026-11-11
 
 ### Added
