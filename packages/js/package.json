@@ -33,6 +33,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "native:build": "npm --prefix ../../crates/indycheck-napi run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
