@@ -85,18 +85,18 @@ validateMobile('9876543210', { normalizeCountryCode: false }); // ok: true
 
 | Validator | `uppercase` | `allowSpaces` / `allowHyphens` | `normalizeCountryCode` |
 | --- | --- | --- | --- |
-| PAN | ✅ | ✅ | — |
+| PAN | Yes | Yes | — |
 | Aadhaar | — | Always allowed | — |
-| GSTIN | ✅ | ✅ | — |
-| IFSC | ✅ | ✅ | — |
-| UPI ID | — (case-sensitive, never changed) | ✅ in lenient mode | — |
-| Mobile | — | Always allowed | ✅ |
+| GSTIN | Yes | Yes | — |
+| IFSC | Yes | Yes | — |
+| UPI ID | — (case-sensitive, never changed) | Yes in lenient mode | — |
+| Mobile | — | Always allowed | Yes |
 | PIN code | — | Always allowed | — |
-| TAN | ✅ | ✅ | — |
-| CIN | ✅ | ✅ | — |
-| LLPIN | ✅ | Hyphen always allowed | — |
-| Voter ID (EPIC) | ✅ | ✅ | — |
-| Vehicle | ✅ | Always allowed | — |
+| TAN | Yes | Yes | — |
+| CIN | Yes | Yes | — |
+| LLPIN | Yes | Hyphen always allowed | — |
+| Voter ID (EPIC) | Yes | Yes | — |
+| Vehicle | Yes | Always allowed | — |
 
 ## Python and Rust
 
