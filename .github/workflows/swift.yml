@@ -42,11 +42,16 @@ jobs:
       # -I points at the directory holding indycheck_uniffiFFI.modulemap so
       # the `import indycheck_uniffiFFI` in the generated file resolves;
       # -lindycheck_uniffi links the cdylib, and the rpath makes it
-      # findable at runtime.
+      # findable at runtime. NOTE: `-I` alone is NOT enough — the
+      # `#if canImport(indycheck_uniffiFFI)` check silently fails and
+      # every `uniffi_indycheck_uniffi_fn_func_*` call then errors with
+      # "cannot find ... in scope". The modulemap must be passed
+      # explicitly with -Xcc -fmodule-map-file.
       - name: Compile bindings + smoke test
         run: |
           swiftc \
             -I crates/indycheck-uniffi/bindings/swift \
+            -Xcc -fmodule-map-file=crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.modulemap \
             crates/indycheck-uniffi/bindings/swift/indycheck_uniffi.swift /tmp/main.swift \
             -L "$GITHUB_WORKSPACE/target/release" -lindycheck_uniffi \
             -Xlinker -rpath -Xlinker "$GITHUB_WORKSPACE/target/release" \
