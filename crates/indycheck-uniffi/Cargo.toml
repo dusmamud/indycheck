@@ -5,9 +5,19 @@ edition.workspace = true
 license.workspace = true
 # Binding crate — never published to crates.io on its own; only the
 # core `indycheck` crate is published. Prevents release-plz from
-# trying to publish it.
+# trying to publish it (its path dependency has no version requirement).
 publish = false
-description = "UniFFI bindings for indycheck (Phase 3 scaffold, not in v0.1)"
+description = "UniFFI bindings for indycheck — Kotlin and Swift wrappers over the Rust core"
+
+[lib]
+# cdylib: the shared library UniFFI generates Kotlin/Swift bindings from.
+# rlib: so `cargo test` / `cargo clippy` can exercise this crate directly.
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 indycheck = { path = "../indycheck" }
+serde_json = "1"
+uniffi = "0.28"
+
+[dev-dependencies]
+serde_json = "1"
