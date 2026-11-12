@@ -7,6 +7,20 @@
  * network calls, nothing leaves the page. (The full playground at
  * /playground/ is where the real WASM build is lazy-loaded when available.)
  */
+import idCard from '../assets/icons/id-card.svg?raw';
+import wifiOff from '../assets/icons/wifi-off.svg?raw';
+import packageIcon from '../assets/icons/package.svg?raw';
+import languages from '../assets/icons/languages.svg?raw';
+import sliders from '../assets/icons/sliders-horizontal.svg?raw';
+import eyeOff from '../assets/icons/eye-off.svg?raw';
+import cpu from '../assets/icons/cpu.svg?raw';
+import layers from '../assets/icons/layers.svg?raw';
+import dices from '../assets/icons/dices.svg?raw';
+import braces from '../assets/icons/braces.svg?raw';
+import puzzle from '../assets/icons/puzzle.svg?raw';
+import terminal from '../assets/icons/terminal.svg?raw';
+import triangleAlert from '../assets/icons/triangle-alert.svg?raw';
+
 const title = 'indycheck — Offline Indian ID validator';
 const description =
 	'Validate PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN, TAN, CIN, LLPIN, Voter ID and vehicle numbers offline. Rust core, zero dependencies, Hindi + English error reasons.';
@@ -37,11 +51,11 @@ const description =
 			description,
 			author: { '@type': 'Person', name: 'dusmamud' },
 			offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
-			softwareVersion: '0.2.0',
+			softwareVersion: '0.2.1',
 			url: 'https://indycheck.pages.dev/',
 		})} />
-		<style>
-			:root { --bg: #0a0f1e; --card: #141f3a; --ink: #f1f5f9; --muted: #a7b4c9; --green: #22c55e; --green-bright: #4ade80; --red: #f87171; --amber: #fbbf24; --line: #263449; --ring: #4ade80; }
+		<style is:global>
+			:root { --bg: #0a0f1e; --card: #141f3a; --ink: #f1f5f9; --muted: #a7b4c9; --green: #22c55e; --green-bright: #4ade80; --red: #f87171; --amber: #fbbf24; --line: rgba(241, 245, 249, 0.12); --ring: #4ade80; --ease: cubic-bezier(0.22, 1, 0.36, 1); }
 			* { box-sizing: border-box; }
 			body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; }
 			::selection { background: rgba(34, 197, 94, 0.35); }
@@ -49,78 +63,83 @@ const description =
 			a { color: #4ade80; }
 			.wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 64px; }
 			header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; position: sticky; top: 0; z-index: 20; background: rgba(10, 15, 30, 0.88); backdrop-filter: blur(12px); }
-			.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.25rem; color: var(--ink); text-decoration: none; }
+			.logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.125rem; color: var(--ink); text-decoration: none; }
 			.logo img { width: 32px; height: 32px; }
-			nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-weight: 600; }
+			nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-weight: 500; }
 			nav a:hover { color: var(--ink); }
-			.hero { padding: 48px 0 8px; }
-			.hero h1 { font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.12; margin: 0 0 16px; }
+			.hero { padding: 64px 0 16px; }
+			.hero h1 { font-size: clamp(2.25rem, 5vw, 3.5rem); line-height: 1.05; letter-spacing: -0.02em; font-weight: 600; margin: 0 0 16px; }
 			.hero h1 span { color: var(--green); }
 			.hero p { font-size: 1.2rem; color: var(--muted); max-width: 640px; margin: 0 0 24px; }
 			.cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
-			.btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-weight: 700; text-decoration: none; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
-			.btn:hover { transform: translateY(-1px); }
-			.btn:active { transform: translateY(0); }
+			.btn { display: inline-block; padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none; transition: background-color .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease), transform .15s var(--ease); }
+			.btn:active { transform: scale(0.98); }
 			.btn-primary:hover { background: #16a34a; }
 			.btn-ghost:hover { border-color: var(--green); color: var(--green-bright); }
 			.btn-primary { background: var(--green); color: #052e12; }
-			.btn-ghost { border: 1px solid var(--line); color: var(--ink); }
-			h2 { margin: 48px 0 12px; font-size: 1.5rem; }
-			pre { background: #020617; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 0.95rem; margin: 0 0 12px; }
+			.btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+			h2 { margin: 64px 0 16px; font-size: 1.5rem; font-weight: 600; }
+			pre { background: #020617; border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto; font-size: 0.95rem; margin: 0 0 12px; }
 			pre code { color: #e2e8f0; }
 			.install-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-			.install-tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 600; }
+			.install-tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 500; }
 			.install-tabs button[aria-pressed="true"] { border-color: var(--green); color: var(--green); }
 			.install-tabs button:hover { border-color: var(--green); }
 			.install-box { position: relative; }
-			.copy-btn { position: absolute; top: 8px; right: 8px; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+			.copy-btn { position: absolute; top: 8px; right: 8px; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 500; font-size: 0.85rem; }
 			.copy-btn:hover { border-color: var(--green); color: var(--green-bright); }
-			.pill { display: inline-block; margin: 0 0 16px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 0.9rem; font-weight: 600; }
-			.pill::before { content: '● '; color: var(--green); font-size: 0.7rem; }
-			.demo { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+			.demo { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+			.demo-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+			.demo-bar .dots { display: flex; gap: 6px; }
+			.demo-bar .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+			.demo-bar .demo-title { font-family: ui-monospace, monospace; font-size: 0.8rem; color: var(--muted); }
+			.demo-bar .offline { margin-left: auto; display: flex; align-items: center; gap: 6px; font-family: ui-monospace, monospace; font-size: 0.8rem; color: var(--green-bright); }
+			.offline .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
 			.demo-row { display: flex; gap: 10px; flex-wrap: wrap; }
 			.demo select, .demo input { background: #020617; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-size: 1rem; }
 			.demo select { flex: 0 0 auto; }
 			.demo input { flex: 1 1 260px; font-family: ui-monospace, monospace; }
 			.demo .hint { color: var(--muted); font-size: 0.9rem; margin: 10px 0 0; }
 			.demo .hint button { background: none; border: none; color: #4ade80; cursor: pointer; padding: 0; font-size: 0.9rem; text-decoration: underline; }
-			.result { margin-top: 14px; border-radius: 10px; padding: 14px 16px; display: none; }
+			.result { margin-top: 16px; border-radius: 12px; padding: 16px; display: none; }
 			.result.show { display: block; }
 			.result.valid { background: #052e12; border: 1px solid #166534; }
 			.result.invalid { background: #450a0a; border: 1px solid #991b1b; }
-			.result .verdict { font-weight: 800; font-size: 1.05rem; }
+			.result .verdict { font-weight: 600; font-size: 1.05rem; }
 			.result .verdict.valid { color: var(--green); }
 			.result .verdict.invalid { color: var(--red); }
 			.result code { color: #e2e8f0; }
 			.result .reason-hi { color: var(--muted); }
 			.result pre { background: rgba(2, 6, 23, 0.6); margin-top: 10px; }
-			.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-			.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; transition: transform .18s ease, border-color .18s ease; }
-			.card:hover { transform: translateY(-2px); border-color: #33507a; }
-			.card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+			.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+			.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; transition: border-color .18s var(--ease), background-color .18s var(--ease); }
+			.card:hover { border-color: rgba(241, 245, 249, 0.24); }
+			.card h3 { margin: 0 0 6px; font-size: 1.05rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+			.card h3 svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--muted); }
 			.card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
-			table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+			table { width: 100%; border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 			th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 			th { color: var(--muted); font-weight: 600; }
 			td code { color: #e2e8f0; }
-			.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
-			.limits { background: #451a03; border: 1px solid #92400e; border-radius: 12px; padding: 18px 20px; }
-			.limits h2 { margin-top: 0; color: var(--amber); }
-			.limits p, .limits li { color: #fde68a; }
+			.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; }
+			.limits { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: 16px; padding: 20px; }
+			.limits h2 { margin-top: 0; color: var(--amber); display: flex; align-items: center; gap: 8px; }
+			.limits h2 svg { width: 20px; height: 20px; flex: 0 0 auto; }
+			.limits p, .limits li { color: var(--ink); }
 			footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 0.9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 			@media (max-width: 640px) {
 				.wrap { padding: 0 16px 48px; }
-				header { padding: 14px 0; }
+				header { padding: 16px 0; }
 				nav a { margin-left: 12px; font-size: 0.92rem; }
 				.logo { font-size: 1.1rem; }
-				.hero { padding: 32px 0 4px; }
+				.hero { padding: 48px 0 8px; }
 				.hero p { font-size: 1.05rem; }
-				h2 { margin: 36px 0 10px; font-size: 1.3rem; }
+				h2 { margin: 48px 0 12px; font-size: 1.3rem; }
 				.demo { padding: 16px; }
 				.demo select { flex: 1 1 100%; }
 				.demo input { flex: 1 1 100%; }
 				.demo .demo-clear { flex: 1 1 100%; }
-				.btn { padding: 11px 18px; }
+				.btn { padding: 12px 20px; }
 				table { font-size: 0.88rem; }
 				th, td { padding: 8px; }
 			}
@@ -139,8 +158,7 @@ const description =
 			</header>
 
 			<section class="hero">
-				<p class="pill">Rust core · Zero dependencies · Fully offline</p>
-				<h1>indycheck — <span>Offline Indian ID validator</span></h1>
+				<h1>indycheck — <span>Offline</span> Indian ID validator</h1>
 				<p>
 					Validate PAN, Aadhaar, GSTIN, IFSC, UPI IDs, mobile numbers, PIN codes,
 					TAN, CIN, LLPIN, Voter IDs and vehicle numbers —
@@ -180,6 +198,7 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 			<section>
 				<h2>Try it — right here, offline</h2>
 				<div class="demo">
+					<div class="demo-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="demo-title">live demo</span><span class="offline"><i class="dot"></i>offline</span></div>
 					<div class="demo-row">
 						<select id="demo-type" aria-label="ID type">
 							<option value="pan">PAN</option>
@@ -195,7 +214,7 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 							<option value="epic">Voter ID</option>
 							<option value="vehicle">Vehicle</option>
 						</select>
-						<input id="demo-input" type="text" placeholder="AAAPL1234C" autocomplete="off" spellcheck="false" aria-label="Value to validate" />
+						<input id="demo-input" type="text" value="AAAPL1234C" autocomplete="off" spellcheck="false" aria-label="Value to validate" />
 						<button type="button" class="btn btn-ghost demo-clear" id="demo-clear">Clear</button>
 					</div>
 					<p class="hint">
@@ -220,51 +239,51 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 				<h2>Why indycheck</h2>
 				<div class="grid">
 					<div class="card">
-						<h3>🪪 12 validators</h3>
+						<h3><span set:html={idCard} /> 12 validators</h3>
 						<p>PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN, TAN, CIN, LLPIN, Voter ID (EPIC) and vehicle numbers.</p>
 					</div>
 					<div class="card">
-						<h3>🔌 Fully offline</h3>
+						<h3><span set:html={wifiOff} /> Fully offline</h3>
 						<p>No API keys, no network calls, no per-check fees. Works in a Lambda, a CLI, or a browser with no internet.</p>
 					</div>
 					<div class="card">
-						<h3>📦 Zero dependencies</h3>
+						<h3><span set:html={packageIcon} /> Zero dependencies</h3>
 						<p>One small Rust core compiled to native, Node and Python. Nothing to audit, nothing to break on install.</p>
 					</div>
 					<div class="card">
-						<h3>🇮🇳 Hindi + English reasons</h3>
+						<h3><span set:html={languages} /> Hindi + English reasons</h3>
 						<p>Every failure comes with <code>reason_en</code> and <code>reason_hi</code>, so your form errors make sense to every user in India.</p>
 					</div>
 					<div class="card">
-						<h3>🎛️ Strict / lenient options</h3>
+						<h3><span set:html={sliders} /> Strict / lenient options</h3>
 						<p>Control spaces, hyphens, <code>+91</code> normalisation and uppercasing per call — strict for APIs, lenient for messy user input.</p>
 					</div>
 					<div class="card">
-						<h3>🎭 Masking &amp; formatting</h3>
+						<h3><span set:html={eyeOff} /> Masking &amp; formatting</h3>
 						<p><code>mask('aadhaar', …)</code> → <code>XXXX XXXX 0124</code>, <code>format('mobile', …)</code> → <code>+91 98765 43210</code>. Display-safe by default.</p>
 					</div>
 					<div class="card">
-						<h3>🦀 Rust core</h3>
+						<h3><span set:html={cpu} /> Rust core</h3>
 						<p>One implementation, one test suite — the same rules in JavaScript, Python and Rust. No drift between ports.</p>
 					</div>
 					<div class="card">
-						<h3>⚡ Batch-friendly</h3>
+						<h3><span set:html={layers} /> Batch-friendly</h3>
 						<p>Validate thousands of rows in milliseconds. Built for CSV imports, signup forms and KYC pre-checks.</p>
 					</div>
 					<div class="card">
-						<h3>🎲 Test-data generators</h3>
+						<h3><span set:html={dices} /> Test-data generators</h3>
 						<p><code>generate('pan')</code> gives you a valid-looking value for tests and seed data — clearly labelled TEST DATA ONLY, never a real ID.</p>
 					</div>
 					<div class="card">
-						<h3>🔍 Structured output</h3>
+						<h3><span set:html={braces} /> Structured output</h3>
 						<p>Every result returns a stable error <code>code</code>, a parsed breakdown (state, holder type, bank code…) and the normalised value.</p>
 					</div>
 					<div class="card">
-						<h3>🧩 Framework integrations</h3>
+						<h3><span set:html={puzzle} /> Framework integrations</h3>
 						<p>Ready-made Zod schemas, React Hook Form / Yup resolvers and Pydantic types — drop indycheck into the form library you already use.</p>
 					</div>
 					<div class="card">
-						<h3>⌨️ CLI</h3>
+						<h3><span set:html={terminal} /> CLI</h3>
 						<p><code>indycheck validate</code>, <code>detect</code> and <code>generate</code> — check a single value or a whole CSV from your terminal.</p>
 					</div>
 				</div>
@@ -321,7 +340,7 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 			</section>
 
 			<section class="limits">
-				<h2>⚠️ Honest limits — read this first</h2>
+				<h2><span set:html={triangleAlert} /> Honest limits — read this first</h2>
 				<p>
 					indycheck validates <strong>format and checksum only</strong>. It does not — and cannot — tell you
 					whether an ID is real, active, or belongs to the person who typed it.
@@ -370,12 +389,14 @@ console.log(r.reason_hi); // 'मान्य प्रारूप।'</code></
 			function renderDemo() {
 				const value = inputEl.value;
 				if (!value.trim()) {
-					resultEl.className = 'result';
+					resultEl.classList.remove('show', 'valid', 'invalid');
 					resultEl.innerHTML = '';
 					return;
 				}
 				const r = validate(typeEl.value, value);
-				resultEl.className = `result show ${r.ok ? 'valid' : 'invalid'}`;
+				resultEl.classList.add('show');
+				resultEl.classList.toggle('valid', r.ok);
+				resultEl.classList.toggle('invalid', !r.ok);
 				const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 				resultEl.innerHTML = `
 					<div class="verdict ${r.ok ? 'valid' : 'invalid'}">${r.ok ? '✓ Valid' : '✗ Invalid'} — ${esc(r.code)}</div>
