@@ -58,12 +58,12 @@ assert_eq!(r.parsed.unwrap()["state_code"], "DL");
 
 | Input | Result | Code |
 | --- | --- | --- |
-| `U12345DL2025PTC123456` | ✅ Valid, unlisted Pvt Ltd, Delhi, 2025 | `VALID` |
-| `L12345MH2020PLC123456` | ✅ Valid, listed public company | `VALID` |
-| `X12345DL2025PTC123456` | ❌ Invalid — must start with L or U | `INVALID_FORMAT` |
-| `U12345DL2025PTC12345` | ❌ Invalid — 20 characters | `INVALID_LENGTH` |
-| `U1234ADL2025PTC123456` | ❌ Invalid — letter inside industry code | `INVALID_FORMAT` |
-| *(empty)* | ❌ Invalid | `EMPTY` |
+| `U12345DL2025PTC123456` | Valid, unlisted Pvt Ltd, Delhi, 2025 | `VALID` |
+| `L12345MH2020PLC123456` | Valid, listed public company | `VALID` |
+| `X12345DL2025PTC123456` | Invalid — must start with L or U | `INVALID_FORMAT` |
+| `U12345DL2025PTC12345` | Invalid — 20 characters | `INVALID_LENGTH` |
+| `U1234ADL2025PTC123456` | Invalid — letter inside industry code | `INVALID_FORMAT` |
+| *(empty)* | Invalid | `EMPTY` |
 
 ## Error codes
 
