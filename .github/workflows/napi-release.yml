@@ -1,0 +1,271 @@
+# Node napi-rs prebuilds + npm publish — the native .node addon from
+# crates/indycheck-napi, built per platform and published to npm via
+# Trusted Publishing (GitHub OIDC), together with the root `indycheck`
+# package from packages/js.
+#
+# MANUAL DISPATCH ONLY — it never runs on push, so it can never turn
+# CI red by itself. Do NOT dispatch it until every prerequisite below
+# is in place; the publish job fails fast with a plain message if one
+# is missing.
+#
+# GATING: the publish job `needs: build`, so it only runs when ALL
+# five platform builds succeeded. A platform build failure stops the
+# whole job before anything is published — npm versions are immutable,
+# so a partial publish can never be fixed by re-running. (If the
+# publish loop itself fails part-way, do NOT re-dispatch as-is — the
+# version check below will stop it. Recover by bumping the patch
+# version and re-dispatching, or by publishing the remaining platform
+# package by hand.)
+#
+# PLATFORM PACKAGE NAMES (napi-rs convention `<napi.name>-<platform>`):
+#   indycheck-napi-linux-x64-gnu
+#   indycheck-napi-linux-x64-musl
+#   indycheck-napi-darwin-arm64
+#   indycheck-napi-darwin-x64
+#   indycheck-napi-win32-x64-msvc
+# These names are not a free choice: they are what `napi create-npm-dir`
+# generates from crates/indycheck-napi/package.json (napi.name
+# "indycheck-napi") and what the generated loader
+# crates/indycheck-napi/index.js requires (`require('indycheck-napi-…')`).
+# Verified locally with @napi-rs/cli 2.18.4: `napi create-npm-dir`
+# writes exactly these names (with os/cpu/libc fields), and
+# `napi artifacts` copies each `indycheck-napi.<platform>.node` into
+# npm/<platform>/ — and throws if the platform is not configured.
+#
+# PREREQUISITES — all manual, all before the first dispatch:
+#   1. npm TRUSTED PUBLISHERS (Dus, on npmjs.com — one per package,
+#      the existing publisher covers ONLY the package name `indycheck`
+#      with workflow file npm.yml):
+#      - each of the 5 platform packages above: owner dusmamud, repo
+#        indycheck, workflow file napi-release.yml, no environment.
+#      - the root package `indycheck` needs a SECOND trusted publisher
+#        entry for workflow file napi-release.yml (its existing entry
+#        points at npm.yml, and OIDC only matches the exact workflow
+#        file — without this the root publish gets 403).
+#   2. crates/indycheck-napi/package.json must list the two
+#      non-default targets under napi.triples.additional
+#      (["aarch64-apple-darwin", "x86_64-unknown-linux-musl"]) — DONE
+#      in the same change as this workflow. napi-rs's default triples
+#      are only win32-x64-msvc, darwin-x64 and linux-x64-gnu; without
+#      the additional entries `napi create-npm-dir` creates no dirs
+#      for darwin-arm64 / linux-x64-musl and `napi artifacts` throws.
+#   3. packages/js/package.json must gain the matching
+#      `optionalDependencies` entries (exact version, e.g.
+#      "indycheck-napi-linux-x64-gnu": "0.2.3") — a SEPARATE step, not
+#      this workflow. The publish job fails fast if any entry is missing
+#      or has the wrong version.
+#   4. VERSION SYNC: crates/indycheck-napi/package.json currently
+#      sits at 0.2.0 while packages/js is at 0.2.2 — scripts/sync-versions.sh
+#      does NOT cover it yet. Before the release, bump it to the same
+#      version as packages/js (ideally by adding it to
+#      scripts/sync-versions.sh). The publish job fails fast on a
+#      mismatch, because the platform packages take their version from
+#      this file and the root's optionalDependencies must resolve to
+#      exactly that version.
+#   5. LOADER WIRING (a code change, not covered by this workflow's
+#      checks): the published `indycheck` package does not currently
+#      load the native addon at all — packages/js/src/native.ts only
+#      finds crates/indycheck-napi/index.js inside a repo checkout,
+#      and packages/js/package.json ships files: ['dist'] only. Before
+#      the first napi publish, the dist must ship a loader that
+#      requires `indycheck-napi-<platform>` (mirroring
+#      crates/indycheck-napi/index.js), or the platform packages will
+#      install but never be loaded and every user silently stays on
+#      the pure-TypeScript implementation.
+#
+# How the pieces fit (napi-rs standard flow):
+#   build job: `npx napi build --platform --release --target <triple>`
+#     per platform, .node uploaded as an artifact.
+#   publish job: downloads all .node files into
+#     crates/indycheck-napi/artifacts/, runs `napi create-npm-dir`
+#     (writes npm/<platform>/package.json) then `napi artifacts`
+#     (copies each .node into its npm/<platform>/ dir), runs the
+#     pre-flight checks, publishes the 5 platform packages first,
+#     then the root package. The root publish is identical to
+#     npm.yml's (Node 22, npm@11, setup-node `token: ""` so
+#     NODE_AUTH_TOKEN stays unset and npm does the OIDC exchange —
+#     npm >= 11.5.1 is required for `npm publish --provenance`).
+#
+# Cross-compile notes:
+#   - darwin-x64 is built on the arm64 macos-latest runner via
+#     `cargo build --target x86_64-apple-darwin` (Apple's linker
+#     handles both architectures). If that ever breaks, fall back to
+#     an Intel macOS runner for that leg.
+#   - linux-x64-musl links with musl-gcc, installed via musl-tools.
+name: Node napi-rs prebuilds + npm publish
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: napi .node (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x64-gnu
+            smoke: true
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: linux-x64-musl
+            smoke: false
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: darwin-arm64
+            smoke: true
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: darwin-x64
+            smoke: false
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: win32-x64-msvc
+            smoke: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+      # The musl target links with musl-gcc (see c-release.yml).
+      - name: Install musl toolchain (musl leg)
+        if: matrix.platform == 'linux-x64-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Build .node addon
+        working-directory: crates/indycheck-napi
+        # --target names the output indycheck-napi.<platform>.node
+        # (--platform); the npm script has no --target, so call the
+        # CLI directly. Same crates/indycheck-napi checkout that
+        # .github/workflows/napi.yml builds, just per target.
+        run: |
+          npm ci
+          npx napi build --platform --release --target ${{ matrix.target }}
+      - name: Confirm .node file exists
+        shell: bash
+        run: ls crates/indycheck-napi/*.node
+      # Cross-built binaries cannot load on the build host (musl .node
+      # on a glibc runner, x64 .node on an arm64 runner), so the smoke
+      # test only runs on the legs whose binary matches the host.
+      - name: Smoke-load the addon (host legs only)
+        if: matrix.smoke
+        working-directory: crates/indycheck-napi
+        shell: bash
+        run: |
+          node -e "const b = require('./index.js'); if (typeof b.validatePan !== 'function') { console.error('native addon did not load'); process.exit(1); } console.log('native addon loaded, validatePan:', typeof b.validatePan)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: napi-${{ matrix.platform }}
+          path: crates/indycheck-napi/*.node
+
+  publish:
+    name: publish platform packages + root package to npm (OIDC)
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+          # setup-node defaults `token` to github.token; an explicit
+          # empty value keeps NODE_AUTH_TOKEN unset so npm does the
+          # OIDC exchange (same as npm.yml).
+          token: ""
+      - name: Install npm 11 (OIDC publish needs npm >= 11.5.1)
+        run: npm install -g npm@11
+      # Downloaded into the napi crate dir so `napi artifacts` finds
+      # them with its defaults (-d artifacts, --dist npm).
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: napi-*
+          path: crates/indycheck-napi/artifacts
+          merge-multiple: true
+      - name: Install napi CLI + lay out platform packages
+        working-directory: crates/indycheck-napi
+        run: |
+          npm ci
+          ls artifacts/
+          # Writes npm/<platform>/package.json for every configured
+          # triple (defaults + triples.additional — see the header).
+          npx napi create-npm-dir -t .
+          # Copies each artifacts/indycheck-napi.<platform>.node into
+          # npm/<platform>/ (and a copy next to package.json). Throws
+          # if a platform has no npm dir — i.e. if triples.additional
+          # is missing.
+          npx napi artifacts
+          ls npm/*/ | head -30
+      - name: Build root package dist
+        working-directory: packages/js
+        run: |
+          npm ci
+          npm run build
+          npm pack --dry-run
+      # Every check below runs BEFORE any publish. npm versions are
+      # immutable: publishing platform package #3 and then discovering
+      # the root package is already at this version (or a platform
+      # package is) cannot be undone.
+      - name: Pre-flight checks (fail before any publish)
+        shell: bash
+        run: |
+          set -euo pipefail
+          JS_VER=$(node -e "console.log(require('./packages/js/package.json').version)")
+          NAPI_VER=$(node -e "console.log(require('./crates/indycheck-napi/package.json').version)")
+          echo "root indycheck version: $JS_VER"
+          echo "indycheck-napi version: $NAPI_VER"
+          if [ "$JS_VER" != "$NAPI_VER" ]; then
+            echo "ERROR: crates/indycheck-napi/package.json is at $NAPI_VER but packages/js/package.json is at $JS_VER." >&2
+            echo "The platform packages take their version from the napi package, and the root's optionalDependencies must resolve to exactly that version." >&2
+            echo "Fix: bump crates/indycheck-napi/package.json to $JS_VER (ideally add it to scripts/sync-versions.sh) and re-dispatch." >&2
+            exit 1
+          fi
+          node -e "
+            const fs = require('fs');
+            const js = JSON.parse(fs.readFileSync('packages/js/package.json', 'utf8'));
+            const ver = js.version;
+            const platforms = ['linux-x64-gnu', 'linux-x64-musl', 'darwin-arm64', 'darwin-x64', 'win32-x64-msvc'];
+            const opt = js.optionalDependencies || {};
+            const missing = platforms.filter(p => opt['indycheck-napi-' + p] !== ver);
+            if (missing.length) {
+              console.error('ERROR: packages/js/package.json is missing optionalDependencies entries (exact version ' + ver + ') for: ' + missing.map(p => 'indycheck-napi-' + p).join(', '));
+              console.error('Fix: add the entries, then re-dispatch. See the header of .github/workflows/napi-release.yml.');
+              process.exit(1);
+            }
+            console.log('optionalDependencies OK for all 5 platform packages at ' + ver);
+          "
+          for f in crates/indycheck-napi/npm/*/indycheck-napi.*.node; do
+            [ -f "$f" ] || { echo "ERROR: expected .node missing: $f" >&2; exit 1; }
+          done
+          echo "all 5 .node files present in npm/<platform>/"
+          for pkg in indycheck indycheck-napi-linux-x64-gnu indycheck-napi-linux-x64-musl indycheck-napi-darwin-arm64 indycheck-napi-darwin-x64 indycheck-napi-win32-x64-msvc; do
+            if npm view "$pkg@$JS_VER" version 2>/dev/null; then
+              echo "ERROR: $pkg@$JS_VER is already on npm — nothing to publish; bump the version and re-dispatch" >&2
+              exit 1
+            fi
+            echo "$pkg@$JS_VER is new"
+          done
+      - name: Publish platform packages to npm
+        working-directory: crates/indycheck-napi
+        run: |
+          set -e
+          for platform in linux-x64-gnu linux-x64-musl darwin-arm64 darwin-x64 win32-x64-msvc; do
+            echo "publishing indycheck-napi-$platform"
+            (cd "npm/$platform" && npm publish --provenance --access public)
+          done
+      - name: Publish root package to npm
+        working-directory: packages/js
+        run: npm publish --provenance --access public
+      - name: Summary
+        run: |
+          JS_VER=$(node -e "console.log(require('./packages/js/package.json').version)")
+          echo "published indycheck@$JS_VER + indycheck-napi-<linux-x64-gnu,linux-x64-musl,darwin-arm64,darwin-x64,win32-x64-msvc>@$JS_VER"
