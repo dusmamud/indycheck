@@ -58,13 +58,13 @@ assert_eq!(r.parsed.unwrap()["state"], "Maharashtra");
 
 | Input | Result | Code |
 | --- | --- | --- |
-| `27AAAPL1234C1ZE` | ✅ Valid, Maharashtra | `VALID` |
-| `18AAAPL1234C1Z4` | ❌ Invalid — check character wrong for this GSTIN | `INVALID_CHECKSUM` |
-| `99AAAPL1234C1ZE` | ❌ Invalid — no state code 99 | `INVALID_STATE_CODE` |
-| `27ABCDE1234F1ZM` | ❌ Invalid — check digit does not match | `INVALID_CHECKSUM` |
-| `27AAAPL1234C1AM` | ❌ Invalid — 14th character must be Z | `INVALID_FORMAT` |
-| `27AAAPL1234C1Z` | ❌ Invalid — 14 characters | `INVALID_LENGTH` |
-| *(empty)* | ❌ Invalid | `EMPTY` |
+| `27AAAPL1234C1ZE` | Valid, Maharashtra | `VALID` |
+| `18AAAPL1234C1Z4` | Invalid — check character wrong for this GSTIN | `INVALID_CHECKSUM` |
+| `99AAAPL1234C1ZE` | Invalid — no state code 99 | `INVALID_STATE_CODE` |
+| `27ABCDE1234F1ZM` | Invalid — check digit does not match | `INVALID_CHECKSUM` |
+| `27AAAPL1234C1AM` | Invalid — 14th character must be Z | `INVALID_FORMAT` |
+| `27AAAPL1234C1Z` | Invalid — 14 characters | `INVALID_LENGTH` |
+| *(empty)* | Invalid | `EMPTY` |
 
 Note: the `18…` example above uses the right shape but the wrong check character — compute the check character with the Mod-36 Luhn algorithm (or let indycheck do it) instead of guessing.
 
