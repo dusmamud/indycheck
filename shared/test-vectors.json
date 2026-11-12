@@ -1505,6 +1505,69 @@
     "detect": true
   },
   {
+    "input": "22BH1234AA",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "26BH9876AB",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "22 BH 1234 AA",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "22bh1234aa",
+    "type": "vehicle",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "20BH1234AA",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "22BH0000AA",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "22BH1234AI",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "22BH1234AO",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "22BH1234A",
+    "type": "vehicle",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
     "input": "DL01A1234",
     "type": "vehicle",
     "valid": true,
