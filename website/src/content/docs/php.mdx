@@ -1,0 +1,139 @@
+---
+title: PHP
+description: Use indycheck in PHP — offline PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN code, TAN, CIN, LLPIN, Voter ID and vehicle validation through PHP FFI.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The PHP package is a thin [FFI](https://www.php.net/manual/en/book.ffi.php) binding over the C API in `crates/indycheck-ffi`, which itself wraps the Rust core. **No validation logic lives in PHP** — every call goes through the C API and decodes the JSON result it returns, so PHP returns the same answer as Rust for the same input.
+
+<Aside type="caution" title="Status — in the repo, not on Packagist yet">
+  The package lives in `packages/php` in the repo (Composer name `dusmamud/indycheck`) and ships with the **upcoming 0.2.3 release** — it is **not on Packagist yet**, so `composer require dusmamud/indycheck` will not work until it is published there. It needs PHP 8.1+ with `ext-ffi` and `ffi.enable=true`, plus the compiled native library (see below). This is the FFI tier only; a compiled PHP extension (PIE) is a later tier and is not part of this package.
+</Aside>
+
+## Install
+
+Until the package is on Packagist, install it from the repo — either as a VCS repository in your `composer.json`:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/dusmamud/indycheck"
+        }
+    ],
+    "require": {
+        "dusmamud/indycheck": "^0.2"
+    }
+}
+```
+
+or, from a local checkout of the repo, point Composer at the package directory with a `path` repository (`packages/php`).
+
+Requires PHP `>=8.1`, `ext-ffi` and `ext-json`.
+
+## Enabling FFI (`ffi.enable=true`)
+
+PHP ships FFI disabled by default (`ffi.enable=preload`), which only allows `FFI::cdef()` inside preload scripts — not how this package runs. You need `ffi.enable=true`, and it is a `PHP_INI_SYSTEM` setting, so **`ini_set()` cannot change it**. Add to `php.ini`:
+
+```ini
+ffi.enable=true
+```
+
+For PHP-FPM, set `php_admin_value[ffi.enable]=true` in the pool config and restart PHP-FPM.
+
+## The native library
+
+Build the Rust shared library once from the indycheck repo root:
+
+```sh
+cargo build -p indycheck-ffi --release
+```
+
+The package finds the library in this order: the `INDYCHECK_LIB_PATH` environment variable, `vendor/dusmamud/indycheck/lib/<platform file>` (Composer install), `<package>/lib/<platform file>`, then `target/release/` / `target/debug/` in the repo checkout. The file is `libindycheck_ffi.so` (Linux), `libindycheck_ffi.dylib` (macOS) or `indycheck_ffi.dll` (Windows). If it cannot be found, the package throws a `RuntimeException` naming the file and the `cargo build` command.
+
+## Example
+
+```php
+<?php
+
+use Indycheck\Indycheck;
+
+$pan = Indycheck::validatePan('ABCDE1234F');
+if ($pan['valid']) {
+    echo $pan['code'] . ' ' . $pan['parsed']['entity'] . ' ' . $pan['parsed']['entity_code'];
+} else {
+    echo $pan['code'] . ' ' . $pan['reason_en'] . ' / ' . $pan['reason_hi'];
+}
+
+// Bharat (BH) series vehicle number
+$vehicle = Indycheck::validateVehicle('22BH1234AA');
+echo $vehicle['valid'] . ' ' . $vehicle['parsed']['series_type'] . ' '
+    . $vehicle['parsed']['year'] . ' ' . $vehicle['parsed']['suffix'];
+
+// Detect the type first, then validate a batch in one call
+echo Indycheck::detect('9876543210'); // mobile
+$batch = Indycheck::validateMany(['ABCDE1234F', '9876543210', 'nope']);
+// $batch[0]['valid'] === true, $batch[2]['valid'] === false
+
+echo Indycheck::version(); // e.g. '0.2.2'
+```
+
+## API
+
+Every validator is a static method on `Indycheck\Indycheck` and returns an associative array with the same shape as the JSON the Rust core returns:
+
+```php
+[
+    'valid'     => bool,   // true when the input is valid
+    'code'      => string, // 'VALID' on success, otherwise a stable error code
+    'reason_en' => string, // human-readable reason (English)
+    'reason_hi' => string, // human-readable reason (Hindi)
+    'parsed'    => array,  // extracted fields — present only on success
+]
+```
+
+A failed validation is a normal return value (`'valid' => false`), never an exception. Exceptions are only for transport problems: the native library cannot be found, `ext-ffi` is disabled, or the native call returns something that cannot be decoded.
+
+| Method | Validates |
+|---|---|
+| `Indycheck::validatePan` | PAN, e.g. `ABCDE1234F` |
+| `Indycheck::validateAadhaar` | 12-digit Aadhaar (Verhoeff checksum) |
+| `Indycheck::validateGstin` | 15-character GSTIN |
+| `Indycheck::validateMobile` | Indian mobile (`+91` / `91` / `0` prefix, spaces/hyphens OK) |
+| `Indycheck::validateVehicle` / `Indycheck::validateVehicleRegistration` | State format (`DL01AB1234`) or Bharat series (`22BH1234AA`) |
+| `Indycheck::validateIfsc` | IFSC (11 characters) |
+| `Indycheck::validateUpi` | UPI ID (`name@handle`) |
+| `Indycheck::validatePincode` | 6-digit PIN code |
+| `Indycheck::validateTan` | TAN (format only) |
+| `Indycheck::validateCin` | CIN (format only) |
+| `Indycheck::validateLlpin` | LLPIN |
+| `Indycheck::validateVoterId` / `Indycheck::validateEpic` | Voter ID / EPIC |
+| `Indycheck::detect` | Returns the type string (`'pan'`, `'mobile'`, `'vehicle'`, …, `'unknown'`) |
+| `Indycheck::validateMany(array $inputs)` | Batch: validates each input, results in input order |
+| `Indycheck::version()` | Core version string, e.g. `'0.2.2'` |
+
+All 23 methods are verified in `packages/php/src/Indycheck.php` and covered by 16 PHPUnit tests (`packages/php/tests/IndycheckTest.php`).
+
+## Test-data generators — test data only
+
+```php
+Indycheck::generatePan(); // e.g. 'XKQPW4821M' — mock test data only, never a real PAN
+Indycheck::generatePan('C'); // entity Company
+Indycheck::generateAadhaar(); // 12 digits, correct Verhoeff check digit
+Indycheck::generateGstin(); // valid GSTIN for Assam ('18')
+Indycheck::generateGstin('27'); // ... for Maharashtra
+Indycheck::generateMobile(); // 10 digits, first digit 6-9
+Indycheck::generateVehicle(); // e.g. 'DL01AB1234'
+Indycheck::generateVehicleBharat(); // e.g. '22BH1234AA'
+```
+
+Generated values are syntactically valid, not real issued IDs — they pass this library's own validators but were never issued by UIDAI, Income Tax, GSTN or anyone else. Use them only in tests, fixtures and demos.
+
+## What is not here yet
+
+- **No Packagist release.** Install from the repo as above until the package is published.
+- **No prebuilt native library.** You must run the `cargo build` step; the `.so` / `.dylib` / `.dll` is a build artefact, never committed to the repo.
+- **No options variants.** Unlike the Rust core and the JS/Python wrappers, the PHP package has no `validate_*_with_options` methods yet — validation always uses the core defaults.
+- **No compiled extension.** This is the FFI tier only; a PIE extension is planned later, not part of this package.
