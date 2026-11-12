@@ -8,7 +8,8 @@ use indycheck::{
     ValidationResult, detect as core_detect, format_gstin as core_format_gstin,
     format_pan as core_format_pan, generate_aadhaar as core_generate_aadhaar,
     generate_gstin as core_generate_gstin, generate_mobile as core_generate_mobile,
-    generate_pan as core_generate_pan, mask_aadhaar as core_mask_aadhaar,
+    generate_pan as core_generate_pan, generate_vehicle as core_generate_vehicle,
+    generate_vehicle_bharat as core_generate_vehicle_bharat, mask_aadhaar as core_mask_aadhaar,
     mask_mobile as core_mask_mobile, mask_pan as core_mask_pan,
     validate_aadhaar as core_validate_aadhaar, validate_cin as core_validate_cin,
     validate_gstin as core_validate_gstin, validate_ifsc as core_validate_ifsc,
@@ -146,4 +147,14 @@ pub fn generate_gstin(state_code: String) -> String {
 #[wasm_bindgen]
 pub fn generate_mobile() -> String {
     core_generate_mobile()
+}
+
+#[wasm_bindgen]
+pub fn generate_vehicle() -> String {
+    core_generate_vehicle()
+}
+
+#[wasm_bindgen]
+pub fn generate_vehicle_bharat() -> String {
+    core_generate_vehicle_bharat()
 }
