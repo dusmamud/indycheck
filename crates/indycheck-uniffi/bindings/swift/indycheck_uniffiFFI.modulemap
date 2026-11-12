@@ -1,0 +1,4 @@
+module indycheck_uniffiFFI {
+    header "indycheck_uniffiFFI.h"
+    export *
+}
