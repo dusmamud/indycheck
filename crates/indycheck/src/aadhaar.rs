@@ -1,4 +1,4 @@
-use crate::options::{spaces_hyphens_ok, strip_spaces_hyphens, Options};
+use crate::options::{Options, spaces_hyphens_ok, strip_spaces_hyphens};
 use crate::types::ValidationResult;
 use crate::verhoeff;
 use serde_json::json;
