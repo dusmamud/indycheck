@@ -110,6 +110,18 @@ export default defineConfig({
 					],
 				},
 				{
+					label: 'Languages & runtimes',
+					items: [
+						{ label: 'Flutter & Dart', slug: 'flutter' },
+						{ label: 'PHP', slug: 'php' },
+						{ label: 'Go', slug: 'go' },
+						{ label: 'Kotlin', slug: 'kotlin' },
+						{ label: 'Swift', slug: 'swift' },
+						{ label: 'C API', slug: 'c' },
+						{ label: 'Node.js native (napi-rs)', slug: 'node-napi' },
+					],
+				},
+				{
 					label: 'Reference',
 					items: [
 						{ label: 'API & error codes', slug: 'api' },
