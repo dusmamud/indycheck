@@ -2,12 +2,11 @@
 # (crates/indycheck-ffi). Builds the C library first, then vets and tests the
 # Go package against it on all three OSes. Windows needs a C toolchain for
 # cgo; MinGW gcc from Chocolatey is the standard choice for go+cgo on
-# windows-latest (the MSVC-built Rust staticlib is linked by gcc — see the
-# note on the Windows step; if that link ever fails, build the Rust lib for
-# the GNU target instead: rustup target add x86_64-pc-windows-gnu, then
-# cargo build -p indycheck-ffi --release --target x86_64-pc-windows-gnu and
-# copy target/x86_64-pc-windows-gnu/release/libindycheck_ffi.a into
-# target/release/ before `go test`).
+# windows-latest. Note the Windows build step: the MSVC-built Rust
+# staticlib cannot be linked by MinGW gcc (undefined std/panic_unwind
+# symbols), so on Windows the C library is built for the
+# x86_64-pc-windows-gnu target and its static archive is copied where
+# `-lindycheck_ffi` finds it — the Go binary then links statically.
 name: Go
 
 on:
@@ -42,7 +41,22 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install mingw -y
       - name: Build C library
-        run: cargo build -p indycheck-ffi --release
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            # The MSVC-built staticlib cannot be linked by MinGW gcc
+            # (undefined std/panic_unwind symbols at cgo link time), so
+            # build the GNU target instead and copy its static archive
+            # where `-lindycheck_ffi` finds it. MinGW's ld searches
+            # libindycheck_ffi.a before indycheck_ffi.lib, so the GNU
+            # archive wins and the Go binary links statically (no DLL
+            # needed at runtime).
+            rustup target add x86_64-pc-windows-gnu
+            cargo build -p indycheck-ffi --release --target x86_64-pc-windows-gnu
+            cp target/x86_64-pc-windows-gnu/release/libindycheck_ffi.a target/release/
+          else
+            cargo build -p indycheck-ffi --release
+          fi
       # Windows: the test binary loads indycheck_ffi.dll at runtime, and
       # Windows has no rpath — the DLL must be findable via PATH.
       - name: Add Rust lib dir to PATH (Windows)
