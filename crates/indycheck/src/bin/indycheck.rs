@@ -16,10 +16,10 @@
 //! Exit codes: 0 = valid / success, 1 = invalid input, 2 = usage error.
 
 use indycheck::{
-    detect, generate_aadhaar, generate_gstin, generate_mobile, generate_pan, validate_aadhaar,
-    validate_cin, validate_gstin, validate_ifsc, validate_llpin, validate_mobile, validate_pan,
-    validate_pincode, validate_tan, validate_upi, validate_vehicle, validate_voter_id,
-    ValidationResult,
+    ValidationResult, detect, generate_aadhaar, generate_gstin, generate_mobile, generate_pan,
+    validate_aadhaar, validate_cin, validate_gstin, validate_ifsc, validate_llpin, validate_mobile,
+    validate_pan, validate_pincode, validate_tan, validate_upi, validate_vehicle,
+    validate_voter_id,
 };
 use std::env;
 use std::process::ExitCode;
