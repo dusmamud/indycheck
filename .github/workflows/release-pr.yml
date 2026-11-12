@@ -5,9 +5,13 @@ name: Release PR
 #    chore/docs -> no bump) and updates CHANGELOG.md. The sync step keeps
 #    the JS/Python packages and the docs site on the same version, and the
 #    job opens (or updates) a `release-plz` PR with all of it.
-#  - Merging that PR publishes indycheck to crates.io automatically
-#    (the `release` job below, via Trusted Publishing) and creates the
-#    GitHub release with the changelog as its body (release-plz.toml).
+#  - Merging that PR does NOT publish by itself. Publish with a manual
+#    dispatch of the `Release` workflow (release.yml) — it is the only
+#    workflow the crates.io Trusted Publishing config allows (crate
+#    Settings > Trusted Publishing: workflow file release.yml). A `release`
+#    job used to live in this file too, but its OIDC JWT names
+#    release-pr.yml, so crates.io rejected it (400) on every merge and the
+#    run went red. Do NOT re-add a release job here.
 #  - npm and PyPI are NOT auto-published: npm needs a staged publish +
 #    Dus's passkey approval, PyPI needs a pypi.yml dispatch. Those stay
 #    manual on purpose.
@@ -19,7 +23,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  id-token: write
 
 jobs:
   release-pr:
@@ -69,25 +72,5 @@ jobs:
           else
             gh pr create --base main --head release-plz \
               --title "chore: Release package indycheck version $version" \
-              --body "Release PR (release-plz). Merging publishes indycheck $version to crates.io and creates the GitHub release. npm and PyPI still need their manual steps."
+              --body "Release PR (release-plz). After merging, publish indycheck $version to crates.io by manually dispatching the Release workflow (release.yml); it creates the GitHub release too. npm and PyPI still need their manual steps."
           fi
-
-  release:
-    # Runs on every push to main, after the PR job. Publishes only when
-    # the workspace version is new (i.e. right after a release PR merges);
-    # on ordinary pushes it is a no-op.
-    needs: release-pr
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Release to crates.io
-        uses: release-plz/action@v0.5
-        with:
-          command: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
