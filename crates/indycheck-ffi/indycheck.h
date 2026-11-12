@@ -191,6 +191,65 @@ char *indycheck_detect(const char *input);
 char *indycheck_validate_many(const char *inputs_json);
 
 /**
+ * Generate a syntactically valid PAN for testing. `entity` is the
+ * entity character string (`"P"`, `"C"`, …); a null, empty or unknown
+ * value falls back to `"P"` (Individual). Returns a heap-allocated
+ * string — free it with `indycheck_free_string`. TEST DATA ONLY —
+ * not a real issued PAN.
+ *
+ * # Safety
+ *
+ * `entity` must be null or point to a valid NUL-terminated C string
+ * that stays alive for the duration of the call.
+ */
+char *indycheck_generate_pan(const char *entity);
+
+/**
+ * Generate a syntactically valid 12-digit Aadhaar number (correct
+ * Verhoeff check digit). Returns a heap-allocated string — free it
+ * with `indycheck_free_string`. TEST DATA ONLY — not a real issued
+ * Aadhaar number.
+ */
+char *indycheck_generate_aadhaar(void);
+
+/**
+ * Generate a syntactically valid GSTIN for the given 2-digit state
+ * code (`"18"` for Assam). A null, empty or unknown state code falls
+ * back to `"18"`. Returns a heap-allocated string — free it with
+ * `indycheck_free_string`. TEST DATA ONLY — not a real issued GSTIN.
+ *
+ * # Safety
+ *
+ * `state_code` must be null or point to a valid NUL-terminated C
+ * string that stays alive for the duration of the call.
+ */
+char *indycheck_generate_gstin(const char *state_code);
+
+/**
+ * Generate a syntactically valid Indian mobile number (10 digits,
+ * first digit 6-9). Returns a heap-allocated string — free it with
+ * `indycheck_free_string`. TEST DATA ONLY — not a real person's
+ * number.
+ */
+char *indycheck_generate_mobile(void);
+
+/**
+ * Generate a syntactically valid state-format vehicle registration
+ * number (`DL01AB1234`). Returns a heap-allocated string — free it
+ * with `indycheck_free_string`. TEST DATA ONLY — not a real issued
+ * registration number.
+ */
+char *indycheck_generate_vehicle(void);
+
+/**
+ * Generate a syntactically valid Bharat (BH) series vehicle number
+ * (`22BH1234AA`). Returns a heap-allocated string — free it with
+ * `indycheck_free_string`. TEST DATA ONLY — not a real issued
+ * registration number.
+ */
+char *indycheck_generate_vehicle_bharat(void);
+
+/**
  * Return the indycheck core version (e.g. `"0.2.0"`) as a
  * heap-allocated string — free it with `indycheck_free_string`.
  */
