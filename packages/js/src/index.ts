@@ -162,10 +162,13 @@ export interface VoterParsed {
 
 export interface VehicleParsed {
   registration: string;
-  state_code: string;
-  district: string;
+  series_type: "state" | "bharat";
+  state_code?: string;
+  district?: string;
   series: string;
   number: string;
+  year?: string;
+  suffix?: string;
 }
 
 export interface DetectParsed {
@@ -1242,6 +1245,11 @@ export function validateVehicle(input: unknown): ValidationResult<VehicleParsed>
         "Vehicle registration number 8 se 10 character ka hona chahiye (jaise DL01AB1234)",
       );
     }
+    // Bharat (BH) series: YYBH####XX — starts with 2 digits (the year),
+    // so it must be checked before the state format (2 leading letters).
+    if (chars.slice(0, 2).every(isAsciiDigit)) {
+      return validateBharat(cleaned, chars);
+    }
     if (!chars.slice(0, 2).every(isAsciiAlpha)) {
       return fail(
         "INVALID_FORMAT",
@@ -1272,11 +1280,55 @@ export function validateVehicle(input: unknown): ValidationResult<VehicleParsed>
     return ok(
       "Vehicle registration format is valid. Registration numbers have no checksum, so this only checks the format",
       "Vehicle registration ka format sahi hai. Registration number ka koi checksum nahi hai, isliye sirf format check hua hai",
-      { registration: cleaned, state_code: stateCode, district, series, number },
+      { registration: cleaned, series_type: "state", state_code: stateCode, district, series, number },
     );
   } catch {
     return invalidType<VehicleParsed>();
   }
+}
+
+/** Bharat (BH) series: `YYBH####XX` — called only when the cleaned input starts with digits. */
+function validateBharat(cleaned: string, chars: string[]): ValidationResult<VehicleParsed> {
+  const notBharat = (en: string, hi: string): ValidationResult<VehicleParsed> =>
+    fail("INVALID_FORMAT", en, hi);
+  const shapeOk =
+    chars.length === 10 &&
+    chars[2] === "B" &&
+    chars[3] === "H" &&
+    chars.slice(4, 8).every(isAsciiDigit) &&
+    chars.slice(8, 10).every(isAsciiAlpha);
+  if (!shapeOk) {
+    return notBharat(
+      "Vehicle registration number must start with 2 state-code letters (e.g. DL01AB1234), or be a Bharat series number (e.g. 22BH1234AA)",
+      "Vehicle registration number 2 state-code akshar se shuru hona chahiye (jaise DL01AB1234), ya Bharat series number hona chahiye (jaise 22BH1234AA)",
+    );
+  }
+  const year = chars.slice(0, 2).join("");
+  if (Number(year) < 21) {
+    return notBharat(
+      "Bharat (BH) series numbers start from 2021 — the year must be 21 or later (e.g. 22BH1234AA)",
+      "Bharat (BH) series number 2021 se shuru hue hain — saal 21 ya usse baad ka hona chahiye (jaise 22BH1234AA)",
+    );
+  }
+  const number = chars.slice(4, 8).join("");
+  if (number === "0000") {
+    return notBharat(
+      "Bharat (BH) series number must be 0001-9999 (e.g. 22BH1234AA)",
+      "Bharat (BH) series number 0001 se 9999 ke beech hona chahiye (jaise 22BH1234AA)",
+    );
+  }
+  const suffix = chars.slice(8, 10).join("");
+  if (suffix.includes("I") || suffix.includes("O")) {
+    return notBharat(
+      "Bharat (BH) series suffix letters cannot be I or O (e.g. 22BH1234AA)",
+      "Bharat (BH) series ke aakhiri akshar I ya O nahi ho sakte (jaise 22BH1234AA)",
+    );
+  }
+  return ok(
+    "Bharat (BH) series vehicle registration format is valid. Registration numbers have no checksum, so this only checks the format",
+    "Bharat (BH) series vehicle registration ka format sahi hai. Registration number ka koi checksum nahi hai, isliye sirf format check hua hai",
+    { registration: cleaned, series_type: "bharat", year, series: "BH", number, suffix },
+  );
 }
 
 /** Alias for `validateVehicle`. */
