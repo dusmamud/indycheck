@@ -24,9 +24,10 @@ package indycheck
 // unlike MSVC's link.exe — does not implicitly link the Windows
 // system libraries the Rust standard library references. Link them
 // explicitly: ws2_32 (Winsock: freeaddrinfo, WSASend, WSARecv, ...),
-// userenv and bcrypt (std's home-dir / randomness helpers).
-// gcc already links kernel32/advapi32/user32 by default.
-#cgo windows LDFLAGS: -lws2_32 -luserenv -lbcrypt
+// userenv and bcrypt (std's home-dir / randomness helpers), ntdll
+// (NtCreateFile, NtReadFile, RtlNtStatusToDosError, ...). gcc already
+// links kernel32/advapi32/user32 by default.
+#cgo windows LDFLAGS: -lws2_32 -luserenv -lbcrypt -lntdll
 #include <stdlib.h>
 #include "indycheck.h"
 */
