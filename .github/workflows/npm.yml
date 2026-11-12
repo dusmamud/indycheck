@@ -6,9 +6,13 @@ name: Publish to npm
 # approval is needed anymore. The trusted publisher must be configured once
 # on npmjs.com (package indycheck > Settings > Trusted Publishers > GitHub
 # Actions): owner dusmamud, repo indycheck, workflow file npm.yml, no
-# environment. Do NOT add a NODE_AUTH_TOKEN — that would disable OIDC.
-# Requires npm >= 11.5.1 (Node 22 ships it); `npm publish --provenance`
-# exchanges the GitHub OIDC token for a short-lived npm token itself.
+# environment. `npm publish --provenance` exchanges the GitHub OIDC token
+# for a short-lived npm token itself — that needs npm >= 11.5.1, but Node 22
+# ships npm 10.9, so the workflow installs npm@11 explicitly (lesson from
+# the first 0.2.2 attempt: npm 10 signed the provenance statement but sent
+# the publish PUT with a wrong token and got 404). And setup-node defaults
+# its `token` input to github.token — if NODE_AUTH_TOKEN is set at all, npm
+# skips the OIDC exchange, so the token input is explicitly emptied below.
 on:
   workflow_dispatch:
 
@@ -25,6 +29,11 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
+          # setup-node defaults `token` to github.token; an explicit empty
+          # value keeps NODE_AUTH_TOKEN unset so npm does the OIDC exchange.
+          token: ""
+      - name: Install npm 11 (OIDC publish needs npm >= 11.5.1)
+        run: npm install -g npm@11
       - name: build dist
         working-directory: packages/js
         run: |
