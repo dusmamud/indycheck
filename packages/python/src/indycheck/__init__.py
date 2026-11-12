@@ -1175,6 +1175,10 @@ def validate_vehicle(value):
                 "Vehicle registration number must be 8-10 characters (e.g. DL01AB1234)",
                 "Vehicle registration number 8 se 10 character ka hona chahiye (jaise DL01AB1234)",
             )
+        # Bharat (BH) series: YYBH####XX — starts with 2 digits (the year),
+        # so it must be checked before the state format (2 leading letters).
+        if all(_is_ascii_digit(c) for c in chars[:2]):
+            return _validate_bharat(cleaned, chars)
         if not all(_is_ascii_alpha(c) for c in chars[:2]):
             return _fail(
                 "INVALID_FORMAT",
@@ -1206,11 +1210,53 @@ def validate_vehicle(value):
         return _ok(
             "Vehicle registration format is valid. Registration numbers have no checksum, so this only checks the format",
             "Vehicle registration ka format sahi hai. Registration number ka koi checksum nahi hai, isliye sirf format check hua hai",
-            {"registration": cleaned, "state_code": state_code,
+            {"registration": cleaned, "series_type": "state", "state_code": state_code,
              "district": district, "series": series, "number": number},
         )
     except Exception:
         return _invalid_type()
+
+
+def _validate_bharat(cleaned, chars):
+    """Bharat (BH) series: ``YYBH####XX`` — only when input starts with digits."""
+    def _not_bharat(en, hi):
+        return _fail("INVALID_FORMAT", en, hi)
+    shape_ok = (
+        len(chars) == 10
+        and chars[2] == "B"
+        and chars[3] == "H"
+        and all(_is_ascii_digit(c) for c in chars[4:8])
+        and all(_is_ascii_alpha(c) for c in chars[8:10])
+    )
+    if not shape_ok:
+        return _not_bharat(
+            "Vehicle registration number must start with 2 state-code letters (e.g. DL01AB1234), or be a Bharat series number (e.g. 22BH1234AA)",
+            "Vehicle registration number 2 state-code akshar se shuru hona chahiye (jaise DL01AB1234), ya Bharat series number hona chahiye (jaise 22BH1234AA)",
+        )
+    year = "".join(chars[:2])
+    if int(year) < 21:
+        return _not_bharat(
+            "Bharat (BH) series numbers start from 2021 — the year must be 21 or later (e.g. 22BH1234AA)",
+            "Bharat (BH) series number 2021 se shuru hue hain — saal 21 ya usse baad ka hona chahiye (jaise 22BH1234AA)",
+        )
+    number = "".join(chars[4:8])
+    if number == "0000":
+        return _not_bharat(
+            "Bharat (BH) series number must be 0001-9999 (e.g. 22BH1234AA)",
+            "Bharat (BH) series number 0001 se 9999 ke beech hona chahiye (jaise 22BH1234AA)",
+        )
+    suffix = "".join(chars[8:10])
+    if "I" in suffix or "O" in suffix:
+        return _not_bharat(
+            "Bharat (BH) series suffix letters cannot be I or O (e.g. 22BH1234AA)",
+            "Bharat (BH) series ke aakhiri akshar I ya O nahi ho sakte (jaise 22BH1234AA)",
+        )
+    return _ok(
+        "Bharat (BH) series vehicle registration format is valid. Registration numbers have no checksum, so this only checks the format",
+        "Bharat (BH) series vehicle registration ka format sahi hai. Registration number ka koi checksum nahi hai, isliye sirf format check hua hai",
+        {"registration": cleaned, "series_type": "bharat", "year": year,
+         "series": "BH", "number": number, "suffix": suffix},
+    )
 
 
 def validate_vehicle_registration(value):
