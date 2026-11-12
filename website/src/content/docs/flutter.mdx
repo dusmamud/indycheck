@@ -1,0 +1,136 @@
+---
+title: Flutter & Dart
+description: Use indycheck in Dart and Flutter apps — offline PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN code, TAN, CIN, LLPIN, Voter ID and vehicle validation through dart:ffi.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Dart package is a thin [`dart:ffi`](https://api.dart.dev/stable/dart-ffi/dart-ffi-library.html) wrapper over the C API in `crates/indycheck-ffi`, which itself wraps the Rust core. **No validation logic lives in Dart** — every method calls the matching C function and decodes the JSON it returns, so Dart returns the same answer as Rust for the same input.
+
+This is a pure Dart package, not a Flutter plugin: it works in a Dart CLI or server, and in a Flutter app that bundles the native library.
+
+<Aside type="caution" title="Status — in the repo, not on pub.dev yet">
+  The package lives in `packages/flutter` in the repo and ships with the **upcoming 0.2.3 release** — it is **not published to pub.dev yet**, so `dart pub add indycheck` / `flutter pub add indycheck` will not work until it is. The native library is also **not shipped with the package**; you build it once from the repo (see below). A failed validation is a normal `ValidationResult` with `valid == false` — the methods only throw on transport failures (the native library cannot be loaded, or it returns null).
+</Aside>
+
+## Install
+
+Until the package is on pub.dev, add it as a git dependency in your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  indycheck:
+    git:
+      url: https://github.com/dusmamud/indycheck.git
+      path: packages/flutter
+  ffi: ^2.1.0
+```
+
+Requires Dart SDK `>=3.4.0 <4.0.0` and `ffi ^2.1.0`.
+
+## Build the native library
+
+From a checkout of the indycheck repo, build the Rust shared library once:
+
+```sh
+cargo build -p indycheck-ffi --release
+```
+
+That produces `target/release/libindycheck_ffi.so` (Linux), `libindycheck_ffi.dylib` (macOS) or `indycheck_ffi.dll` (Windows). Then point the package at it — either with an environment variable:
+
+```sh
+INDYCHECK_NATIVE_LIB=/path/to/libindycheck_ffi.so dart run
+```
+
+or explicitly in code, before the first validation call:
+
+```dart
+import 'package:indycheck/indycheck.dart';
+
+Indycheck.init('/path/to/libindycheck_ffi.so');
+// or: Indycheck.setLibraryPath('/path/to/libindycheck_ffi.so');
+```
+
+Resolution order: the explicit path passed to `init` / `setLibraryPath` first, then `INDYCHECK_NATIVE_LIB`, then the platform's default library file name on the library search path. On Android and iOS the library is expected to be linked into the app binary (`DynamicLibrary.process()`). If the library cannot be loaded, the package throws a `StateError` naming the expected file and the `cargo build` command — it never fails silently.
+
+## Example
+
+```dart
+import 'package:indycheck/indycheck.dart';
+
+void main() {
+  final pan = Indycheck.validatePan('ABCDE1234F');
+  if (pan.valid) {
+    print('${pan.code} ${pan.parsed?['entity']} ${pan.parsed?['entity_code']}');
+  } else {
+    print('${pan.code} ${pan.reasonEn} / ${pan.reasonHi}');
+  }
+
+  // Bharat (BH) series vehicle number
+  final vehicle = Indycheck.validateVehicle('22BH1234AA');
+  print('${vehicle.valid} ${vehicle.parsed?['series_type']} '
+      '${vehicle.parsed?['year']} ${vehicle.parsed?['suffix']}');
+
+  // Detect the type first, then validate a batch in one call
+  print(Indycheck.detect('9876543210')); // mobile
+  final batch = Indycheck.validateMany(['ABCDE1234F', '9876543210', 'nope']);
+  print(batch.map((r) => r.valid).toList()); // [true, true, false]
+
+  print(Indycheck.version()); // e.g. '0.2.2'
+}
+```
+
+## API
+
+Every validator is a static method on `Indycheck` and returns a `ValidationResult`:
+
+```dart
+class ValidationResult {
+  final bool valid;
+  final String code; // 'VALID' on success
+  final String reasonEn;
+  final String reasonHi; // Roman-script Hinglish
+  final Map<String, dynamic>? parsed; // extracted fields on success, null otherwise
+}
+```
+
+| Method | Validates |
+|---|---|
+| `Indycheck.validatePan` | PAN, e.g. `ABCDE1234F` |
+| `Indycheck.validateAadhaar` | 12-digit Aadhaar (Verhoeff checksum) |
+| `Indycheck.validateGstin` | 15-character GSTIN |
+| `Indycheck.validateMobile` | Indian mobile (`+91` / `91` / `0` prefix, spaces/hyphens OK) |
+| `Indycheck.validateVehicle` / `Indycheck.validateVehicleRegistration` | State format (`DL01AB1234`) or Bharat series (`22BH1234AA`) |
+| `Indycheck.validateIfsc` | IFSC (11 characters) |
+| `Indycheck.validateUpi` | UPI ID (`name@handle`) |
+| `Indycheck.validatePincode` | 6-digit PIN code |
+| `Indycheck.validateTan` | TAN (format only) |
+| `Indycheck.validateCin` | CIN (format only) |
+| `Indycheck.validateLlpin` | LLPIN |
+| `Indycheck.validateVoterId` / `Indycheck.validateEpic` | Voter ID / EPIC |
+| `Indycheck.detect` | Returns the type string (`'pan'`, `'mobile'`, `'vehicle'`, …, `'unknown'`) |
+| `Indycheck.validateMany(List<String>)` | Batch: validates each input, results in input order |
+| `Indycheck.version()` | Core version string, e.g. `'0.2.2'` |
+| `Indycheck.isLoaded` | Whether the native library has been loaded |
+
+## Test-data generators — test data only
+
+```dart
+Indycheck.generatePan(); // e.g. 'XKQPW4821M' — mock test data only, never a real PAN
+Indycheck.generatePan(entity: 'C'); // entity Company (unknown char -> 'P')
+Indycheck.generateAadhaar(); // 12 digits, correct Verhoeff check digit
+Indycheck.generateGstin(); // valid GSTIN for Assam ('18')
+Indycheck.generateGstin(stateCode: '27'); // ... for Maharashtra
+Indycheck.generateMobile(); // 10 digits, first digit 6-9
+Indycheck.generateVehicle(); // e.g. 'DL01AB1234'
+Indycheck.generateVehicleBharat(); // e.g. '22BH1234AA'
+```
+
+All six generators are verified in `packages/flutter/lib/src/indycheck.dart`. Generated values are syntactically valid, not real issued IDs — they pass this library's own validators but were never issued by UIDAI, Income Tax, GSTN or anyone else. Use them only in tests, fixtures and demos.
+
+## What is not here yet
+
+- **No pub.dev release.** Install from the repo as above until the package is published.
+- **No prebuilt native library.** You must run the `cargo build` step; the `.so` / `.dylib` / `.dll` is a build artefact, never committed to the repo.
+- **No Flutter plugin scaffolding and no widget tests.** The package is pure Dart over FFI; bundling the native library into a Flutter app (Android/iOS) is up to the app.
+- **No options variants.** Unlike the Rust core and the JS/Python wrappers, the Dart package has no `validate_*_with_options` methods yet — validation always uses the core defaults.
