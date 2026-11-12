@@ -20,6 +20,13 @@ package indycheck
 /*
 #cgo CFLAGS: -I${SRCDIR}/../../crates/indycheck-ffi
 #cgo LDFLAGS: -L${SRCDIR}/../../target/release -lindycheck_ffi -Wl,-rpath,${SRCDIR}/../../target/release
+// On Windows the Rust static library is linked by MinGW gcc, which —
+// unlike MSVC's link.exe — does not implicitly link the Windows
+// system libraries the Rust standard library references. Link them
+// explicitly: ws2_32 (Winsock: freeaddrinfo, WSASend, WSARecv, ...),
+// userenv and bcrypt (std's home-dir / randomness helpers).
+// gcc already links kernel32/advapi32/user32 by default.
+#cgo windows LDFLAGS: -lws2_32 -luserenv -lbcrypt
 #include <stdlib.h>
 #include "indycheck.h"
 */
