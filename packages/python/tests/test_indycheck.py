@@ -3,11 +3,11 @@
 Mirrors packages/js/src/index.test.ts: inline cases (Rust codes /
 reasons), parsed shapes from shared/spec.md, Rust detect() semantics,
 Options cases, format/mask helpers, generators, and
-shared/test-vectors.json (245 cases), asserted in full — including the
+shared/test-vectors.json (254 cases), asserted in full — including the
 ``options`` entries (run through ``validate_*_with_options``) and the
 ``generator`` entries (freshly generated values must re-validate as
 VALID). As of the last check the Rust code and the vectors agree on all
-245 entries (verified by emulating the Rust source over the file), so
+254 entries (verified by emulating the Rust source over the file), so
 there are no exceptions: if the Rust side drifts again, that test
 fails loudly.
 """
@@ -300,6 +300,7 @@ def test_parsed_shapes():
     assert validate_epic("ABC1234567") == validate_voter_id("ABC1234567")
     assert validate_vehicle("DL01AB1234")["parsed"] == {
         "registration": "DL01AB1234",
+        "series_type": "state",
         "state_code": "DL",
         "district": "01",
         "series": "AB",
@@ -308,12 +309,30 @@ def test_parsed_shapes():
     assert validate_vehicle("DL 01 AB 1234")["parsed"]["registration"] == "DL01AB1234"
     assert validate_vehicle("DL0AB1234")["parsed"] == {
         "registration": "DL0AB1234",
+        "series_type": "state",
         "state_code": "DL",
         "district": "0",
         "series": "AB",
         "number": "1234",
     }
     assert validate_vehicle_registration("DL01A1234") == validate_vehicle("DL01A1234")
+    # Bharat (BH) series: YYBH####XX.
+    assert validate_vehicle("22BH1234AA")["parsed"] == {
+        "registration": "22BH1234AA",
+        "series_type": "bharat",
+        "year": "22",
+        "series": "BH",
+        "number": "1234",
+        "suffix": "AA",
+    }
+    assert validate_vehicle("22 BH 1234 AA")["valid"]
+    assert validate_vehicle("22bh1234aa")["valid"]
+    assert validate_vehicle("20BH1234AA")["code"] == "INVALID_FORMAT"
+    assert validate_vehicle("22BH0000AA")["code"] == "INVALID_FORMAT"
+    assert validate_vehicle("22BH1234AI")["code"] == "INVALID_FORMAT"
+    assert validate_vehicle("22BH1234AO")["code"] == "INVALID_FORMAT"
+    assert validate_vehicle("22BH1234A")["code"] == "INVALID_FORMAT"
+    assert detect("22BH1234AA")["parsed"]["type"] == "vehicle"
 
 
 def test_options():
@@ -511,7 +530,7 @@ def test_shared_test_vectors():
     if not vectors_path.exists():
         pytest.skip("shared/test-vectors.json not written yet — inline cases are the contract")
     vectors = json.loads(vectors_path.read_text(encoding="utf-8"))
-    assert len(vectors) == 245
+    assert len(vectors) == 254
     failures = []
     for v in vectors:
         if "generator" in v:
