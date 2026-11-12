@@ -136,6 +136,16 @@ against a real verification provider. See [Test-data generators](/generators/).
 | `1` | Invalid input |
 | `2` | Usage error — unknown type, missing value, unknown command |
 
+## `--version` — which version is installed?
+
+```bash
+$ indycheck --version
+indycheck 0.2.0
+```
+
+`indycheck version` and `indycheck -V` print the same line. Useful in scripts
+to check the installed version before calling `validate`.
+
 ## Planned, not in v0.2.0
 
 - `--lenient` / `--strict` flags and per-option flags on `validate`
