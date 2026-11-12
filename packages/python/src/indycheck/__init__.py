@@ -108,6 +108,8 @@ __all__ = [
     "generate_aadhaar",
     "generate_gstin",
     "generate_mobile",
+    "generate_vehicle",
+    "generate_vehicle_bharat",
     "default_options",
     "strict_options",
     "lenient_options",
@@ -150,6 +152,8 @@ __all__ = [
     "generateAadhaar",
     "generateGstin",
     "generateMobile",
+    "generateVehicle",
+    "generateVehicleBharat",
     "defaultOptions",
     "strictOptions",
     "lenientOptions",
@@ -1279,6 +1283,10 @@ def _random_letter():
     return chr(ord("A") + random.randrange(26))
 
 
+def _random_letter_no_io():
+    return random.choice("ABCDEFGHJKLMNPQRSTUVWXYZ")
+
+
 def _random_digit():
     return str(random.randrange(10))
 
@@ -1333,6 +1341,32 @@ def generate_mobile():
     for _ in range(9):
         mobile += _random_digit()
     return mobile
+
+
+_VEHICLE_STATE_CODES = [
+    "DL", "MH", "UP", "KA", "TN", "GJ", "RJ", "WB", "KL", "PB", "HR", "AP", "TS", "MP", "BR",
+]
+
+
+def generate_vehicle():
+    """Generates a syntactically valid state-format vehicle registration
+    number (``DL01AB1234``: state code + district + series + number).
+    TEST DATA ONLY — not a real issued registration number."""
+    state = random.choice(_VEHICLE_STATE_CODES)
+    district = f"{random.randrange(1, 100):02d}"
+    series = "".join(_random_letter_no_io() for _ in range(1 if random.random() < 0.5 else 2))
+    number = f"{random.randrange(1, 10000):04d}"
+    return f"{state}{district}{series}{number}"
+
+
+def generate_vehicle_bharat():
+    """Generates a syntactically valid Bharat (BH) series vehicle number
+    (``22BH1234AA``: year 21-26, ``BH``, number 0001-9999, suffix without
+    ``I``/``O``). TEST DATA ONLY — not a real issued registration number."""
+    year = f"{random.randrange(21, 27):02d}"
+    number = f"{random.randrange(1, 10000):04d}"
+    suffix = _random_letter_no_io() + _random_letter_no_io()
+    return f"{year}BH{number}{suffix}"
 
 
 # ---------------------------------------------------------------------------
@@ -1592,6 +1626,8 @@ generatePan = generate_pan
 generateAadhaar = generate_aadhaar
 generateGstin = generate_gstin
 generateMobile = generate_mobile
+generateVehicle = generate_vehicle
+generateVehicleBharat = generate_vehicle_bharat
 defaultOptions = default_options
 strictOptions = strict_options
 lenientOptions = lenient_options
