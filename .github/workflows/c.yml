@@ -1,0 +1,50 @@
+# C API CI — the C FFI surface in crates/indycheck-ffi. Regenerates the
+# committed header with cbindgen and fails on any drift, builds the
+# cdylib + staticlib, verifies the per-OS artifacts exist, and runs the
+# crate's FFI tests (exercised through the rlib half of the crate).
+name: C API
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/indycheck-ffi/**'
+      - 'crates/indycheck/**'
+      - '.github/workflows/c.yml'
+
+jobs:
+  c:
+    name: C API (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      # Pinned: cbindgen 0.29.4 regenerates the committed indycheck.h
+      # byte-identically (verified locally), so the drift check below is
+      # not spuriously red.
+      - name: Install cbindgen
+        run: cargo install cbindgen --version 0.29.4 --locked
+      - name: Check committed header is up to date
+        working-directory: crates/indycheck-ffi
+        shell: bash
+        run: |
+          cbindgen --config cbindgen.toml --crate indycheck-ffi --output "${{ runner.temp }}/indycheck.h"
+          diff -u indycheck.h "${{ runner.temp }}/indycheck.h"
+      - name: Build C library
+        run: cargo build -p indycheck-ffi --release
+      - name: Verify artifacts
+        shell: bash
+        run: |
+          case "${{ runner.os }}" in
+            Linux)   test -f target/release/libindycheck_ffi.so && test -f target/release/libindycheck_ffi.a ;;
+            macOS)   test -f target/release/libindycheck_ffi.dylib && test -f target/release/libindycheck_ffi.a ;;
+            Windows) test -f target/release/indycheck_ffi.dll && test -f target/release/indycheck_ffi.lib ;;
+          esac
+      - name: Test FFI crate
+        run: cargo test -p indycheck-ffi
