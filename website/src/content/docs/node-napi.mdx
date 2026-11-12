@@ -1,0 +1,74 @@
+---
+title: Node.js native addon (napi-rs)
+description: Run indycheck's Rust core inside Node.js — the optional napi-rs native backend for the indycheck npm package, with a pure-TypeScript fallback.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The published `indycheck` npm package is a pure-TypeScript mirror of the Rust core — it works with no native code at all. The napi-rs addon in `crates/indycheck-napi` is an **optional native backend** for it: the same validators, but the validation itself runs in the compiled Rust core instead of the TypeScript re-implementation. `packages/js/src/native.ts` loads the addon when it is present and falls back to TypeScript silently when it is not.
+
+<Aside type="caution" title="Status — built in CI, not shipped in the npm package">
+  The addon builds in CI (workflow `Node napi-rs addon`) and ships with the **upcoming 0.2.3 release** — but the compiled `.node` binary is **never shipped in the published npm package** and never committed to the repo. You build it yourself from a repo checkout (see below), and the published package does not expose a `./native` entry point: the native backend is used from within the repo, not imported from the installed package.
+</Aside>
+
+## Build
+
+Requires a Rust toolchain (MSRV 1.85, same as the core crate) and Node.js 18+.
+
+```sh
+# From packages/js — builds crates/indycheck-napi:
+npm run native:build
+
+# Or directly in the crate:
+cd crates/indycheck-napi
+npm install          # installs @napi-rs/cli (devDependency)
+npm run build        # release build -> indycheck-napi.linux-x64-gnu.node
+npm run build:debug  # debug build (faster, for development)
+```
+
+`napi build` also generates `index.js` (platform-aware loader) and `index.d.ts` from the `#[napi]` functions in `src/lib.rs` — both are committed, like in any napi-rs project. The compiled `.node` binary is **not** committed; build it locally or in CI.
+
+## Example
+
+From a repo checkout, after building the addon:
+
+```ts
+import { backend, isNativeAvailable, validatePan } from "./native";
+// (in packages/js/src — the same code as native.test.ts uses)
+
+console.log(isNativeAvailable()); // true when the addon loaded
+console.log(backend()); // 'native' | 'typescript'
+
+const r = validatePan("ABCDE1234F");
+console.log(r.valid, r.code); // true VALID
+```
+
+How the addon is found, in order: the `INDYCHECK_NATIVE_PATH` environment variable (a path to the addon's `index.js`, or directly to a `.node` file); `crates/indycheck-napi/index.js` relative to the JS package; the same path found by walking up from the current working directory to a repo checkout. An explicit `INDYCHECK_NATIVE_PATH` is authoritative: if it cannot be loaded, the addon is treated as absent instead of silently loading a different binary.
+
+```sh
+INDYCHECK_NATIVE_PATH=/path/to/crates/indycheck-napi/index.js node app.js
+```
+
+## API
+
+The addon exposes the same camelCase API as the pure-TypeScript package (`validatePan`, `validateVehicle`, `detect`, `validateMany`, … — see [Getting started](/getting-started/)), through `packages/js/src/native.ts`. `backend()` reports which implementation is currently in use; `isNativeAvailable()` reports whether the addon loaded.
+
+Underneath, the Rust `#[napi]` functions are snake_case and return JSON strings, verified in `crates/indycheck-napi/src/lib.rs`:
+
+| Rust function | Returns |
+|---|---|
+| `validate_pan`, `validate_aadhaar`, `validate_gstin`, `validate_ifsc`, `validate_upi`, `validate_mobile`, `validate_pincode`, `validate_tan`, `validate_cin`, `validate_llpin`, `validate_voter_id`, `validate_vehicle` | JSON `ValidationResult` string |
+| `detect` | Type string (`"pan"`, `"aadhaar"`, …, `"unknown"`) |
+| `validate_many` | JSON array of `ValidationResult` |
+| `format_pan`, `format_gstin`, `format_mobile` | Formatted string or `null` |
+| `mask_pan`, `mask_mobile`, `mask_aadhaar` | Masked string |
+| `generate_pan`, `generate_aadhaar`, `generate_gstin`, `generate_mobile` | Test-data string |
+
+Every function in `native.ts` never throws on bad input, like the TypeScript implementation. The `*WithOptions` variants have no native equivalent (the Rust core's options live behind different entry points), so they always use the TypeScript implementation. `native.test.ts` asserts the native result equals the TypeScript result for every case, so a drift between the Rust core and the TS mirror fails loudly — but those tests are skipped entirely when the addon is not built.
+
+## What is not here yet
+
+- **No `generateVehicle` / `generateVehicleBharat` in the addon.** The napi crate exposes only `generate_pan`, `generate_aadhaar`, `generate_gstin` and `generate_mobile`; the vehicle generators in `native.ts` always use the TypeScript implementation.
+- **No `validateEpic` alias and no `version()` in the addon.** The napi crate has `validate_voter_id` only (the `validateEpic` alias exists in `native.ts` as a JS-side alias) and no version export.
+- **No shipped binary.** The `.node` is built by you or by CI — it is not in the npm package, and there are no prebuilt binaries for other platforms yet.
+- **macOS link fix (0.2.3).** The addon previously failed to link on macOS; the crate now uses napi-build 2 with a `build.rs`, so the macOS build in CI is green.
