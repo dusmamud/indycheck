@@ -1,0 +1,3 @@
+# napi-rs build outputs — the compiled .node binary is never committed.
+/*.node
+/node_modules
