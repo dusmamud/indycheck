@@ -5,6 +5,46 @@ description: What changed in each indycheck release — new validators, fixes, a
 
 All notable changes to indycheck, newest first. The full changelog lives in [`CHANGELOG.md`](https://github.com/dusmamud/indycheck/blob/main/CHANGELOG.md) in the repo. All crates, npm and PyPI packages share one version in lockstep.
 
+## [0.2.3] — Upcoming (release PR open, not published yet)
+
+The 0.2.3 release adds new language packages and the native bindings behind them. Nothing below is on any registry yet — the Flutter, PHP, Go, Kotlin, Swift and C packages live in the repo only until the release is published (see each language page for its exact install status).
+
+### Added
+
+- **Flutter / Dart package (`packages/flutter`).** Pure-Dart package over `dart:ffi`: 14 validators (including the `validateVehicleRegistration` / `validateEpic` aliases), `detect`, `validateMany`, `version()` and all 6 test-data generators. Requires Dart SDK `>=3.4.0` and `ffi ^2.1.0`. Not on pub.dev yet — install as a git dependency — and the native library is not shipped; build it with `cargo build -p indycheck-ffi --release`. See the [Flutter & Dart page](/flutter/).
+- **PHP package (`packages/php`).** FFI binding (`dusmamud/indycheck`, PHP `>=8.1`, `ext-ffi`, `ffi.enable=true`): 23 methods — 14 validators, `detect`, `validateMany`, `version()` and all 6 generators — covered by 16 PHPUnit tests. Not on Packagist yet — install from the repo as a VCS repository. See the [PHP page](/php/).
+- **Go package (`packages/go`).** cgo wrapper over the C API, module `github.com/dusmamud/indycheck-go`: 14 validators, `Detect`, `ValidateMany`, `Version()`. No version tag yet, so `go get` does not work — use a `replace` directive until a tag is pushed. The Go package has no `Generate*` helpers yet. See the [Go page](/go/).
+- **Kotlin and Swift bindings (`crates/indycheck-uniffi`).** Generated UniFFI bindings: 12 validators, `detect` and `validateMany`, with `parsed` as a JSON string. Compile-verified in CI with a `validatePan` smoke test only. Not distributed — no Maven Central artifact, no Swift Package Manager package; copy the generated files into your project. No `validateEpic` alias, no generators, no `version()`. See the [Kotlin page](/kotlin/) and [Swift page](/swift/).
+- **C API (`crates/indycheck-ffi`).** Six new `indycheck_generate_*` exports (`generate_pan`, `generate_aadhaar`, `generate_gstin`, `generate_mobile`, `generate_vehicle`, `generate_vehicle_bharat`), bringing the header to 24 functions. The header is regenerated with cbindgen and checked for drift in CI. See the [C API page](/c/).
+- **Node.js native addon (`crates/indycheck-napi`).** napi-rs addon as an optional backend for the npm package (`packages/js/src/native.ts`, `backend()` / `isNativeAvailable()`), falling back to the pure-TypeScript mirror when the `.node` is not built. The `.node` is not shipped in the npm package. See the [Node.js native addon page](/node-napi/).
+
+### Fixed
+
+- **napi-rs macOS link fix.** The addon now builds with napi-build 2 + `build.rs`, so the macOS build links correctly.
+- **Go Windows link fixes.** The cgo wrapper now links `-lws2_32 -luserenv -lbcrypt -lntdll` explicitly — MinGW `gcc` does not link the Windows system libraries the Rust standard library needs, the way MSVC's `link.exe` does.
+- **Kotlin / Swift / C CI fixes.** Swift passes the UniFFI modulemap explicitly to `swiftc`; the C header drift check runs on Linux only (CRLF line endings on Windows made it fail spuriously).
+
+### CI
+
+- **Seven new test workflows, all green:** C API, Flutter, Go, Kotlin, Node napi-rs addon, PHP and Swift — each builds and tests its binding on every push.
+
+## [0.2.2] - 2026-11-12
+
+### Added
+
+- **CLI: `indycheck update`.** Prints the installed version, checks crates.io for a newer one (via `curl`, falling back to `cargo search`) and prints the `cargo install indycheck --force` command. It never installs anything by itself and still exits 0 when offline. See the [CLI page](/cli/).
+- **Vehicle test-data generators.** `generate_vehicle()` (state format, e.g. `DL01AB1234`) and `generate_vehicle_bharat()` (Bharat format, e.g. `22BH1234AA`) in the Rust core, JS package, Python package and WASM bindings, plus `indycheck generate vehicle` / `generate vehicle-bharat` in the CLI.
+- **npm Trusted Publishing.** New `.github/workflows/npm.yml` publishes to npm via GitHub OIDC (`npm publish --provenance`) — no token, no staged publish, no passkey approval.
+
+### Changed
+
+- **Python bindings: PyO3 upgraded 0.22 → 0.30.** `indycheck-py` now builds on Rust edition 2024 like every other crate.
+- **WASM workflow installs `wasm-opt`** (Binaryen) so wasm-pack optimizes the playground WASM instead of silently skipping that step.
+
+### Fixed
+
+- **Docs truthfulness.** The Test-data generators page no longer claims a `generate(type)` dispatcher or `generateIfsc` / `generateUpi` / `generatePincode` / `generateTan` / `generateCin` / `generateLlpin` / `generateEpic` helpers — those never existed in the package. Only the real generators are documented.
+
 ## [0.2.1] - 2026-11-12
 
 ### Fixed
