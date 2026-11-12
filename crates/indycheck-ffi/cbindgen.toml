@@ -1,0 +1,5 @@
+language = "C"
+header = "/* indycheck.h — C API for indycheck (offline Indian ID validator).\n * Generated with cbindgen from crates/indycheck-ffi. Do not edit by hand;\n * re-run: cbindgen --config cbindgen.toml --crate indycheck-ffi --output indycheck.h\n *\n * Ownership: every function returning `char *` returns a heap-allocated,\n * NUL-terminated UTF-8 string owned by the caller. Release it with\n * indycheck_free_string(). Never free() it directly, never free twice.\n * Validators return JSON: {\"valid\": bool, \"code\": \"...\", \"reason_en\": \"...\",\n * \"reason_hi\": \"...\", \"parsed\": {...}} (\"parsed\" omitted when absent).\n * indycheck_detect() returns a plain type string, not JSON.\n * indycheck_validate_many() takes a JSON array of strings and returns a\n * JSON array of validation results. */"
+sys_includes = ["stdint.h"]
+style = "Both"
+tab_width = 2
