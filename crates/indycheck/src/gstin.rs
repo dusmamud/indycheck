@@ -1,6 +1,6 @@
 use crate::data::state_name;
 use crate::luhn36;
-use crate::options::{maybe_uppercase, spaces_hyphens_ok, strip_spaces_hyphens, Options};
+use crate::options::{Options, maybe_uppercase, spaces_hyphens_ok, strip_spaces_hyphens};
 use crate::types::ValidationResult;
 use serde_json::json;
 
@@ -56,7 +56,7 @@ pub fn validate_gstin_with_options(input: &str, options: Options) -> ValidationR
                 "INVALID_STATE_CODE",
                 "GSTIN state code is not a valid Indian state code (01-38)",
                 "GSTIN ka state code sahi nahi hai (01-38 ke beech hona chahiye)",
-            )
+            );
         }
     };
     // Characters 3-12 are the PAN; check its format (letters/digits pattern only).
