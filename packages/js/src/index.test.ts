@@ -26,6 +26,8 @@ import {
   generateGstin,
   generateMobile,
   generatePan,
+  generateVehicle,
+  generateVehicleBharat,
   lenientOptions,
   maskAadhaar,
   maskMobile,
@@ -117,6 +119,8 @@ const GENERATORS: Record<string, (arg: string) => string> = {
   aadhaar: () => generateAadhaar(),
   gstin: (arg) => generateGstin(arg),
   mobile: () => generateMobile(),
+  vehicle: () => generateVehicle(),
+  "vehicle-bharat": () => generateVehicleBharat(),
 };
 
 interface InlineCase {
@@ -515,6 +519,12 @@ describe("generators (TEST DATA ONLY — syntactically valid, not real IDs)", ()
       expect(validateGstin(generateGstin("18")).valid).toBe(true);
       expect(validateGstin(generateGstin("27")).parsed?.state_code).toBe("27");
       expect(validateMobile(generateMobile()).valid).toBe(true);
+      const vehicle = generateVehicle();
+      expect(validateVehicle(vehicle).valid).toBe(true);
+      expect(validateVehicle(vehicle).parsed?.series_type).toBe("state");
+      const bharat = generateVehicleBharat();
+      expect(validateVehicle(bharat).valid).toBe(true);
+      expect(validateVehicle(bharat).parsed?.series_type).toBe("bharat");
     }
   });
 
