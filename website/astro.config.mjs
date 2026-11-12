@@ -13,7 +13,7 @@ const jsonLd = {
 		'Offline Indian ID validator — PAN, Aadhaar, GSTIN, IFSC, UPI ID, mobile number, PIN code, TAN, CIN, LLPIN, Voter ID and vehicle numbers. Rust core, zero dependencies, no network calls.',
 	author: { '@type': 'Person', name: 'dusmamud' },
 	offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
-	softwareVersion: '0.2.0',
+	softwareVersion: '0.2.1',
 	url: 'https://indycheck.dev/',
 	downloadUrl: 'https://www.npmjs.com/package/indycheck',
 	programmingLanguage: ['Rust', 'JavaScript', 'TypeScript', 'Python'],
