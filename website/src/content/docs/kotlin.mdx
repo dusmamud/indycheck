@@ -1,0 +1,87 @@
+---
+title: Kotlin
+description: Use indycheck in Kotlin — offline PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN code, TAN, CIN, LLPIN, Voter ID and vehicle validation through UniFFI bindings.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Kotlin bindings are generated [UniFFI](https://mozilla.github.io/uniffi-rs/) bindings over the Rust core in `crates/indycheck-uniffi`. **No validation logic lives in Kotlin** — every function calls the matching core validator and returns a `ValidationResult` record whose `parsed` field is the core result's `parsed` object serialised as a JSON string (or `null` when there is none). Keeping `parsed` as JSON keeps the interface identical in Kotlin and Swift.
+
+<Aside type="caution" title="Status — generated bindings in the repo, not distributed">
+  The generated bindings live in `crates/indycheck-uniffi/bindings/kotlin/` in the repo and ship with the **upcoming 0.2.3 release** — but they are **not distributed anywhere**: there is no Maven Central artifact, no Gradle package, and no JitPack setup. You copy the generated file into your project and build the Rust library yourself (see below). The bindings are **compile-verified in CI with a `validatePan` smoke test only** — there is no full Kotlin test suite yet.
+</Aside>
+
+## Install
+
+Copy the generated binding into your project:
+
+- `crates/indycheck-uniffi/bindings/kotlin/uniffi/indycheck_uniffi/indycheck_uniffi.kt` — package `uniffi.indycheck_uniffi`
+
+Build the Rust core as a shared library for your target (e.g. Android `libindycheck_uniffi.so` via `cargo build -p indycheck-uniffi`) and load it — the generated code does this via JNA. To regenerate the bindings after a core change, see the README in `crates/indycheck-uniffi/`; do not edit the generated file by hand.
+
+## Example
+
+```kotlin
+import uniffi.indycheck_uniffi.*
+
+fun main() {
+    val pan = validatePan("ABCDE1234F")
+    println("${pan.valid} ${pan.code}") // true VALID
+
+    if (!pan.valid) {
+        println("${pan.reasonEn} / ${pan.reasonHi}")
+    }
+
+    // Bharat (BH) series vehicle number
+    val vehicle = validateVehicle("22BH1234AA")
+    println("${vehicle.valid} ${vehicle.parsed}")
+    // parsed is a JSON string, e.g. {"series_type":"bharat","year":22,...}
+    // — decode it with your JSON library (kotlinx.serialization, Gson, ...)
+
+    // Detect the type first, then validate a batch in one call
+    println(detect("9876543210")) // mobile
+    val batch = validateMany(listOf("ABCDE1234F", "9876543210", "nope"))
+    println(batch.map { it.valid }) // [true, true, false]
+}
+```
+
+## API
+
+Top-level functions in package `uniffi.indycheck_uniffi`, verified in the generated `indycheck_uniffi.kt`:
+
+| Function | Returns |
+|---|---|
+| `validatePan(input)` | `ValidationResult` |
+| `validateAadhaar(input)` | `ValidationResult` |
+| `validateGstin(input)` | `ValidationResult` |
+| `validateIfsc(input)` | `ValidationResult` |
+| `validateUpi(input)` | `ValidationResult` |
+| `validateMobile(input)` | `ValidationResult` |
+| `validatePincode(input)` | `ValidationResult` |
+| `validateVehicle(input)` | `ValidationResult` (incl. Bharat `22BH1234AA`) |
+| `validateTan(input)` | `ValidationResult` |
+| `validateCin(input)` | `ValidationResult` |
+| `validateLlpin(input)` | `ValidationResult` |
+| `validateVoterId(input)` | `ValidationResult` |
+| `detect(input)` | `String` (`"pan"`, `"aadhaar"`, … or `"unknown"`) |
+| `validateMany(inputs)` | `List<ValidationResult>` |
+
+```kotlin
+data class ValidationResult(
+    var valid: Boolean,
+    var code: String,       // "VALID" on success, otherwise a stable error code
+    var reasonEn: String,
+    var reasonHi: String,
+    var parsed: String?     // JSON string, or null when there is nothing to parse
+)
+```
+
+`valid` is true only on success; `code` is `"VALID"` then, otherwise a stable error code such as `"INVALID_CHECKSUM"`.
+
+## What is not here yet
+
+- **No distribution.** No Maven Central / Gradle artifact — copy the generated file and build the Rust library yourself.
+- **No `validateEpic` alias.** The UniFFI interface exports `validateVoterId` only — use that for Voter ID / EPIC. (The Rust core, JS/Python wrappers, Dart, PHP, Go and C all have a `validateEpic` alias; Kotlin and Swift do not.)
+- **No test-data generators and no `version()`.** The UniFFI interface has no `generate_*` functions and no version function — only the 12 validators, `detect` and `validateMany` listed above. If you need mock test data, generate it with the Rust core, the CLI, or another wrapper.
+- **No options variants.** There are no `validate*WithOptions` functions yet — validation always uses the core defaults.
+- **No full test suite.** CI only compiles the bindings and runs a `validatePan` smoke test. The core itself is fully tested in Rust; the Kotlin surface is not.
