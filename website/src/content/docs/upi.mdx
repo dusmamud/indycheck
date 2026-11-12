@@ -46,15 +46,15 @@ assert!(r.ok);
 
 | Input | Result | Code |
 | --- | --- | --- |
-| `9876543210@paytm` | ✅ Valid | `VALID` |
-| `rahul@okicici` | ✅ Valid | `VALID` |
-| `rahul.sharma@okhdfcbank` | ✅ Valid | `VALID` |
-| `rahul@` | ❌ Invalid — empty handle | `INVALID_HANDLE` |
-| `@paytm` | ❌ Invalid — empty name | `INVALID_FORMAT` |
-| `r@paytm` | ❌ Invalid — name too short | `INVALID_FORMAT` |
-| `rahul@ok icici` | ❌ Invalid — unknown handle | `INVALID_HANDLE` |
-| `rahul@unknownhandle` | ❌ Invalid — handle not in the maintained list | `INVALID_HANDLE` |
-| *(empty)* | ❌ Invalid | `EMPTY` |
+| `9876543210@paytm` | Valid | `VALID` |
+| `rahul@okicici` | Valid | `VALID` |
+| `rahul.sharma@okhdfcbank` | Valid | `VALID` |
+| `rahul@` | Invalid — empty handle | `INVALID_HANDLE` |
+| `@paytm` | Invalid — empty name | `INVALID_FORMAT` |
+| `r@paytm` | Invalid — name too short | `INVALID_FORMAT` |
+| `rahul@ok icici` | Invalid — unknown handle | `INVALID_HANDLE` |
+| `rahul@unknownhandle` | Invalid — handle not in the maintained list | `INVALID_HANDLE` |
+| *(empty)* | Invalid | `EMPTY` |
 
 ## Error codes
 
