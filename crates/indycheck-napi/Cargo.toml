@@ -17,3 +17,9 @@ indycheck = { path = "../indycheck" }
 napi = { version = "2", features = ["napi8"] }
 napi-derive = "2"
 serde_json = "1"
+
+# Runs napi_build::setup() (see build.rs): emits the platform link
+# flags the addon needs — notably `-undefined dynamic_lookup` on
+# macOS, without which the link fails on undefined N-API symbols.
+[build-dependencies]
+napi-build = "2"
