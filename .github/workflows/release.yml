@@ -1,14 +1,19 @@
 name: Release
 
-# Manual only — release-plz needs CARGO_REGISTRY_TOKEN (crates.io) to be
-# configured as a repository secret. It never runs on push, so it can
-# never turn CI red by itself.
+# Manual only — it never runs on push, so it can never turn CI red by itself.
+# Publishes to crates.io via Trusted Publishing (GitHub OIDC): no long-lived
+# CARGO_REGISTRY_TOKEN secret is needed. release-plz exchanges the OIDC
+# token for a short-lived registry token itself. The trusted publisher must
+# be configured once on crates.io (crate Settings > Trusted Publishing):
+# GitHub repo dusmamud/indycheck, workflow file release.yml, no environment.
+# Keep the API token out of this workflow — do not re-add CARGO_REGISTRY_TOKEN.
 on:
   workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 jobs:
   release-plz:
@@ -25,4 +30,3 @@ jobs:
           command: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
