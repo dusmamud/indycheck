@@ -6,7 +6,9 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
 use indycheck_ffi::{
-    indycheck_detect, indycheck_free_string, indycheck_validate_aadhaar, indycheck_validate_gstin,
+    indycheck_detect, indycheck_free_string, indycheck_generate_aadhaar, indycheck_generate_gstin,
+    indycheck_generate_mobile, indycheck_generate_pan, indycheck_generate_vehicle,
+    indycheck_generate_vehicle_bharat, indycheck_validate_aadhaar, indycheck_validate_gstin,
     indycheck_validate_many, indycheck_validate_mobile, indycheck_validate_pan,
     indycheck_validate_pincode, indycheck_validate_vehicle, indycheck_version,
 };
@@ -158,4 +160,81 @@ fn free_string_accepts_null_and_version_is_semver() {
         version.split('.').count() == 3,
         "version {version} is not semver"
     );
+}
+
+/// Call a no-argument generator and return its string (freed afterwards).
+fn generate(f: unsafe extern "C" fn() -> *mut c_char) -> String {
+    let ptr = unsafe { f() };
+    assert!(!ptr.is_null(), "FFI generator returned null");
+    // SAFETY: `ptr` came from this library and has not been freed yet.
+    let out = unsafe { CStr::from_ptr(ptr) }
+        .to_string_lossy()
+        .into_owned();
+    unsafe { indycheck_free_string(ptr) };
+    out
+}
+
+/// Call a generator that takes one string argument (null allowed).
+fn generate_with(
+    f: unsafe extern "C" fn(*const c_char) -> *mut c_char,
+    arg: Option<&str>,
+) -> String {
+    let c_arg = arg.map(|a| CString::new(a).unwrap());
+    let ptr = unsafe { f(c_arg.as_ref().map_or(std::ptr::null(), |c| c.as_ptr())) };
+    assert!(!ptr.is_null(), "FFI generator returned null");
+    // SAFETY: `ptr` came from this library and has not been freed yet.
+    let out = unsafe { CStr::from_ptr(ptr) }
+        .to_string_lossy()
+        .into_owned();
+    unsafe { indycheck_free_string(ptr) };
+    out
+}
+
+#[test]
+fn generators_produce_valid_test_data() {
+    // Every generated value must validate cleanly through the same
+    // FFI surface the other languages use.
+    let pan = generate_with(indycheck_generate_pan, Some("P"));
+    assert_eq!(pan.chars().nth(3), Some('P'));
+    let v: serde_json::Value = serde_json::from_str(&call(indycheck_validate_pan, &pan)).unwrap();
+    assert_eq!(v["valid"], true);
+
+    let aadhaar = generate(indycheck_generate_aadhaar);
+    let v: serde_json::Value =
+        serde_json::from_str(&call(indycheck_validate_aadhaar, &aadhaar)).unwrap();
+    assert_eq!(v["valid"], true);
+
+    let gstin = generate_with(indycheck_generate_gstin, Some("27"));
+    assert!(gstin.starts_with("27"));
+    let v: serde_json::Value =
+        serde_json::from_str(&call(indycheck_validate_gstin, &gstin)).unwrap();
+    assert_eq!(v["valid"], true);
+
+    let mobile = generate(indycheck_generate_mobile);
+    let v: serde_json::Value =
+        serde_json::from_str(&call(indycheck_validate_mobile, &mobile)).unwrap();
+    assert_eq!(v["valid"], true);
+
+    let vehicle = generate(indycheck_generate_vehicle);
+    let v: serde_json::Value =
+        serde_json::from_str(&call(indycheck_validate_vehicle, &vehicle)).unwrap();
+    assert_eq!(v["valid"], true);
+
+    let bharat = generate(indycheck_generate_vehicle_bharat);
+    assert!(bharat.contains("BH"));
+    let v: serde_json::Value =
+        serde_json::from_str(&call(indycheck_validate_vehicle, &bharat)).unwrap();
+    assert_eq!(v["valid"], true);
+    assert_eq!(v["parsed"]["series_type"], "bharat");
+}
+
+#[test]
+fn generators_fall_back_on_null_or_unknown_arguments() {
+    // Null entity / state code must not crash and must use the defaults.
+    let pan = generate_with(indycheck_generate_pan, None);
+    assert_eq!(pan.chars().nth(3), Some('P'));
+    let gstin = generate_with(indycheck_generate_gstin, None);
+    assert!(gstin.starts_with("18"));
+    let gstin = generate_with(indycheck_generate_gstin, Some("99"));
+    assert!(gstin.starts_with("18"));
 }
