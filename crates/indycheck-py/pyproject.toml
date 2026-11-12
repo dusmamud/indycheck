@@ -11,6 +11,13 @@ license = "MIT"
 authors = [{ name = "dusmamud" }]
 requires-python = ">=3.10"
 
+[project.optional-dependencies]
+pydantic = ["pydantic>=2"]
+
 [tool.maturin]
 features = ["pyo3/abi3-py310"]
 module-name = "indycheck"
+# Ship the hand-written Python package (this __init__.py re-exports the
+# native module, plus indycheck.pydantic) instead of maturin's generated
+# minimal __init__.py — otherwise indycheck.pydantic never reaches PyPI.
+python-source = "python"
