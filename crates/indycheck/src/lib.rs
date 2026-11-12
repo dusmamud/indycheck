@@ -32,7 +32,10 @@ pub mod voter;
 
 pub use aadhaar::{mask_aadhaar, validate_aadhaar, validate_aadhaar_with_options};
 pub use cin::validate_cin;
-pub use generate::{generate_aadhaar, generate_gstin, generate_mobile, generate_pan};
+pub use generate::{
+    generate_aadhaar, generate_gstin, generate_mobile, generate_pan, generate_vehicle,
+    generate_vehicle_bharat,
+};
 pub use gstin::{format_gstin, validate_gstin, validate_gstin_with_options};
 pub use ifsc::validate_ifsc;
 pub use llpin::validate_llpin;
