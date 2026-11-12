@@ -1,0 +1,248 @@
+# C prebuilt archives — the C library (cdylib + staticlib) from
+# crates/indycheck-ffi, built per platform and attached to the GitHub
+# Release for the tag.
+#
+# Runs on tags `indycheck-v*` (pushed by the release.yml workflow when
+# release-plz creates the tag + the release) and on manual dispatch
+# (give the tag, e.g. indycheck-v0.2.3, to re-attach or backfill
+# archives for an existing release — the release must already exist,
+# release.yml creates it).
+#
+# Archives are named indycheck-<version>-<platform>.tar.gz / .zip and
+# each contains indycheck.h + LICENSE + the platform libraries:
+#   linux-x64-gnu    libindycheck_ffi.so, libindycheck_ffi.a
+#   linux-x64-musl   libindycheck_ffi.so, libindycheck_ffi.a (musl libc)
+#   darwin-arm64     libindycheck_ffi.dylib, libindycheck_ffi.a
+#   darwin-x64       libindycheck_ffi.dylib, libindycheck_ffi.a
+#   win32-x64-msvc   indycheck_ffi.dll, indycheck_ffi.lib (static),
+#                    indycheck_ffi.dll.lib (DLL import library, if cargo
+#                    emits it — see the note in the package step)
+#   win32-x64-gnu    indycheck_ffi.dll, libindycheck_ffi.dll.a (import),
+#                    libindycheck_ffi.a (static, GNU target)
+# The win32-x64-gnu leg exists for the Go binding: MinGW gcc (the C
+# toolchain Go + cgo uses on Windows) cannot link the MSVC .lib, so the
+# vendored Windows .a in packages/go/lib/ must come from the GNU
+# target (same trick as .github/workflows/go.yml, which builds the GNU
+# target and links the static archive). The MSVC leg is for C/C++
+# consumers using MSVC.
+#
+# Header check: the header is platform-independent, so it is
+# regenerated with cbindgen and diffed against the committed
+# crates/indycheck-ffi/indycheck.h on the Linux (glibc) leg only — on
+# Windows the checkout converts line endings and `diff` fails
+# spuriously (same lesson as .github/workflows/c.yml). If the header
+# drifted, that leg fails and the release job never runs, so no
+# archive ships with a stale header.
+#
+# Race note: on a tag push this workflow can start while release-plz
+# is still creating the GitHub Release for the same tag (the tag is
+# pushed first, the release a moment later). The release job therefore
+# polls `gh release view` for up to ~6 minutes before giving up, so a
+# manual dispatch is only needed if that wait expires.
+name: C prebuilt archives
+
+on:
+  push:
+    tags:
+      - 'indycheck-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to attach archives to, e.g. indycheck-v0.2.3 (the release must already exist)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: C library (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x64-gnu
+            kind: linux
+            archive: tar.gz
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: linux-x64-musl
+            kind: linux
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: darwin-arm64
+            kind: darwin
+            archive: tar.gz
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: darwin-x64
+            kind: darwin
+            archive: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: win32-x64-msvc
+            kind: windows-msvc
+            archive: zip
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            platform: win32-x64-gnu
+            kind: windows-gnu
+            archive: zip
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Tag pushes check out the tag already; manual dispatch must
+          # check out the given tag so the archives are built from the
+          # tagged commit, not from main.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Resolve tag + version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          case "$TAG" in
+            indycheck-v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "tag '$TAG' does not look like indycheck-vX.Y.Z" >&2; exit 1 ;;
+          esac
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "VERSION=${TAG#indycheck-v}" >> "$GITHUB_ENV"
+          echo "building archives for $TAG"
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+      # The musl target links with musl-gcc, which is not on the stock
+      # ubuntu runner. musl-tools provides it (pure-Rust crate, no C
+      # deps, but the final link still needs a linker).
+      - name: Install musl toolchain (musl leg)
+        if: matrix.platform == 'linux-x64-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      # The GNU target on Windows links with MinGW gcc, which is not on
+      # PATH on windows-latest. Same install as .github/workflows/go.yml.
+      - name: Install MinGW (Windows GNU leg)
+        if: matrix.kind == 'windows-gnu'
+        run: choco install mingw -y
+      # Pinned: cbindgen 0.29.4 regenerates the committed indycheck.h
+      # byte-identically (verified locally), so the drift check below
+      # is not spuriously red. Linux only — see the header note above.
+      - name: Install cbindgen (Linux glibc leg)
+        if: matrix.platform == 'linux-x64-gnu'
+        run: cargo install cbindgen --version 0.29.4 --locked
+      - name: Check committed header is up to date (Linux glibc leg)
+        if: matrix.platform == 'linux-x64-gnu'
+        working-directory: crates/indycheck-ffi
+        shell: bash
+        run: |
+          cbindgen --config cbindgen.toml --crate indycheck-ffi --output "${{ runner.temp }}/indycheck.h"
+          diff -u indycheck.h "${{ runner.temp }}/indycheck.h"
+      - name: Build C library
+        run: cargo build -p indycheck-ffi --release --target ${{ matrix.target }}
+      # Show exactly what cargo produced, so the first run's log settles
+      # the Windows .lib naming (MSVC emits the static archive as
+      # indycheck_ffi.lib and the DLL import library as
+      # indycheck_ffi.dll.lib; GNU emits libindycheck_ffi.a and
+      # libindycheck_ffi.dll.a). The copy step below requires the
+      # primary library and takes whichever import library exists.
+      - name: List built libraries
+        shell: bash
+        run: ls -l target/${{ matrix.target }}/release/ | grep -i indycheck_ffi || true
+      - name: Stage + package archive
+        shell: bash
+        env:
+          LIBDIR: target/${{ matrix.target }}/release
+        run: |
+          set -euo pipefail
+          STAGE="stage/indycheck-${VERSION}-${{ matrix.platform }}"
+          mkdir -p "$STAGE"
+          cp crates/indycheck-ffi/indycheck.h LICENSE "$STAGE/"
+          case "${{ matrix.kind }}" in
+            linux)
+              test -f "$LIBDIR/libindycheck_ffi.so" || { echo "missing libindycheck_ffi.so" >&2; exit 1; }
+              test -f "$LIBDIR/libindycheck_ffi.a"  || { echo "missing libindycheck_ffi.a" >&2; exit 1; }
+              cp "$LIBDIR/libindycheck_ffi.so" "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
+              ;;
+            darwin)
+              test -f "$LIBDIR/libindycheck_ffi.dylib" || { echo "missing libindycheck_ffi.dylib" >&2; exit 1; }
+              test -f "$LIBDIR/libindycheck_ffi.a"     || { echo "missing libindycheck_ffi.a" >&2; exit 1; }
+              cp "$LIBDIR/libindycheck_ffi.dylib" "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
+              ;;
+            windows-msvc)
+              test -f "$LIBDIR/indycheck_ffi.dll" || { echo "missing indycheck_ffi.dll" >&2; exit 1; }
+              cp "$LIBDIR/indycheck_ffi.dll" "$STAGE/"
+              # Static archive and/or DLL import library — at least one
+              # .lib must be present; copy whichever cargo emitted.
+              copied=0
+              for f in indycheck_ffi.lib indycheck_ffi.dll.lib; do
+                if [ -f "$LIBDIR/$f" ]; then cp "$LIBDIR/$f" "$STAGE/"; copied=1; fi
+              done
+              [ "$copied" = 1 ] || { echo "missing indycheck_ffi.lib / indycheck_ffi.dll.lib" >&2; exit 1; }
+              ;;
+            windows-gnu)
+              test -f "$LIBDIR/indycheck_ffi.dll"      || { echo "missing indycheck_ffi.dll" >&2; exit 1; }
+              test -f "$LIBDIR/libindycheck_ffi.a"     || { echo "missing libindycheck_ffi.a" >&2; exit 1; }
+              cp "$LIBDIR/indycheck_ffi.dll" "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
+              if [ -f "$LIBDIR/libindycheck_ffi.dll.a" ]; then cp "$LIBDIR/libindycheck_ffi.dll.a" "$STAGE/"; fi
+              ;;
+          esac
+          ls -l "$STAGE"
+          if [ "${{ matrix.archive }}" = "tar.gz" ]; then
+            tar -czf "indycheck-${VERSION}-${{ matrix.platform }}.tar.gz" -C stage "indycheck-${VERSION}-${{ matrix.platform }}"
+          fi
+      - name: Zip archive (Windows legs)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: Compress-Archive -Path "stage/indycheck-${{ env.VERSION }}-${{ matrix.platform }}" -DestinationPath "indycheck-${{ env.VERSION }}-${{ matrix.platform }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: c-${{ matrix.platform }}
+          path: indycheck-*-${{ matrix.platform }}.*
+
+  release:
+    name: attach archives to the GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Resolve tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG=${{ inputs.tag }}" >> "$GITHUB_ENV"
+          else
+            echo "TAG=${{ github.ref_name }}" >> "$GITHUB_ENV"
+          fi
+      # The tag is pushed before the release is created (release-plz
+      # pushes the tag, then creates the release), so wait for the
+      # release to appear instead of failing on a race. Manual
+      # dispatch against an existing release finds it on the first try.
+      - name: Wait for the GitHub Release to exist
+        run: |
+          for i in $(seq 1 12); do
+            if gh release view "$TAG" --repo dusmamud/indycheck >/dev/null 2>&1; then
+              echo "release $TAG exists"
+              exit 0
+            fi
+            echo "attempt $i/12: release $TAG not found yet, waiting 30s…"
+            sleep 30
+          done
+          echo "release $TAG still does not exist after ~6 minutes — run the Release workflow (release.yml) first, it creates the release" >&2
+          exit 1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: c-*
+          path: dist
+          merge-multiple: true
+      - name: Upload archives to the release
+        run: |
+          count=$(ls dist | wc -l)
+          echo "uploading $count archives:"
+          ls -l dist
+          [ "$count" = 6 ] || { echo "expected 6 archives (one per platform), got $count" >&2; exit 1; }
+          gh release upload "$TAG" dist/* --clobber --repo dusmamud/indycheck
