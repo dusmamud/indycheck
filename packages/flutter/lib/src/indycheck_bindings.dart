@@ -1,6 +1,8 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:ffi/ffi.dart';
+
 /// Native signature shared by every validator: one C string in, one
 /// heap-allocated C string out (owned by the caller).
 typedef _ValidateNative = Pointer<Utf8> Function(Pointer<Utf8>);
