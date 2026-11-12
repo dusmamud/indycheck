@@ -1,0 +1,48 @@
+# PHP binding CI — Composer package in packages/php, which loads the Rust
+# C library via PHP FFI (INDYCHECK_LIB_PATH). Builds the .so first, then
+# runs the setup helper as a smoke check followed by the PHPUnit suite,
+# on PHP 8.2 and 8.3.
+name: PHP
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/php/**'
+      - 'crates/indycheck-ffi/**'
+      - 'crates/indycheck/**'
+      - '.github/workflows/php.yml'
+
+jobs:
+  php:
+    name: PHP FFI package (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build C library
+        run: cargo build -p indycheck-ffi --release
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ffi, json
+          ini-values: ffi.enable=true
+      - name: Install dependencies
+        working-directory: packages/php
+        run: composer install --no-interaction
+      - name: Setup smoke check
+        working-directory: packages/php
+        env:
+          INDYCHECK_LIB_PATH: ${{ github.workspace }}/target/release/libindycheck_ffi.so
+        run: php scripts/setup.php
+      - name: Run PHPUnit
+        working-directory: packages/php
+        env:
+          INDYCHECK_LIB_PATH: ${{ github.workspace }}/target/release/libindycheck_ffi.so
+        run: vendor/bin/phpunit --testdox
