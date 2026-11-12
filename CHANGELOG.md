@@ -5,6 +5,14 @@ All notable changes to indycheck are documented here. The format is based on
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 All crates, npm and PyPI packages share one version in lockstep.
 
+## [0.1.2] - 2026-11-12
+
+### Fixed
+- `rust-version` is now inherited by the core crate, so crates.io shows
+  the minimum supported Rust version (1.85) instead of blank.
+- First release published via crates.io Trusted Publishing (GitHub OIDC)
+  instead of a long-lived API token.
+
 ## [0.1.1] - 2026-11-12
 
 ### Fixed
