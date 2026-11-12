@@ -21,6 +21,8 @@
  * implements the exact same rules (Verhoeff for Aadhaar, Mod-36 Luhn for
  * GSTIN). Results are never faked: both paths run the real validation logic.
  */
+
+import dices from '../assets/icons/dices.svg?raw';
 ---
 
 <!doctype html>
@@ -39,8 +41,8 @@
 		<meta property="og:image" content="https://indycheck.pages.dev/og.svg" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="canonical" href="https://indycheck.pages.dev/playground/" />
-		<style>
-			:root { --bg: #0a0f1e; --card: #141f3a; --ink: #f1f5f9; --muted: #a7b4c9; --green: #22c55e; --green-bright: #4ade80; --red: #f87171; --amber: #fbbf24; --line: #263449; --ring: #4ade80; }
+		<style is:global>
+			:root { --bg: #0a0f1e; --card: #141f3a; --ink: #f1f5f9; --muted: #a7b4c9; --green: #22c55e; --green-bright: #4ade80; --red: #f87171; --amber: #fbbf24; --line: rgba(241, 245, 249, 0.12); --ring: #4ade80; --ease: cubic-bezier(0.22, 1, 0.36, 1); }
 			* { box-sizing: border-box; }
 			body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; }
 			::selection { background: rgba(34, 197, 94, 0.35); }
@@ -48,60 +50,62 @@
 			a { color: #4ade80; }
 			.wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 64px; }
 			header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; position: sticky; top: 0; z-index: 20; background: rgba(10, 15, 30, 0.88); backdrop-filter: blur(12px); }
-			.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.25rem; color: var(--ink); text-decoration: none; }
+			.logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.125rem; color: var(--ink); text-decoration: none; }
 			.logo img { width: 32px; height: 32px; }
-			nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-weight: 600; }
+			nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-weight: 500; }
 			nav a:hover { color: var(--ink); }
-			h1 { font-size: 2rem; margin: 24px 0 4px; }
+			h1 { font-size: 2rem; font-weight: 600; margin: 32px 0 4px; }
 			.sub { color: var(--muted); margin: 0 0 24px; }
 			.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-			.tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 9px 18px; cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+			.tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 500; font-size: 0.95rem; }
 			.tabs button[aria-pressed="true"] { background: var(--green); color: #052e12; border-color: var(--green); }
 			.tabs button:hover { border-color: var(--green); }
-			.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+			.panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
 			.input-row { display: flex; gap: 10px; flex-wrap: wrap; }
-			.input-row input { flex: 1 1 300px; background: #020617; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 13px; font-size: 1.05rem; font-family: ui-monospace, monospace; }
-			.btn { border: none; border-radius: 8px; padding: 13px 22px; font-weight: 700; cursor: pointer; font-size: 1rem; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
-			.btn:hover { transform: translateY(-1px); }
+			.input-row input { flex: 1 1 300px; background: #020617; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-size: 1.05rem; font-family: ui-monospace, monospace; }
+			.btn { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 8px; padding: 12px 20px; font-weight: 600; cursor: pointer; font-size: 1rem; transition: background-color .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease), transform .15s var(--ease); }
+			.btn svg { width: 18px; height: 18px; }
+			.btn:active { transform: scale(0.98); }
 			.btn-primary:hover { background: #16a34a; }
 			.btn-ghost:hover { border-color: var(--green); color: var(--green-bright); }
 			.btn-primary { background: var(--green); color: #052e12; }
 			.btn-ghost { background: #020617; color: var(--ink); border: 1px solid var(--line); }
-			.presets { margin: 14px 0 0; color: var(--muted); font-size: 0.9rem; }
-			.presets button { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 4px 12px; cursor: pointer; margin: 2px 4px 2px 0; font-size: 0.85rem; }
+			.presets { margin: 16px 0 0; color: var(--muted); font-size: 0.9rem; }
+			.presets button { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 4px 12px; cursor: pointer; margin: 2px 4px 2px 0; font-size: 0.85rem; }
 			.presets button:hover { border-color: var(--green); }
-			.options { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
-			.options h2 { font-size: 1rem; margin: 0 0 10px; }
-			.options .row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+			.options { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+			.options h2 { font-size: 1rem; font-weight: 600; margin: 0 0 10px; }
+			.options .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
 			.options label { display: flex; align-items: center; gap: 6px; font-size: 0.95rem; cursor: pointer; }
 			.options select { background: #020617; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 0.95rem; }
 			.options input[type="checkbox"] { accent-color: var(--green); width: 16px; height: 16px; }
 			.options .hint { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; }
-			.result { margin-top: 16px; border-radius: 10px; padding: 16px; display: none; }
+			.result { margin-top: 16px; border-radius: 12px; padding: 16px; display: none; }
 			.result.show { display: block; }
 			.result.valid { background: #052e12; border: 1px solid #166534; }
 			.result.invalid { background: #450a0a; border: 1px solid #991b1b; }
-			.result .verdict { font-weight: 800; font-size: 1.1rem; }
+			.result .verdict { font-weight: 600; font-size: 1.1rem; }
 			.result .verdict.valid { color: var(--green); }
 			.result .verdict.invalid { color: var(--red); }
 			.result .reason-hi { color: var(--muted); }
 			.result .code-line { margin-top: 8px; font-size: 0.95rem; }
-			.result .code-line code { background: rgba(2, 6, 23, 0.6); border-radius: 6px; padding: 2px 8px; font-weight: 700; }
-			.result .testdata { display: inline-block; margin-left: 8px; background: var(--amber); color: #451a03; font-size: 0.75rem; font-weight: 800; border-radius: 6px; padding: 2px 8px; vertical-align: middle; }
+			.result .code-line code { background: rgba(2, 6, 23, 0.6); border-radius: 6px; padding: 2px 8px; font-weight: 600; }
+			.result .testdata { display: inline-block; margin-left: 8px; background: var(--amber); color: #451a03; font-size: 0.75rem; font-weight: 600; border-radius: 6px; padding: 2px 8px; vertical-align: middle; }
 			.result pre { background: rgba(2, 6, 23, 0.6); border-radius: 8px; padding: 12px; overflow-x: auto; margin: 12px 0 0; }
 			.result pre code { color: #e2e8f0; font-size: 0.9rem; }
 			.engine { font-size: 0.85rem; color: var(--muted); margin-top: 12px; }
+			.engine .offline { display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, monospace; font-size: 0.8rem; color: var(--green-bright); margin-right: 8px; }
+			.engine .offline .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
 			.share { margin-top: 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-			.share button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+			.share button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 500; }
 			.share button:hover { border-color: var(--green); color: var(--green-bright); }
 			.share span { color: var(--muted); font-size: 0.9rem; }
 			.share code { color: #e2e8f0; font-size: 0.85rem; word-break: break-all; }
-			.note { background: #451a03; border: 1px solid #92400e; border-radius: 12px; padding: 16px 18px; margin-top: 32px; color: #fde68a; font-size: 0.95rem; }
-			.note a { color: #fcd34d; }
+			.note { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: 16px; padding: 20px; margin-top: 32px; color: var(--ink); font-size: 0.95rem; }
 			footer { margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 0.9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 			@media (max-width: 640px) {
 				.wrap { padding: 0 16px 48px; }
-				header { padding: 14px 0; }
+				header { padding: 16px 0; }
 				nav a { margin-left: 12px; font-size: 0.92rem; }
 				.logo { font-size: 1.1rem; }
 				h1 { font-size: 1.6rem; margin: 16px 0 4px; }
@@ -139,7 +143,7 @@
 				<div class="input-row">
 					<input id="value-input" type="text" autocomplete="off" spellcheck="false" aria-label="Value to validate" placeholder="AAAPL1234C" />
 					<button type="button" class="btn btn-primary" id="validate-btn">Validate</button>
-					<button type="button" class="btn btn-ghost" id="generate-btn" title="Fill in a random syntactically-valid value for testing only">🎲 Generate test data</button>
+					<button type="button" class="btn btn-ghost" id="generate-btn" title="Fill in a random syntactically-valid value for testing only"><span set:html={dices} /> Generate test data</button>
 				</div>
 				<p class="presets" id="presets"></p>
 
@@ -165,7 +169,7 @@
 				</div>
 
 				<div id="result" class="result" aria-live="polite"></div>
-				<p class="engine" id="engine">Engine: not loaded yet.</p>
+				<p class="engine" id="engine"><span class="offline"><i class="dot"></i>offline</span>Engine: not loaded yet.</p>
 				<div class="share">
 					<button type="button" id="copy-link">Copy shareable link</button>
 					<button type="button" id="copy-json">Copy result JSON</button>
@@ -235,10 +239,10 @@
 					const mod = await import(/* @vite-ignore */ '/wasm/indycheck_wasm.js');
 					await mod.default();
 					wasmModule = mod;
-					engineEl.textContent = 'Engine: WASM (Rust core, compiled to WebAssembly).';
+					engineEl.innerHTML = '<span class="offline"><i class="dot"></i>offline</span>Engine: WASM (Rust core, compiled to WebAssembly).';
 				} catch {
 					wasmModule = null;
-					engineEl.textContent = 'Engine: pure-JS fallback (same rules as the Rust core). WASM build not present yet — see TODO in page source.';
+					engineEl.innerHTML = '<span class="offline"><i class="dot"></i>offline</span>Engine: pure-JS fallback (same rules as the Rust core). WASM build not present yet — see TODO in page source.';
 				}
 				return wasmModule;
 			}
@@ -322,13 +326,15 @@
 				const value = inputEl.value;
 				updateShareUrl();
 				if (!value.trim()) {
-					resultEl.className = 'result';
+					resultEl.classList.remove('show', 'valid', 'invalid');
 					resultEl.innerHTML = '';
 					return;
 				}
 				const r = await validateValue(currentType, value, currentOptions());
 				lastResult = r;
-				resultEl.className = `result show ${r.ok ? 'valid' : 'invalid'}`;
+				resultEl.classList.add('show');
+				resultEl.classList.toggle('valid', r.ok);
+				resultEl.classList.toggle('invalid', !r.ok);
 				resultEl.innerHTML = `
 					<div class="verdict ${r.ok ? 'valid' : 'invalid'}">${r.ok ? '✓ Valid' : '✗ Invalid'}${generatedValue ? '<span class="testdata">TEST DATA ONLY</span>' : ''}</div>
 					<div class="code-line">Error code: <code>${esc(r.code)}</code> · <a href="/error-codes/">all error codes →</a></div>
