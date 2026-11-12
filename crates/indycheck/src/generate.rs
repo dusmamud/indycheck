@@ -105,11 +105,7 @@ pub fn generate_gstin(state_code: &str) -> String {
     };
     let mut rng = SimpleRng::new();
     let pan = generate_pan('P');
-    let entity_char = if rng.next_u64().is_multiple_of(2) {
-        '1'
-    } else {
-        '2'
-    };
+    let entity_char = if rng.next_u64() % 2 == 0 { '1' } else { '2' };
     let first_14 = format!("{state_code}{pan}{entity_char}Z");
     let check = luhn36::check_digit(&first_14).unwrap_or('0');
     format!("{first_14}{check}")
