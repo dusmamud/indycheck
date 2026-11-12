@@ -36,7 +36,7 @@ JSON serialisation omits `parsed` when it is `None`.
 | `validate_cin(input)` | 21 chars: `L`/`U` + 5 digits + 2 letters + 4 digits + 3 letters + 6 digits (format only, no checksum) | `{"cin": "…", "listing": "Listed", "industry_code": "12345", "state_code": "MH", "year": "2020", "company_type": "PLC", "registration_number": "123456"}` |
 | `validate_llpin(input)` | 3 letters + 4 digits (format only, no checksum) | `{"llpin": "AAA1234"}` |
 | `validate_voter_id(input)` / `validate_epic(input)` | 3 letters + 7 digits (format only, no checksum) | `{"epic": "ABC1234567"}` |
-| `validate_vehicle(input)` / `validate_vehicle_registration(input)` | e.g. `DL01AB1234` / `DL01A1234` (format only, no checksum) | `{"registration": "DL01AB1234", "state_code": "DL", "district": "01", "series": "AB", "number": "1234"}` |
+| `validate_vehicle(input)` / `validate_vehicle_registration(input)` | state: `SSNNXX(X)NNNN` (e.g. `DL01AB1234`); Bharat: `YYBH####XX` (e.g. `22BH1234AA`, year 21+, suffix excludes `I`/`O`) — format only, no checksum | `{"registration": "DL01AB1234", "series_type": "state", "state_code": "DL", "district": "01", "series": "AB", "number": "1234"}` / Bharat: `{"registration": "22BH1234AA", "series_type": "bharat", "year": "22", "series": "BH", "number": "1234", "suffix": "AA"}` |
 | `detect(input) -> String` | any string | `"pan" \| "aadhaar" \| "gstin" \| "ifsc" \| "upi" \| "mobile" \| "pincode" \| "tan" \| "cin" \| "llpin" \| "voter" \| "vehicle" \| "unknown"` — GSTIN before PAN, Aadhaar before mobile (by length), UPI by `@` |
 | `validate_many(inputs: &[String]) -> Vec<ValidationResult>` | batch; detects then validates each | per-item results |
 
@@ -164,7 +164,7 @@ aadhaar, gstin [state-code], mobile`. Exit codes: 0 = valid/success,
 
 ## Test vectors
 
-`shared/test-vectors.json` — 245 cases covering valid + invalid inputs for
+`shared/test-vectors.json` — 254 cases covering valid + invalid inputs for
 all 12 types, `detect`/batch behaviour, `Options` cases (each entry carries
 an `"options"` object and is run through `validate_*_with_options`), and
 generator cases (each entry carries a `"generator"` field; the test
