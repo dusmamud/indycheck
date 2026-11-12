@@ -111,18 +111,18 @@ Use `code` for branching in your code, and `reason_en` / `reason_hi` for showing
 
 TAN, CIN, LLPIN, Voter ID and vehicle numbers have **no public checksum** — for those, indycheck checks the format only. (IFSC, UPI, mobile and PIN code are format-only too.)
 
-There is also a generic entry point — `validate('pan', value)` — handy when the type comes from user input, plus `detect(value)` to guess the type, `generate(type)` for test data, and `mask()` / `format()` for display. Try everything live in the [playground](/playground/).
+Each type has its own named validator — `validatePan(value)`, `validateAadhaar(value)`, and so on — plus `detect(value)` to guess the type, `generatePan()` / `generateMobile()` / `generateVehicle()` for test data, and `mask()` / `format()` for display. Try everything live in the [playground](/playground/).
 
 ## Batch validation
 
-Validators are pure functions with no I/O, so batching is just a loop:
+Validators are pure functions with no I/O, so batching is just a loop — or use `validateMany` (see the [API reference](/api/)):
 
 ```js
-import { validate } from 'indycheck';
+import { validatePan } from 'indycheck';
 
 const rows = ['AAAPL1234C', 'AAAPL12345', '9876543210'];
-const results = rows.map((v) => validate('pan', v));
-const bad = results.filter((r) => !r.ok);
+const results = rows.map((v) => validatePan(v));
+const bad = results.filter((r) => !r.valid);
 console.log(`${bad.length} of ${rows.length} failed`);
 ```
 
