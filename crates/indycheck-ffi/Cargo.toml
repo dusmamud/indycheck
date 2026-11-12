@@ -7,10 +7,11 @@ license.workspace = true
 # core `indycheck` crate is published. Prevents release-plz from
 # trying to publish it.
 publish = false
-description = "C FFI bindings for indycheck (Phase 3 scaffold, not in v0.1)"
+description = "C FFI bindings for indycheck (C API, used by the Go binding)"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 indycheck = { path = "../indycheck" }
+serde_json = "1"
