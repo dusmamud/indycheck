@@ -9,3 +9,13 @@
 git_release_enable = true
 git_release_name = "indycheck-v{{ version }}"
 git_release_body = "{{ changelog }}"
+
+# NOTE: changelog_include does NOT fix release-plz missing satellite-only
+# batches (see scripts/release-fallback.sh): binding crates have
+# publish = false, so takes_part_in_release() never processes them and
+# their commits never enter the diff. This entry is harmless and helps
+# only mixed batches, where a core change triggers `update` — then the
+# binding-crate commits appear in the changelog too.
+[[package]]
+name = "indycheck"
+changelog_include = ["indycheck-ffi", "indycheck-napi", "indycheck-py", "indycheck-uniffi", "indycheck-wasm"]
