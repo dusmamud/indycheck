@@ -8,6 +8,8 @@
 /// `state_code` / `district` / `series` / `number`) and is `null`
 /// otherwise — the JSON omits `parsed` when there is nothing to report.
 class ValidationResult {
+  /// Creates a validation result with the given fields. Validators build
+  /// this for you; use [ValidationResult.fromJson] to rebuild one from JSON.
   const ValidationResult({
     required this.valid,
     required this.code,
@@ -16,6 +18,8 @@ class ValidationResult {
     this.parsed,
   });
 
+  /// Rebuilds a [ValidationResult] from its JSON shape (as produced by
+  /// [toJson]).
   factory ValidationResult.fromJson(Map<String, dynamic> json) {
     final parsed = json['parsed'];
     return ValidationResult(
@@ -46,6 +50,8 @@ class ValidationResult {
   /// Extracted fields on success, `null` otherwise.
   final Map<String, dynamic>? parsed;
 
+  /// Converts this result to its JSON shape (omits `parsed` when it is
+  /// `null`).
   Map<String, dynamic> toJson() {
     return {
       'valid': valid,
