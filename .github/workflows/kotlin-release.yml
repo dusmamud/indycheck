@@ -77,6 +77,12 @@ jobs:
           test -n "$NDK" || { echo "no NDK found under \$ANDROID_HOME/ndk" >&2; exit 1; }
           echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
           echo "Using NDK: $NDK"
+      - name: Install Android SDK packages
+        # AGP 8.13 defaults to Build Tools 35.0.0; install it (and the API 34
+        # platform) explicitly so the build does not depend on what the
+        # runner happens to have pre-installed.
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;35.0.0" > /dev/null
       - name: Build AAR
         working-directory: packages/kotlin
         run: ./gradlew :indycheck:assembleRelease --no-configuration-cache
@@ -129,6 +135,12 @@ jobs:
           test -n "$NDK" || { echo "no NDK found under \$ANDROID_HOME/ndk" >&2; exit 1; }
           echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
           echo "Using NDK: $NDK"
+      - name: Install Android SDK packages
+        # AGP 8.13 defaults to Build Tools 35.0.0; install it (and the API 34
+        # platform) explicitly so the build does not depend on what the
+        # runner happens to have pre-installed.
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;35.0.0" > /dev/null
       - name: Preflight — secrets present
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
