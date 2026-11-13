@@ -1,0 +1,54 @@
+# CI for the Packagist split repo (dusmamud/indycheck-php).
+#
+# This file lives at packages/php/.github/workflows/ci.yml in the main
+# repo (dusmamud/indycheck), where it is INERT — GitHub Actions only
+# runs workflows from the repo-root .github/workflows/. The subtree
+# split (see .github/workflows/php-split.yml) carries it to the split
+# repo's root .github/workflows/, where it becomes the split repo's CI.
+#
+# The split repo contains only the PHP package, not the Rust core, so
+# the native library is built from a checkout of the main repo and
+# passed in via INDYCHECK_LIB_PATH (same as the main repo's php.yml).
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  php:
+    name: PHP FFI package (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: dusmamud/indycheck
+          path: indycheck-main
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build C library
+        working-directory: indycheck-main
+        run: cargo build -p indycheck-ffi --release
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ffi, json
+          ini-values: ffi.enable=true
+      - name: Validate composer.json
+        run: composer validate
+      - name: Install dependencies
+        run: composer install --no-interaction
+      - name: Setup smoke check
+        env:
+          INDYCHECK_LIB_PATH: ${{ github.workspace }}/indycheck-main/target/release/libindycheck_ffi.so
+        run: php scripts/setup.php
+      - name: Run PHPUnit
+        env:
+          INDYCHECK_LIB_PATH: ${{ github.workspace }}/indycheck-main/target/release/libindycheck_ffi.so
+        run: vendor/bin/phpunit --testdox
