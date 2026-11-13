@@ -9,13 +9,29 @@ The Dart package is a thin [`dart:ffi`](https://api.dart.dev/stable/dart-ffi/dar
 
 This is a pure Dart package, not a Flutter plugin: it works in a Dart CLI or server, and in a Flutter app that bundles the native library.
 
-<Aside type="caution" title="Status — in the repo, not on pub.dev yet">
-  The package lives in `packages/flutter` in the repo and ships with the **upcoming 0.2.3 release** — it is **not published to pub.dev yet**, so `dart pub add indycheck` / `flutter pub add indycheck` will not work until it is. The native library is also **not shipped with the package**; you build it once from the repo (see below). A failed validation is a normal `ValidationResult` with `valid == false` — the methods only throw on transport failures (the native library cannot be loaded, or it returns null).
+<Aside type="note" title="Status — on pub.dev (0.2.2), 0.2.4 in progress">
+  The package is published on pub.dev as `indycheck` — **0.2.2 is live** and **0.2.4 is in progress**. The native library is **bundled via a build hook** in 0.2.4: the hook downloads the prebuilt library for your platform from the GitHub release (SHA-256 verified), so there is no manual build step in the standard case. A failed validation is a normal `ValidationResult` with `valid == false` — the methods only throw on transport failures (the native library cannot be loaded, or it returns null).
 </Aside>
 
 ## Install
 
-Until the package is on pub.dev, add it as a git dependency in your `pubspec.yaml`:
+From pub.dev:
+
+```sh
+dart pub add indycheck
+# or, in a Flutter app:
+flutter pub add indycheck
+```
+
+That installs the latest published version (0.2.2; 0.2.4 is in progress). To pin a version, add it to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  indycheck: ^0.2.2
+  ffi: ^2.1.0
+```
+
+Requires Dart SDK `>=3.14.0 <4.0.0` and `ffi ^2.1.0` (Flutter 3.50+). To use the latest code before 0.2.4 lands on pub.dev, install it as a git dependency instead:
 
 ```yaml
 dependencies:
@@ -26,11 +42,9 @@ dependencies:
   ffi: ^2.1.0
 ```
 
-Requires Dart SDK `>=3.4.0 <4.0.0` and `ffi ^2.1.0`.
+## The native library
 
-## Build the native library
-
-From a checkout of the indycheck repo, build the Rust shared library once:
+The 0.2.4 package bundles the native library via a Native Assets build hook: when you build or run your app, the hook downloads the prebuilt `libindycheck_ffi` for your platform from the GitHub release (SHA-256 verified) — there is no manual build step in the standard case. If no prebuilt archive exists for your platform, the hook falls back to building it from source. You can also build it yourself from a checkout of the indycheck repo:
 
 ```sh
 cargo build -p indycheck-ffi --release
@@ -51,7 +65,7 @@ Indycheck.init('/path/to/libindycheck_ffi.so');
 // or: Indycheck.setLibraryPath('/path/to/libindycheck_ffi.so');
 ```
 
-Resolution order: the explicit path passed to `init` / `setLibraryPath` first, then `INDYCHECK_NATIVE_LIB`, then the platform's default library file name on the library search path. On Android and iOS the library is expected to be linked into the app binary (`DynamicLibrary.process()`). If the library cannot be loaded, the package throws a `StateError` naming the expected file and the `cargo build` command — it never fails silently.
+Resolution order: the explicit path passed to `init` / `setLibraryPath` first, then `INDYCHECK_NATIVE_LIB`, then the library bundled by the build hook, then the platform's default library file name on the library search path. On Android and iOS the library is expected to be linked into the app binary (`DynamicLibrary.process()`). If the library cannot be loaded, the package throws a `StateError` naming the expected file and the `cargo build` command — it never fails silently.
 
 ## Example
 
@@ -130,7 +144,5 @@ All six generators are verified in `packages/flutter/lib/src/indycheck.dart`. Ge
 
 ## What is not here yet
 
-- **No pub.dev release.** Install from the repo as above until the package is published.
-- **No prebuilt native library.** You must run the `cargo build` step; the `.so` / `.dylib` / `.dll` is a build artefact, never committed to the repo.
 - **No Flutter plugin scaffolding and no widget tests.** The package is pure Dart over FFI; bundling the native library into a Flutter app (Android/iOS) is up to the app.
 - **No options variants.** Unlike the Rust core and the JS/Python wrappers, the Dart package has no `validate_*_with_options` methods yet — validation always uses the core defaults.
