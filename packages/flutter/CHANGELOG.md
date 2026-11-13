@@ -1,3 +1,15 @@
+## 0.2.5
+
+- Version bump in lockstep with indycheck 0.2.5. No API changes.
+- pub.dev publishing fixed: the release workflow now publishes with the
+  standalone Dart SDK (`dart-lang/setup-dart` + `dart pub publish`),
+  so this version reaches pub.dev (0.2.4's publish needed that fix).
+
+## 0.2.4
+
+- Version bump in lockstep with indycheck 0.2.4. No API changes.
+- Published to pub.dev as 0.2.4 (0.2.3 was skipped on pub.dev).
+
 ## 0.2.3
 
 - Native library is now bundled automatically: a build hook
