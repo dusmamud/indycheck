@@ -13,6 +13,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write # to dispatch pubdev-release.yml after the tag is created
   id-token: write
 
 jobs:
@@ -30,3 +31,32 @@ jobs:
           command: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Auto-publish the Flutter package to pub.dev after the crates.io release.
+  # The tag created by release-plz (via GITHUB_TOKEN) does NOT trigger the
+  # tag-push workflow (GitHub does not trigger workflows from GITHUB_TOKEN
+  # events), so this job dispatches pubdev-release.yml explicitly with the
+  # new tag as ref — the OIDC token then carries refs/tags/indycheck-vX.Y.Z,
+  # which matches the pub.dev tag pattern indycheck-v{{version}}.
+  # workflow_dispatch events triggered by GITHUB_TOKEN DO create runs
+  # (the documented exception to the non-trigger rule).
+  publish-pubdev:
+    name: publish to pub.dev (dispatch)
+    needs: release-plz
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Dispatch pub.dev publish for the new tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 '^version =' Cargo.toml | sed -E 's/version = "(.*)"/\1/')
+          TAG="indycheck-v$VERSION"
+          echo "release tag: $TAG"
+          git fetch --tags origin
+          git rev-parse "$TAG^{commit}" >/dev/null || { echo "tag $TAG not found (release-plz did not create it?)" >&2; exit 1; }
+          gh workflow run pubdev-release.yml --ref "$TAG" -f tag="$TAG"
+          echo "dispatched pubdev-release.yml for $TAG"
