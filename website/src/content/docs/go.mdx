@@ -7,33 +7,27 @@ import { Aside } from '@astrojs/starlight/components';
 
 The Go package is a thin [cgo](https://pkg.go.dev/cmd/cgo) wrapper over the C API in `crates/indycheck-ffi`, which itself wraps the Rust core. **No validation logic lives in Go** — every function calls the matching C function and decodes the JSON result it returns, so Go returns the same answer as Rust for the same input.
 
-<Aside type="caution" title="Status — in the repo, no version tag yet">
-  The package lives in `packages/go` in the repo (module `github.com/dusmamud/indycheck-go`) and ships with the **upcoming 0.2.3 release** — but there is **no version tag yet, so `go get github.com/dusmamud/indycheck-go` does not work**. Until a tag exists, use the `replace` directive below. You also need to build the Rust shared library once (see below) — the `.so` is a build artefact, never committed to the repo.
+<Aside type="note" title="Status — published (Go module v0.2.5)">
+  The Go module is published — install it with `go get` (see below). The module path is `github.com/dusmamud/indycheck/packages/go` and the first working version is **v0.2.5** (core 0.2.4). Do **not** use v0.2.4: that tag exists but the Go module proxy cached a broken `.mod` for it, so it cannot be fetched. The five platform `libindycheck_ffi.a` files are **vendored in `packages/go/lib/`**, so there is no Rust build step — you only need a C compiler for cgo.
 </Aside>
 
 ## Install
 
-From a checkout of the indycheck repo, point your module at the package with a `replace` directive:
-
 ```sh
-go mod edit -require=github.com/dusmamud/indycheck-go@v0.0.0 \
-  -replace=github.com/dusmamud/indycheck-go=/path/to/indycheck/packages/go
-go mod tidy
+go get github.com/dusmamud/indycheck/packages/go@v0.2.5
 ```
 
-Requires Go 1.22 or later, a Rust toolchain (`cargo`) and a C compiler (`gcc`) — needed once, to build the shared library this package links against.
-
-## Build the native library
-
-From the repo root, build the Rust shared library first:
-
-```sh
-cargo build -p indycheck-ffi --release
+```go
+import indycheck "github.com/dusmamud/indycheck/packages/go"
 ```
 
-That produces `target/release/libindycheck_ffi.so`. The `#cgo` directives in `indycheck.go` point at `../../crates/indycheck-ffi/indycheck.h` and `../../target/release/libindycheck_ffi.so` (with an `rpath` so test and example binaries find the library at run time). If you move the `.so` elsewhere, set `CGO_LDFLAGS` / `LD_LIBRARY_PATH` accordingly — or vendor the header + library next to your own build.
+Requires Go 1.22 or later and a C compiler (`gcc`) for cgo. No Rust toolchain is needed — the prebuilt `libindycheck_ffi.a` for your platform is vendored in the module (`packages/go/lib/`). `Version()` returns `"0.2.4"` (the Rust core version); the Go module version is v0.2.5. For Linux musl, build with `-tags musl` to link the musl archive.
 
-On Windows the package links the system libraries the Rust standard library needs explicitly (`-lws2_32 -luserenv -lbcrypt -lntdll`) — MinGW `gcc` does not link them implicitly the way MSVC's `link.exe` does.
+## The native library (vendored)
+
+The prebuilt `libindycheck_ffi.a` for your platform is vendored in the module under `packages/go/lib/` (Linux gnu/musl, macOS arm64/x64, Windows), along with `indycheck.h` — the `#cgo` directives in `indycheck.go` point there, so there is no build step. On Linux musl, build with `-tags musl` to select the musl archive.
+
+On Windows the package links the system libraries the Rust standard library needs explicitly (`-lws2_32 -luserenv -lbcrypt -lntdll -lsynchronization`) — MinGW `gcc` does not link them implicitly the way MSVC's `link.exe` does.
 
 ## Example
 
@@ -43,7 +37,7 @@ package main
 import (
 	"fmt"
 
-	indycheck "github.com/dusmamud/indycheck-go"
+	indycheck "github.com/dusmamud/indycheck/packages/go"
 )
 
 func main() {
@@ -109,7 +103,5 @@ All functions are verified in `packages/go/indycheck.go`.
 
 ## What is not here yet
 
-- **No version tag, so no `go get`.** The module path is `github.com/dusmamud/indycheck-go`, but until a tag (e.g. `v0.2.3`) is pushed, Go tooling cannot fetch it — use the `replace` directive above.
-- **No prebuilt native library.** You must run the `cargo build` step first.
 - **No test-data generators.** Unlike the Rust core, the JS/Python wrappers, Dart and PHP, the Go package has **no `Generate*` helpers** — the C API has the six `indycheck_generate_*` functions, but they are not wrapped in Go yet. If you need mock test data from Go, call the C API directly or generate it with another wrapper.
 - **No options variants.** There are no `Validate*WithOptions` functions yet — validation always uses the core defaults.
