@@ -42,11 +42,11 @@ the glibc archive is used.
 **0.2.4 is released** (tag `packages/go/v0.2.4`).
 
 ```sh
-go get github.com/dusmamud/indycheck-go@v0.2.4
+go get github.com/dusmamud/indycheck/packages/go@v0.2.4
 ```
 
 The Go module proxy fetches the tagged module once the tag exists
-(`go list -m -versions github.com/dusmamud/indycheck-go` lists the
+(`go list -m -versions github.com/dusmamud/indycheck/packages/go` lists the
 available versions). The tag is `packages/go/v0.2.4`, not
 `indycheck-v0.2.4` — Go versions a module in a subdirectory by
 prefixing the tag with the subdirectory, and the `v` is required.
@@ -136,7 +136,7 @@ x86_64-pc-windows-gnu`).
 ## Usage
 
 ```go
-import "github.com/dusmamud/indycheck-go"
+import "github.com/dusmamud/indycheck/packages/go"
 
 r, err := indycheck.ValidatePan("ABCDE1234F")
 if err != nil {
