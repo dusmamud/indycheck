@@ -41,9 +41,19 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: packages/js/package-lock.json
+      # NOTE: `npm install`, not `npm ci`. The 5 indycheck-napi-<platform>
+      # optionalDependencies do not exist on npm yet (first publish is
+      # 0.2.5 via napi-release.yml), so no lock file can carry resolved
+      # entries for them and `npm ci` (npm 11) fails the sync check
+      # ("Missing: indycheck-napi-* from lock file"). `npm install`
+      # warns about the missing optional deps and continues; the tests
+      # run against the TypeScript mirror (native tests skipped).
+      # After the 0.2.5 napi publish, regenerate package-lock.json
+      # (it can then resolve the platform packages) and switch back
+      # to `npm ci`.
       - name: install
         working-directory: packages/js
-        run: npm ci
+        run: npm install
       - name: build + typecheck
         working-directory: packages/js
         run: |
