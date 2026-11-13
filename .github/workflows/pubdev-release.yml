@@ -26,6 +26,16 @@
 # publish fails with "Because indycheck_example requires the Flutter SDK,
 # version solving failed". Flutter 3.50.0 ships Dart 3.14, which the
 # package requires (sdk >=3.14.0).
+#
+# NOTE: the publish step uses `dart pub publish`, NOT `flutter pub publish`.
+# `flutter pub publish` does not pick up the GitHub Actions OIDC token — it
+# falls back to interactive browser OAuth ("Waiting for your authorization...")
+# and hangs forever in CI (verified: two runs stuck 30+ min in this step, and
+# a local repro hung at the same prompt). `dart pub publish` uses the OIDC
+# token from the job (id-token: write) and reaches pub.dev — proven by the
+# earlier setup-dart run, which got pub.dev's "tag refType required"
+# rejection. `flutter pub get` stays for dependency resolution (the example
+# needs the Flutter SDK); only the publish command switches to `dart`.
 name: Publish to pub.dev
 
 on:
@@ -66,4 +76,4 @@ jobs:
         run: |
           flutter --version
           flutter pub get
-          flutter pub publish --force
+          dart pub publish --force
