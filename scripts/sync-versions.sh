@@ -11,6 +11,14 @@ version=$(grep -m1 '^version =' Cargo.toml | sed -E 's/version = "(.*)"/\1/')
 echo "syncing lockstep version to $version"
 
 sed -i -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$version\"/" packages/js/package.json
+# The napi-rs package.json is minified single-line JSON (no space after the
+# colon), so it needs its own pattern. Its version must match packages/js
+# exactly, or napi-release.yml's pre-flight check refuses to publish.
+sed -i -E "s/\"version\":\"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\":\"$version\"/" crates/indycheck-napi/package.json
+# The root package's optionalDependencies pin the five napi platform
+# packages at the exact release version (napi-release.yml pre-flight
+# fails otherwise); sync them too.
+sed -i -E "/\"indycheck-napi-/s/\"[0-9]+\.[0-9]+\.[0-9]+\"/\"$version\"/" packages/js/package.json
 sed -i -E "s/^version = \"[0-9]+\.[0-9]+\.[0-9]+\"/version = \"$version\"/" crates/indycheck-py/pyproject.toml packages/python/pyproject.toml
 sed -i -E "s/softwareVersion: '[0-9]+\.[0-9]+\.[0-9]+'/softwareVersion: '$version'/" website/astro.config.mjs
 sed -i -E "s/^version: [0-9]+\.[0-9]+\.[0-9]+$/version: $version/" packages/flutter/pubspec.yaml
@@ -23,6 +31,8 @@ sed -i -E "s/expect\(Indycheck\.version\(\), '[0-9]+\.[0-9]+\.[0-9]+'\)/expect(I
 sed -i -E "s/assertSame\('[0-9]+\.[0-9]+\.[0-9]+', Indycheck::version\(\)\)/assertSame('$version', Indycheck::version())/" packages/php/tests/IndycheckTest.php
 
 echo "packages/js/package.json: $(grep -m1 '"version"' packages/js/package.json)"
+echo "crates/indycheck-napi/package.json: $(grep -m1 '"version"' crates/indycheck-napi/package.json)"
+echo "packages/js/package.json optionalDependencies: $(grep -m1 'indycheck-napi-linux-x64-gnu' packages/js/package.json)"
 echo "crates/indycheck-py/pyproject.toml: $(grep -m1 '^version' crates/indycheck-py/pyproject.toml)"
 echo "packages/python/pyproject.toml: $(grep -m1 '^version' packages/python/pyproject.toml)"
 echo "website/astro.config.mjs: $(grep -m1 'softwareVersion' website/astro.config.mjs)"
