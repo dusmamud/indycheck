@@ -5,16 +5,36 @@ description: What changed in each indycheck release — new validators, fixes, a
 
 All notable changes to indycheck, newest first. The full changelog lives in [`CHANGELOG.md`](https://github.com/dusmamud/indycheck/blob/main/CHANGELOG.md) in the repo. All crates, npm and PyPI packages share one version in lockstep.
 
-## [0.2.3] — Upcoming (release PR open, not published yet)
+## [0.2.4] - 2026-11-13
 
-The 0.2.3 release adds new language packages and the native bindings behind them. Nothing below is on any registry yet — the Flutter, PHP, Go, Kotlin, Swift and C packages live in the repo only until the release is published (see each language page for its exact install status).
+The 0.2.4 release publishes the new language packages for the first time and bundles the Flutter native library. Live on crates.io, npm, PyPI, Maven Central and Packagist, with C archives and the Swift XCFramework on the GitHub release. The Flutter package's pub.dev upload for 0.2.4 is in progress.
 
 ### Added
 
-- **Flutter / Dart package (`packages/flutter`).** Pure-Dart package over `dart:ffi`: 14 validators (including the `validateVehicleRegistration` / `validateEpic` aliases), `detect`, `validateMany`, `version()` and all 6 test-data generators. Requires Dart SDK `>=3.4.0` and `ffi ^2.1.0`. Not on pub.dev yet — install as a git dependency — and the native library is not shipped; build it with `cargo build -p indycheck-ffi --release`. See the [Flutter & Dart page](/flutter/).
-- **PHP package (`packages/php`).** FFI binding (`dusmamud/indycheck`, PHP `>=8.1`, `ext-ffi`, `ffi.enable=true`): 23 methods — 14 validators, `detect`, `validateMany`, `version()` and all 6 generators — covered by 16 PHPUnit tests. Not on Packagist yet — install from the repo as a VCS repository. See the [PHP page](/php/).
+- **Flutter / Dart: native library now bundled.** The package ships a Native Assets build hook that downloads the prebuilt `libindycheck_ffi` for the target platform from the GitHub release (SHA-256 verified) — no more manual `cargo build`. Plus a real Flutter example app (validate PAN/Aadhaar, English + Hindi reasons). Requires Dart `>=3.14.0` / Flutter 3.50+. See the [Flutter & Dart page](/flutter/).
+- **Kotlin on Maven Central (first publish).** `io.github.dusmamud:indycheck:0.2.4` — Gradle Android library (AAR) with the UniFFI Kotlin bindings and native `.so` for 4 ABIs, signed and published to Maven Central. See the [Kotlin page](/kotlin/).
+- **PHP on Packagist.** `dusmamud/indycheck` 0.2.4 (and 0.2.3) — `composer require dusmamud/indycheck`. FFI tier: needs the prebuilt `libindycheck_ffi.so` + `ffi.enable=true`. See the [PHP page](/php/).
+- **C archives on the GitHub release.** Prebuilt `libindycheck_ffi` for 12 platforms (Linux gnu/musl, macOS arm64/x64, Windows gnu/msvc, Android 4 ABIs, iOS arm64 + simulator) + `SHA256SUMS.txt`. See the [C API page](/c/).
+- **Swift XCFramework on the GitHub release.** `IndyCheckFFI.xcframework.zip` (iOS arm64 + simulator, macOS universal). The Swift Package Manager package (`indycheck-swift`) is being updated to 0.2.4. See the [Swift page](/swift/).
+- **pub.dev automated publishing.** The Flutter package now publishes to pub.dev via GitHub OIDC (tag push + dispatch), wired into the release workflow — no manual upload, no token.
+
+### Fixed
+
+- **Go Windows link fix.** The cgo wrapper now links `-lsynchronization` too (new Rust std uses `WaitOnAddress` / `WakeByAddress`).
+- **C archives: musl is static-only** (cargo drops the cdylib for the musl target) and **iOS simulator is arm64-only** (the x86_64 simulator target is unsupported on ARM64 macOS runners).
+- **pub.dev score fixes.** The Flutter package description is now 149 chars and the dangling doc comment is fixed, so the pub.dev score should be 160/160 on the 0.2.4 publish.
+- **Dart + PHP version tests** are now synced by `sync-versions.sh`, so the next version bump won't break them.
+
+## [0.2.3] - 2026-11-13
+
+The 0.2.3 release adds new language packages and the native bindings behind them. Published to crates.io, npm and PyPI on 2026-11-13. The Flutter, PHP, Go, Kotlin, Swift and C packages lived in the repo only at this release — their first published versions came in 0.2.4 above (see each language page for its exact install status).
+
+### Added
+
+- **Flutter / Dart package (`packages/flutter`).** Pure-Dart package over `dart:ffi`: 14 validators (including the `validateVehicleRegistration` / `validateEpic` aliases), `detect`, `validateMany`, `version()` and all 6 test-data generators. Requires Dart SDK `>=3.4.0` and `ffi ^2.1.0`. At this release it was not on pub.dev yet — install as a git dependency — and the native library was not shipped; build it with `cargo build -p indycheck-ffi --release`. (0.2.4 bundles the native library via a build hook.) See the [Flutter & Dart page](/flutter/).
+- **PHP package (`packages/php`).** FFI binding (`dusmamud/indycheck`, PHP `>=8.1`, `ext-ffi`, `ffi.enable=true`): 23 methods — 14 validators, `detect`, `validateMany`, `version()` and all 6 generators — covered by 16 PHPUnit tests. At this release it was not on Packagist yet — install from the repo as a VCS repository. (0.2.4 is on Packagist.) See the [PHP page](/php/).
 - **Go package (`packages/go`).** cgo wrapper over the C API, module `github.com/dusmamud/indycheck-go`: 14 validators, `Detect`, `ValidateMany`, `Version()`. No version tag yet, so `go get` does not work — use a `replace` directive until a tag is pushed. The Go package has no `Generate*` helpers yet. See the [Go page](/go/).
-- **Kotlin and Swift bindings (`crates/indycheck-uniffi`).** Generated UniFFI bindings: 12 validators, `detect` and `validateMany`, with `parsed` as a JSON string. Compile-verified in CI with a `validatePan` smoke test only. Not distributed — no Maven Central artifact, no Swift Package Manager package; copy the generated files into your project. No `validateEpic` alias, no generators, no `version()`. See the [Kotlin page](/kotlin/) and [Swift page](/swift/).
+- **Kotlin and Swift bindings (`crates/indycheck-uniffi`).** Generated UniFFI bindings: 12 validators, `detect` and `validateMany`, with `parsed` as a JSON string. Compile-verified in CI with a `validatePan` smoke test only. At this release they were not distributed — no Maven Central artifact, no Swift Package Manager package; copy the generated files into your project. (0.2.4 publishes Kotlin to Maven Central and ships the Swift XCFramework.) No `validateEpic` alias, no generators, no `version()`. See the [Kotlin page](/kotlin/) and [Swift page](/swift/).
 - **C API (`crates/indycheck-ffi`).** Six new `indycheck_generate_*` exports (`generate_pan`, `generate_aadhaar`, `generate_gstin`, `generate_mobile`, `generate_vehicle`, `generate_vehicle_bharat`), bringing the header to 24 functions. The header is regenerated with cbindgen and checked for drift in CI. See the [C API page](/c/).
 - **Node.js native addon (`crates/indycheck-napi`).** napi-rs addon as an optional backend for the npm package (`packages/js/src/native.ts`, `backend()` / `isNativeAvailable()`), falling back to the pure-TypeScript mirror when the `.node` is not built. The `.node` is not shipped in the npm package. See the [Node.js native addon page](/node-napi/).
 
