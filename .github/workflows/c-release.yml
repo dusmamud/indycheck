@@ -11,7 +11,10 @@
 # Archives are named indycheck-<version>-<platform>.tar.gz / .zip and
 # each contains indycheck.h + LICENSE + the platform libraries:
 #   linux-x64-gnu    libindycheck_ffi.so, libindycheck_ffi.a
-#   linux-x64-musl   libindycheck_ffi.so, libindycheck_ffi.a (musl libc)
+#   linux-x64-musl   libindycheck_ffi.a only (musl libc; static only —
+#                    cargo drops cdylib for the musl target, crt-static
+#                    is on, and forcing a musl .so needs a libgcc_s
+#                    workaround — musl consumers link statically anyway)
 #   darwin-arm64     libindycheck_ffi.dylib, libindycheck_ffi.a
 #   darwin-x64       libindycheck_ffi.dylib, libindycheck_ffi.a
 #   win32-x64-msvc   indycheck_ffi.dll, indycheck_ffi.lib (static),
@@ -19,6 +22,19 @@
 #                    emits it — see the note in the package step)
 #   win32-x64-gnu    indycheck_ffi.dll, libindycheck_ffi.dll.a (import),
 #                    libindycheck_ffi.a (static, GNU target)
+#   android-arm64-v8a  libindycheck_ffi.so (cargo-ndk, aarch64-linux-android)
+#   android-armeabi-v7a libindycheck_ffi.so (cargo-ndk, armv7-linux-androideabi)
+#   android-x86      libindycheck_ffi.so (cargo-ndk, i686-linux-android)
+#   android-x86_64   libindycheck_ffi.so (cargo-ndk, x86_64-linux-android)
+#   ios-arm64        libindycheck_ffi.a (device, aarch64-apple-ios)
+#   ios-simulator    libindycheck_ffi.a (fat: aarch64-apple-ios-sim +
+#                    x86_64-apple-ios-sim lipo'd together)
+# The release job also uploads SHA256SUMS.txt (sha256sum of all 12
+# archives), which the Dart build hook (packages/flutter/hook/build.dart)
+# verifies downloads against.
+# The Android/iOS legs first run on the indycheck-v0.2.3 tag. Do NOT
+# backfill them onto the 0.2.2 release: the 0.2.2 library lacks the
+# generate_* exports the Dart package needs.
 # The win32-x64-gnu leg exists for the Go binding: MinGW gcc (the C
 # toolchain Go + cgo uses on Windows) cannot link the MSVC .lib, so the
 # vendored Windows .a in packages/go/lib/ must come from the GNU
@@ -93,6 +109,36 @@ jobs:
             platform: win32-x64-gnu
             kind: windows-gnu
             archive: zip
+          - os: ubuntu-latest
+            target: aarch64-linux-android
+            platform: android-arm64-v8a
+            kind: android
+            archive: tar.gz
+          - os: ubuntu-latest
+            target: armv7-linux-androideabi
+            platform: android-armeabi-v7a
+            kind: android
+            archive: tar.gz
+          - os: ubuntu-latest
+            target: i686-linux-android
+            platform: android-x86
+            kind: android
+            archive: tar.gz
+          - os: ubuntu-latest
+            target: x86_64-linux-android
+            platform: android-x86_64
+            kind: android
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-ios
+            platform: ios-arm64
+            kind: ios
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-ios-sim
+            platform: ios-simulator
+            kind: ios-sim
+            archive: tar.gz
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,6 +164,11 @@ jobs:
           echo "building archives for $TAG"
       - name: Add Rust target
         run: rustup target add ${{ matrix.target }}
+      # The iOS simulator leg also needs the x86_64 simulator target:
+      # both simulator .a files are lipo'd into one fat archive.
+      - name: Add extra Rust target (iOS simulator leg)
+        if: matrix.kind == 'ios-sim'
+        run: rustup target add x86_64-apple-ios-sim
       # The musl target links with musl-gcc, which is not on the stock
       # ubuntu runner. musl-tools provides it (pure-Rust crate, no C
       # deps, but the final link still needs a linker).
@@ -135,6 +186,13 @@ jobs:
       - name: Install cbindgen (Linux glibc leg)
         if: matrix.platform == 'linux-x64-gnu'
         run: cargo install cbindgen --version 0.29.4 --locked
+      # cargo-ndk drives the Android NDK toolchains for the Rust target
+      # (it sets CC/CXX/linker from the NDK). Pinned 4.1.2. The
+      # ubuntu-latest runner ships the Android SDK + NDK
+      # (ANDROID_NDK_HOME is set there), so no NDK install is needed.
+      - name: Install cargo-ndk (Android legs)
+        if: matrix.kind == 'android'
+        run: cargo install cargo-ndk --version 4.1.2 --locked
       - name: Check committed header is up to date (Linux glibc leg)
         if: matrix.platform == 'linux-x64-gnu'
         working-directory: crates/indycheck-ffi
@@ -143,7 +201,23 @@ jobs:
           cbindgen --config cbindgen.toml --crate indycheck-ffi --output "${{ runner.temp }}/indycheck.h"
           diff -u indycheck.h "${{ runner.temp }}/indycheck.h"
       - name: Build C library
+        if: matrix.kind != 'android'
         run: cargo build -p indycheck-ffi --release --target ${{ matrix.target }}
+      # Android builds go through cargo-ndk, which picks the NDK
+      # toolchain (compiler + linker + sysroot) for the target triple.
+      # API level 21 is the minimum cargo-ndk supports for 64-bit
+      # targets. The .so lands in target/<triple>/release/ as usual.
+      - name: Build C library (Android legs)
+        if: matrix.kind == 'android'
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
+          cargo ndk -t ${{ matrix.target }} --platform 21 build -p indycheck-ffi --release
+      # The iOS simulator leg builds the second simulator architecture;
+      # the main build step above already built ${{ matrix.target }}
+      # (aarch64-apple-ios-sim). Both are lipo'd in the package step.
+      - name: Build extra Rust target (iOS simulator leg)
+        if: matrix.kind == 'ios-sim'
+        run: cargo build -p indycheck-ffi --release --target x86_64-apple-ios-sim
       # Show exactly what cargo produced, so the first run's log settles
       # the Windows .lib naming (MSVC emits the static archive as
       # indycheck_ffi.lib and the DLL import library as
@@ -164,9 +238,17 @@ jobs:
           cp crates/indycheck-ffi/indycheck.h LICENSE "$STAGE/"
           case "${{ matrix.kind }}" in
             linux)
-              test -f "$LIBDIR/libindycheck_ffi.so" || { echo "missing libindycheck_ffi.so" >&2; exit 1; }
-              test -f "$LIBDIR/libindycheck_ffi.a"  || { echo "missing libindycheck_ffi.a" >&2; exit 1; }
-              cp "$LIBDIR/libindycheck_ffi.so" "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
+              # musl is static-only: cargo drops cdylib for the musl target
+              # (crt-static is on), so the musl archive carries just the
+              # static lib. musl consumers link statically by convention.
+              if [ "${{ matrix.platform }}" = "linux-x64-musl" ]; then
+                test -f "$LIBDIR/libindycheck_ffi.a" || { echo "missing libindycheck_ffi.a" >&2; exit 1; }
+                cp "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
+              else
+                test -f "$LIBDIR/libindycheck_ffi.so" || { echo "missing libindycheck_ffi.so" >&2; exit 1; }
+                test -f "$LIBDIR/libindycheck_ffi.a"  || { echo "missing libindycheck_ffi.a" >&2; exit 1; }
+                cp "$LIBDIR/libindycheck_ffi.so" "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
+              fi
               ;;
             darwin)
               test -f "$LIBDIR/libindycheck_ffi.dylib" || { echo "missing libindycheck_ffi.dylib" >&2; exit 1; }
@@ -189,6 +271,27 @@ jobs:
               test -f "$LIBDIR/libindycheck_ffi.a"     || { echo "missing libindycheck_ffi.a" >&2; exit 1; }
               cp "$LIBDIR/indycheck_ffi.dll" "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
               if [ -f "$LIBDIR/libindycheck_ffi.dll.a" ]; then cp "$LIBDIR/libindycheck_ffi.dll.a" "$STAGE/"; fi
+              ;;
+            android)
+              # cargo-ndk builds the cdylib .so for the target triple.
+              # Only the .so ships: the Dart hook needs it, the .a is
+              # not usable by Dart on Android.
+              test -f "$LIBDIR/libindycheck_ffi.so" || { echo "missing libindycheck_ffi.so" >&2; exit 1; }
+              cp "$LIBDIR/libindycheck_ffi.so" "$STAGE/"
+              ;;
+            ios)
+              # iOS links the static archive into the app; no dylib.
+              test -f "$LIBDIR/libindycheck_ffi.a" || { echo "missing libindycheck_ffi.a" >&2; exit 1; }
+              cp "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
+              ;;
+            ios-sim)
+              # Fat static archive: lipo the two simulator .a files
+              # (arm64 + x86_64) into one.
+              SIMDIR="target/aarch64-apple-ios-sim/release"
+              X86DIR="target/x86_64-apple-ios-sim/release"
+              test -f "$SIMDIR/libindycheck_ffi.a" || { echo "missing arm64-sim libindycheck_ffi.a" >&2; exit 1; }
+              test -f "$X86DIR/libindycheck_ffi.a" || { echo "missing x86_64-sim libindycheck_ffi.a" >&2; exit 1; }
+              lipo -create "$SIMDIR/libindycheck_ffi.a" "$X86DIR/libindycheck_ffi.a" -output "$STAGE/libindycheck_ffi.a"
               ;;
           esac
           ls -l "$STAGE"
@@ -241,8 +344,13 @@ jobs:
           merge-multiple: true
       - name: Upload archives to the release
         run: |
-          count=$(ls dist | wc -l)
-          echo "uploading $count archives:"
+          archive_count=$(ls dist/*.tar.gz dist/*.zip 2>/dev/null | wc -l)
+          echo "uploading $archive_count archives:"
           ls -l dist
-          [ "$count" = 6 ] || { echo "expected 6 archives (one per platform), got $count" >&2; exit 1; }
+          [ "$archive_count" = 12 ] || { echo "expected 12 archives (one per platform), got $archive_count" >&2; exit 1; }
+          # SHA256SUMS.txt lists every archive; the Dart build hook
+          # verifies downloads against it. Generated here (not in the
+          # build legs) so it covers exactly what is uploaded.
+          (cd dist && sha256sum indycheck-*.tar.gz indycheck-*.zip > SHA256SUMS.txt)
+          ls -l dist
           gh release upload "$TAG" dist/* --clobber --repo dusmamud/indycheck
