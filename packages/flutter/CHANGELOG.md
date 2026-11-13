@@ -1,3 +1,21 @@
+## 0.2.3
+
+- Native library is now bundled automatically: a build hook
+  (`hook/build.dart`, Dart build hooks + `package:code_assets`)
+  downloads the prebuilt library for the target platform from the
+  indycheck GitHub release and bundles it with the app, so most users
+  no longer need to build it with Cargo or set
+  `INDYCHECK_NATIVE_LIB`. When no release archive exists yet, the
+  hook falls back to a local Cargo build.
+- The Dart loader now resolves the bundled library as a code asset
+  (`DynamicLibrary.codeAsset('package:indycheck/indycheck_ffi')`),
+  after an explicit path / `INDYCHECK_NATIVE_LIB` and before
+  `DynamicLibrary.process()` on Android/iOS. Public API unchanged.
+- Minimum Dart SDK raised to 3.14.0 (`DynamicLibrary.codeAsset` is
+  a 3.14 API, although the hook packages themselves only need 3.10);
+  `hooks`, `code_assets`, `archive` and `crypto` added as
+  dependencies (used by the build hook).
+
 ## 0.2.2
 
 - Initial Dart / Flutter package.
