@@ -137,14 +137,27 @@ String _defaultLibraryFileName() {
   return 'libindycheck_ffi.so';
 }
 
+/// Asset ID of the native library as registered by the build hook
+/// (`hook/build.dart`). The hook registers a `CodeAsset` with this ID
+/// and `DynamicLoadingBundled()` link mode: it downloads the prebuilt
+/// library from the indycheck GitHub release (or builds it locally
+/// with Cargo when no release archive exists yet) and bundles it with
+/// the application. The bundled file is named per platform —
+/// `libindycheck_ffi.so` (Linux/Android), `libindycheck_ffi.dylib`
+/// (macOS/iOS) or `indycheck_ffi.dll` (Windows) — but Dart addresses
+/// it by this asset ID, not by file name: `DynamicLibrary.open` by
+/// file name does not resolve a hook-bundled code asset. Only
+/// [DynamicLibrary.codeAsset] (or `@Native` externals bound to the
+/// asset ID) can load it.
+const _nativeAssetId = 'package:indycheck/indycheck_ffi';
+
 /// Loads the native library.
 ///
 /// Resolution order: [explicitPath] first, then the
-/// `INDYCHECK_NATIVE_LIB` environment variable, then the platform's
-/// default library file name (`libindycheck_ffi.so` on Linux,
-/// `libindycheck_ffi.dylib` on macOS, `indycheck_ffi.dll` on Windows).
-/// On Android and iOS the library is expected to be linked into the
-/// app binary, so the process library is used instead.
+/// `INDYCHECK_NATIVE_LIB` environment variable, then the native asset
+/// bundled by the build hook (`package:indycheck/indycheck_ffi`).
+/// On Android and iOS the library may also be linked into the app
+/// binary, so the process library is tried next.
 ///
 /// Throws a [StateError] naming the expected file and how to build it
 /// when the library cannot be loaded.
@@ -164,19 +177,23 @@ DynamicLibrary loadIndycheckLibrary([String? explicitPath]) {
       );
     }
   }
+  try {
+    return DynamicLibrary.codeAsset(_nativeAssetId);
+  } on ArgumentError {
+    // No bundled asset: the build hook did not run (or the package is
+    // used in a context without native assets). Fall through to the
+    // remaining options below.
+  }
   if (Platform.isAndroid || Platform.isIOS) {
     return DynamicLibrary.process();
   }
   final fileName = _defaultLibraryFileName();
-  try {
-    return DynamicLibrary.open(fileName);
-  } on ArgumentError {
-    throw StateError(
-      'indycheck: could not load "$fileName" — the native library was '
-      'not found. Build it with `cargo build -p indycheck-ffi '
-      '--release` from the indycheck repo and either put the built '
-      'library on the library search path or set INDYCHECK_NATIVE_LIB '
-      'to its full path.',
-    );
-  }
+  throw StateError(
+    'indycheck: could not load "$fileName" — the native library was '
+    'not found. The build hook normally downloads and bundles it '
+    'automatically; if the hook did not run, build it with '
+    '`cargo build -p indycheck-ffi --release` from the indycheck repo '
+    'and either set INDYCHECK_NATIVE_LIB to its full path or pass the '
+    'path to Indycheck.init.',
+  );
 }
