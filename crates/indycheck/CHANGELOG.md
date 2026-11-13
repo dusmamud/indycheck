@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5](https://github.com/dusmamud/indycheck/compare/indycheck-v0.2.4...indycheck-v0.2.5) - 2026-11-13
+
+### Fixed
+
+- *(pubdev)* install Flutter SDK, not just Dart (example app needs Flutter)
+
 ## [0.2.4](https://github.com/dusmamud/indycheck/compare/indycheck-v0.2.3...indycheck-v0.2.4) - 2026-11-13
 
 ### Added
