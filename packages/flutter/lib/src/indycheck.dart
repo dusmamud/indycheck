@@ -17,10 +17,13 @@ import 'result.dart';
 /// set to `false`; the methods below only throw on transport failures
 /// (the native library cannot be loaded, or it returns null).
 ///
-/// Before first use, the native library must be loadable. Either
-/// build it and set the `INDYCHECK_NATIVE_LIB` environment variable to
-/// the built library, or call [Indycheck.init] / [setLibraryPath]
-/// with its path:
+/// Before first use, the native library must be loadable. In a normal
+/// Dart or Flutter build the build hook downloads the prebuilt library
+/// from the indycheck GitHub release and bundles it automatically, so
+/// no setup is needed. To use a different library instead, build it
+/// and set the `INDYCHECK_NATIVE_LIB` environment variable to the
+/// built library, or call [Indycheck.init] / [setLibraryPath] with
+/// its path:
 ///
 /// ```sh
 /// cargo build -p indycheck-ffi --release
@@ -37,9 +40,9 @@ class Indycheck {
   /// Loads the native library from [libPath].
   ///
   /// Call with no argument to (re)load from the `INDYCHECK_NATIVE_LIB`
-  /// environment variable, or from the platform's default library file
-  /// name when the variable is unset. Throws a [StateError] naming the
-  /// expected file and how to build it when loading fails.
+  /// environment variable, or from the native asset bundled by the
+  /// build hook when the variable is unset. Throws a [StateError]
+  /// naming the expected file and how to build it when loading fails.
   static void init([String? libPath]) {
     _explicitPath = libPath;
     _bindings = IndycheckBindings(loadIndycheckLibrary(libPath));
