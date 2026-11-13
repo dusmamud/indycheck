@@ -12,7 +12,9 @@ description = "UniFFI bindings for indycheck — Kotlin and Swift wrappers over 
 [lib]
 # cdylib: the shared library UniFFI generates Kotlin/Swift bindings from.
 # rlib: so `cargo test` / `cargo clippy` can exercise this crate directly.
-crate-type = ["cdylib", "rlib"]
+# staticlib: Apple targets (iOS / macOS) link the static archive into the
+#   Swift XCFramework (see .github/workflows/swift-release.yml).
+crate-type = ["cdylib", "rlib", "staticlib"]
 
 [dependencies]
 indycheck = { path = "../indycheck" }
