@@ -25,7 +25,14 @@
 #     matches the tag version, so a backfill can never ship a build of
 #     a different version under the tag.
 #
-# Slices (4): ios-arm64, ios-arm64-simulator, macos-arm64, macos-x86_64.
+# Slices (3): ios-arm64, ios-arm64-simulator, macos-arm64_x86_64
+# (universal). The macOS slice is a single universal binary: xcodebuild
+# distinguishes static libraries by platform + variant only, so passing
+# the arm64 and x86_64 macOS archives separately fails with "Both
+# 'macos-arm64' and 'macos-x86_64' represent two equivalent library
+# definitions" (exit 70) — the two archs must first be merged with
+# `lipo -create`. The iOS pair does not collide because device and
+# simulator are different platforms.
 # The iOS-simulator slice is arm64-only — rustup on the ARM64 macOS
 # runner cannot add x86_64-apple-ios-sim ("toolchain
 # 'stable-aarch64-apple-darwin' does not support target
@@ -192,11 +199,19 @@ jobs:
           set -euo pipefail
           mkdir -p xcframework-headers
           cp crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.h xcframework-headers/
+          # Merge the two macOS static libs into one universal binary —
+          # xcodebuild takes a single macOS library per XCFramework (see
+          # the header note); passing both archs separately is rejected.
+          mkdir -p xcframework-macos-universal
+          lipo -create \
+            target/aarch64-apple-darwin/release/libindycheck_uniffi.a \
+            target/x86_64-apple-darwin/release/libindycheck_uniffi.a \
+            -output xcframework-macos-universal/libindycheck_uniffi.a
+          lipo -info xcframework-macos-universal/libindycheck_uniffi.a
           xcodebuild -create-xcframework \
             -library target/aarch64-apple-ios/release/libindycheck_uniffi.a -headers xcframework-headers \
             -library target/aarch64-apple-ios-sim/release/libindycheck_uniffi.a -headers xcframework-headers \
-            -library target/aarch64-apple-darwin/release/libindycheck_uniffi.a -headers xcframework-headers \
-            -library target/x86_64-apple-darwin/release/libindycheck_uniffi.a -headers xcframework-headers \
+            -library xcframework-macos-universal/libindycheck_uniffi.a -headers xcframework-headers \
             -output IndyCheckFFI.xcframework
       # xcodebuild does not copy the modulemap into the slices, and a
       # SwiftPM binaryTarget needs it at <slice>/Modules/module.modulemap
