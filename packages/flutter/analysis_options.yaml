@@ -1,0 +1,10 @@
+# The example app is a separate package (it has its own pubspec.yaml and
+# its own analysis_options.yaml) and is analyzed on its own: `flutter
+# analyze` in packages/flutter/example, and the example jobs in
+# .github/workflows/flutter.yml. Exclude it here so `dart analyze` in this
+# directory does not try to resolve its Flutter imports with a plain Dart
+# SDK (no Flutter SDK, no example package config) and drown the result in
+# spurious "uri does not exist" errors.
+analyzer:
+  exclude:
+    - example/**
