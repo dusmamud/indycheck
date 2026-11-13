@@ -19,6 +19,13 @@
 #   - workflow_dispatch with a `tag` input: used by release.yml and for
 #     backfills (the tag must already exist; the pubspec version in it
 #     must match the tag version).
+#
+# NOTE: this workflow installs the FULL Flutter SDK (not just Dart).
+# `dart pub get` resolves the example app too, and the example is a real
+# Flutter app (it requires the Flutter SDK) — with setup-dart alone the
+# publish fails with "Because indycheck_example requires the Flutter SDK,
+# version solving failed". Flutter 3.50.0 ships Dart 3.14, which the
+# package requires (sdk >=3.14.0).
 name: Publish to pub.dev
 
 on:
@@ -51,12 +58,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.tag.outputs.tag }}
-      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
         with:
-          sdk: stable
+          flutter-version: '3.50.0'
       - name: Publish to pub.dev
         working-directory: packages/flutter
         run: |
-          dart --version
-          dart pub get
-          dart pub publish --force
+          flutter --version
+          flutter pub get
+          flutter pub publish --force
