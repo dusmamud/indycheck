@@ -132,6 +132,13 @@ jobs:
       # Regenerate the Swift bindings from the freshly built host dylib
       # and fail if any of the three committed files drifted — a stale
       # binding must never ship inside the framework.
+      # --no-format: the macOS runner has swiftformat installed, which
+      # uniffi-bindgen would otherwise run over the output (re-indenting
+      # imports, `fileprivate` -> `private`, `//` -> `///` comments …),
+      # making this gate spuriously red. The committed bindings are the
+      # unformatted output, so always compare against unformatted
+      # regeneration — on a machine without swiftformat the flag is a
+      # no-op and the output is identical either way.
       - name: Check committed Swift bindings are up to date
         env:
           REGEN_DIR: ${{ runner.temp }}/regen-swift
@@ -139,7 +146,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$REGEN_DIR"
           "$UNIFFI_CLI" generate --library target/release/libindycheck_uniffi.dylib \
-            --language swift --out-dir "$REGEN_DIR"
+            --language swift --out-dir "$REGEN_DIR" --no-format
           ls -l "$REGEN_DIR"
           for f in indycheck_uniffi.swift indycheck_uniffiFFI.h indycheck_uniffiFFI.modulemap; do
             test -f "$REGEN_DIR/$f" || { echo "regeneration did not produce $f" >&2; exit 1; }
