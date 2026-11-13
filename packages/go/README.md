@@ -15,78 +15,49 @@ the same input.
 ## Prerequisites
 
 - Go 1.22 or later
-- A Rust toolchain (`cargo`) and a C compiler (`gcc`) — needed once,
-  to build the shared library this package links against
+- A C compiler (`gcc`) for cgo — needed to link the vendored static
+  library. **No Rust toolchain is needed** to use this package: the
+  prebuilt `libindycheck_ffi.a` for your platform is vendored in
+  `lib/` (see Releases below). A Rust toolchain is only needed if
+  you change the Rust core and want to rebuild the vendored
+  libraries (see "Rebuilding the vendored libraries").
 
 ## Build
 
-From the repo root, build the Rust shared library first:
-
-```sh
-cargo build -p indycheck-ffi --release
-```
-
-That produces `target/release/libindycheck_ffi.so`. Then, from this
-directory:
+From this directory:
 
 ```sh
 go test ./...
 go build ./...
 ```
 
-The `#cgo` directives in `indycheck.go` point at
-`../../crates/indycheck-ffi/indycheck.h` and
-`../../target/release/libindycheck_ffi.so` (with an `rpath` so test
-and example binaries find the library at run time). If you move the
-`.so` elsewhere, set `CGO_LDFLAGS` / `LD_LIBRARY_PATH` accordingly —
-or vendor the header + library next to your own build.
-
-> The `.so` is a build artefact, not a source: it is never committed
-> to the repo. Anyone building this package must run the `cargo build`
-> step above first.
+The `#cgo` directives in `indycheck.go` link the vendored static
+archive for the build platform (`lib/<platform>/libindycheck_ffi.a`,
+header in `lib/indycheck.h`). On musl Linux build with `-tags musl`
+to select the musl archive (`go build -tags musl`); without the tag
+the glibc archive is used.
 
 ## Releases
 
-**Status: no released version yet.** There is no `packages/go/v*`
-tag, so `go get` with a version does not work yet. Until the first
-tag exists, the only way to use this package is the source build
-above (or `go get github.com/dusmamud/indycheck-go@main`, which
-still needs the `cargo build` step first).
+**0.2.4 is released** (tag `packages/go/v0.2.4`).
 
-### How a release is cut (0.2.3)
+```sh
+go get github.com/dusmamud/indycheck-go@v0.2.4
+```
 
-1. **Tag it, after the 0.2.3 PR merges.** Dus creates the tag
-   pointing at the merge commit (the tag must point at a commit that
-   already includes the vendored libraries in step 3):
+The Go module proxy fetches the tagged module once the tag exists
+(`go list -m -versions github.com/dusmamud/indycheck-go` lists the
+available versions). The tag is `packages/go/v0.2.4`, not
+`indycheck-v0.2.4` — Go versions a module in a subdirectory by
+prefixing the tag with the subdirectory, and the `v` is required.
+`indycheck-v0.2.4` is the Rust / npm / PyPI release tag for the same
+version.
 
-   ```sh
-   git checkout main
-   git pull
-   git tag packages/go/v0.2.3
-   git push origin packages/go/v0.2.3
-   ```
+### How a release is cut
 
-   The tag is `packages/go/v0.2.3`, not `indycheck-v0.2.3` — Go
-   versions a module in a subdirectory by prefixing the tag with
-   the subdirectory, and the `v` is required. `indycheck-v0.2.3`
-   is the Rust / npm / PyPI release tag for the same version.
-   Do not create this tag before the merge: the vendored libraries
-   below must be in the tagged commit.
-
-2. **Install it:**
-
-   ```sh
-   go get github.com/dusmamud/indycheck-go@v0.2.3
-   ```
-
-   The Go module proxy fetches the tagged module once the tag
-   exists (`go list -m -versions github.com/dusmamud/indycheck-go`
-   lists the available versions).
-
-3. **Vendored prebuilt libraries (happens at release time, not
-   yet in the repo).** The C library is built in CI from the FFI
-   crate by `.github/workflows/c-release.yml` when the
-   `indycheck-v0.2.3` tag lands, and the archives are attached to
+1. **Vendor the prebuilt libraries.** The C library is built in CI
+   from the FFI crate by `.github/workflows/c-release.yml` when the
+   `indycheck-vX.Y.Z` tag lands, and the archives are attached to
    the GitHub Release. The static archives from those archives are
    vendored into this package, one per platform, so `go get` works
    with no Rust toolchain on the user's machine:
@@ -101,13 +72,7 @@ still needs the `cargo build` step first).
      win32-x64-gnu/libindycheck_ffi.a   # GNU-target build — see the Windows note below
    ```
 
-   `indycheck.go` then gains `#cgo` directives that pick the
-   vendored archive for the build platform, replacing the
-   `../../target/release` lookup for tagged builds (planned form —
-   the exact flags are verified in CI before the tag lands, because
-   a Rust static library also needs the system libraries the Rust
-   standard library uses, e.g. `-ldl -lpthread -lm` on Linux and
-   the Windows system libraries already listed in `indycheck.go`):
+   `indycheck.go` links the vendored archive for the build platform:
 
    ```go
    // #cgo CFLAGS: -I${SRCDIR}/lib
@@ -115,10 +80,10 @@ still needs the `cargo build` step first).
    // #cgo linux,musl LDFLAGS: -L${SRCDIR}/lib/linux-x64-musl -lindycheck_ffi -ldl -lpthread -lm
    // #cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/lib/darwin-arm64 -lindycheck_ffi
    // #cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/lib/darwin-x64 -lindycheck_ffi
-   // #cgo windows LDFLAGS: -L${SRCDIR}/lib/win32-x64-gnu -lindycheck_ffi -lws2_32 -luserenv -lbcrypt -lntdll
+   // #cgo windows LDFLAGS: -L${SRCDIR}/lib/win32-x64-gnu -lindycheck_ffi -lws2_32 -luserenv -lbcrypt -lntdll -lsynchronization
    ```
 
-   Two honest caveats on that plan:
+   Two honest caveats:
 
    - **Windows:** the vendored Windows archive must be the
      **GNU-target** build (`win32-x64-gnu` archive). MinGW gcc —
@@ -137,19 +102,36 @@ still needs the `cargo build` step first).
    self-contained. They are rebuilt from the same tag commit by
    CI, never hand-copied from a local machine.
 
-### Building from source instead
+2. **Tag it, after the vendored libraries are on main.** Dus
+   creates the tag pointing at the commit that includes the
+   vendored libraries:
 
-If you are working from a checkout (or on a platform with no
-vendored archive), ignore the `lib/` layout above and use the
-Build section at the top of this README: Go 1.22+, a Rust
-toolchain and a C compiler, `cargo build -p indycheck-ffi
---release`, then `go test ./...` / `go build ./...`. The `#cgo`
-directives in `indycheck.go` point at
-`../../crates/indycheck-ffi/indycheck.h` and
-`../../target/release/libindycheck_ffi.so` for that flow, with an
-`rpath` so test and example binaries find the library at run
-time. On Windows the same flow needs MinGW gcc (see
-`.github/workflows/go.yml`) and the GNU-target C library build.
+   ```sh
+   git checkout main
+   git pull
+   git tag packages/go/v0.2.4
+   git push origin packages/go/v0.2.4
+   ```
+
+   Do not create this tag before the vendored libraries land: the
+   tag must point at a commit that already includes them.
+
+### Rebuilding the vendored libraries
+
+If you change the Rust core and want to rebuild the vendored
+libraries from source, build the FFI crate and replace the matching
+archive (see `indycheck.go` for the layout). From the repo root:
+
+```sh
+cargo build -p indycheck-ffi --release
+```
+
+That produces `target/release/libindycheck_ffi.a` (staticlib) and
+`target/release/libindycheck_ffi.so`. Copy the static archive into
+`packages/go/lib/<platform>/`. On Windows the same flow needs MinGW
+gcc (see `.github/workflows/go.yml`) and the GNU-target C library
+build (`cargo build -p indycheck-ffi --release --target
+x86_64-pc-windows-gnu`).
 
 ## Usage
 
