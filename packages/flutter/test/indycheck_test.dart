@@ -148,7 +148,7 @@ void main() {
 
   group('version', () {
     test('version matches the package version', () {
-      expect(Indycheck.version(), '0.2.4');
+      expect(Indycheck.version(), '0.2.5');
     });
   });
 }

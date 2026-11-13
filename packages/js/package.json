@@ -28,11 +28,11 @@
   "main": "dist/index.js",
   "name": "indycheck",
   "optionalDependencies": {
-    "indycheck-napi-darwin-arm64": "0.2.4",
-    "indycheck-napi-darwin-x64": "0.2.4",
-    "indycheck-napi-linux-x64-gnu": "0.2.4",
-    "indycheck-napi-linux-x64-musl": "0.2.4",
-    "indycheck-napi-win32-x64-msvc": "0.2.4"
+    "indycheck-napi-darwin-arm64": "0.2.5",
+    "indycheck-napi-darwin-x64": "0.2.5",
+    "indycheck-napi-linux-x64-gnu": "0.2.5",
+    "indycheck-napi-linux-x64-musl": "0.2.5",
+    "indycheck-napi-win32-x64-msvc": "0.2.5"
   },
   "peerDependencies": {
     "zod": "^3.23.0"
@@ -53,5 +53,5 @@
     "typecheck": "tsc --noEmit"
   },
   "types": "dist/index.d.ts",
-  "version": "0.2.4"
+  "version": "0.2.5"
 }

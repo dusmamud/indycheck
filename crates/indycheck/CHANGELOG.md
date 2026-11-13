@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5](https://github.com/dusmamud/indycheck/compare/indycheck-v0.2.4...indycheck-v0.2.5) - 2026-11-13
+
+### Added
+
+- *(go)* vendor prebuilt libindycheck_ffi.a for 0.2.4 (header)
+- *(go)* vendor prebuilt libindycheck_ffi.a for 0.2.4 (win32-x64-gnu)
+- *(go)* vendor prebuilt libindycheck_ffi.a for 0.2.4 (darwin-arm64)
+- *(go)* vendor prebuilt libindycheck_ffi.a for 0.2.4 (darwin-x64)
+- *(go)* vendor prebuilt libindycheck_ffi.a for 0.2.4 (linux-x64-musl)
+- *(go)* vendor prebuilt libindycheck_ffi.a for 0.2.4 (linux-x64-gnu)
+- *(go)* link vendored libindycheck_ffi.a for 0.2.4 (no cargo build needed)
+- *(js)* add napi platform optionalDependencies (0.2.4) and ./native export
+- *(js)* load native addon from published indycheck-napi-<platform> package
+
+### Fixed
+
+- *(go)* module path must be github.com/dusmamud/indycheck/packages/go (subdir module)
+- *(pubdev)* publish with dart pub publish, not flutter pub publish
+
 ## [0.2.4](https://github.com/dusmamud/indycheck/compare/indycheck-v0.2.3...indycheck-v0.2.4) - 2026-11-13
 
 ### Added
