@@ -14,7 +14,12 @@
  *  2. `crates/indycheck-napi/index.js` relative to this file (works
  *     from both `src/` under vitest and `dist/`);
  *  3. the same path found by walking up from the current working
- *     directory to a repo checkout.
+ *     directory to a repo checkout;
+ *  4. the published platform package `indycheck-napi-<platform>`
+ *     (e.g. `indycheck-napi-linux-x64-gnu`), installed as an
+ *     optionalDependency of this package — this is the step that
+ *     makes the PUBLISHED package load the native addon; steps 2–3
+ *     only exist inside a repo checkout.
  * The `.node` binary itself is never committed to the repo — build it
  * with `npm run build` in `crates/indycheck-napi` (see its README).
  *
@@ -37,8 +42,8 @@
  */
 
 import { createRequire } from "node:module";
-import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import type {
   AadhaarParsed,
   CinParsed,
@@ -97,8 +102,10 @@ function bindingCandidates(): string[] {
   const envPath = process.env.INDYCHECK_NATIVE_PATH;
   // An explicit path is authoritative: if it cannot be loaded, the
   // addon is treated as absent (TypeScript fallback) instead of
-  // silently loading a different binary.
-  if (envPath) return [envPath];
+  // silently loading a different binary. Normalise it first: a path
+  // containing `..` segments is not resolved by require() (it fails
+  // with "Cannot find module"), so collapse it with resolve().
+  if (envPath) return [resolve(envPath)];
   const candidates: string[] = [];
   // CommonJS: relative to this file (dist/ or src/ under packages/js).
   if (typeof __dirname !== "undefined") {
@@ -121,24 +128,93 @@ function bindingCandidates(): string[] {
 let binding: NativeBinding | null = null;
 let attempted = false;
 
+/** Require a candidate (file path or package name) and keep it only
+ *  when it looks like the napi-rs binding; never throws. */
+function tryLoad(specifier: string, req: NodeRequire): NativeBinding | null {
+  try {
+    const mod = req(specifier) as Partial<NativeBinding>;
+    if (
+      mod &&
+      typeof mod.validatePan === "function" &&
+      typeof mod.validateVehicle === "function" &&
+      typeof mod.detect === "function" &&
+      typeof mod.validateMany === "function"
+    ) {
+      return mod as NativeBinding;
+    }
+  } catch {
+    // Not built / not loadable here — try the next candidate.
+  }
+  return null;
+}
+
+// A require anchored at this file (CommonJS dist) so the platform
+// package resolves from the published install's node_modules — the
+// platform package is a sibling of this package there. Under vitest
+// (no __filename) fall back to the CWD-anchored require.
+const selfRequire =
+  typeof __filename !== "undefined"
+    ? createRequire(__filename)
+    : nativeRequire;
+
+/** `true` when this Linux host uses musl libc (Alpine etc.). Same
+ *  check as the napi-rs generated loader in
+ *  `crates/indycheck-napi/index.js`. */
+function isMusl(): boolean {
+  if (!process.report || typeof process.report.getReport !== "function") {
+    try {
+      const lddPath = nativeRequire("child_process")
+        .execSync("which ldd")
+        .toString()
+        .trim();
+      return readFileSync(lddPath, "utf8").includes("musl");
+    } catch {
+      return true;
+    }
+  }
+  // @types/node types getReport() as returning `object` (no header
+  // field), so cast to the shape the runtime actually provides.
+  const report = process.report.getReport() as unknown as {
+    header: { glibcVersionRuntime?: string };
+  };
+  const { glibcVersionRuntime } = report.header;
+  return !glibcVersionRuntime;
+}
+
+/** The published platform-package name for this host, or null when
+ *  no platform package is published for it (e.g. arm64 Linux). */
+function platformPackageName(): string | null {
+  const { platform, arch } = process;
+  if (platform === "linux" && arch === "x64") {
+    return isMusl()
+      ? "indycheck-napi-linux-x64-musl"
+      : "indycheck-napi-linux-x64-gnu";
+  }
+  if (platform === "darwin" && arch === "arm64")
+    return "indycheck-napi-darwin-arm64";
+  if (platform === "darwin" && arch === "x64")
+    return "indycheck-napi-darwin-x64";
+  if (platform === "win32" && arch === "x64")
+    return "indycheck-napi-win32-x64-msvc";
+  return null;
+}
+
 function loadBinding(): NativeBinding | null {
   if (attempted) return binding;
   attempted = true;
   for (const candidate of bindingCandidates()) {
-    try {
-      const mod = nativeRequire(candidate) as Partial<NativeBinding>;
-      if (
-        mod &&
-        typeof mod.validatePan === "function" &&
-        typeof mod.validateVehicle === "function" &&
-        typeof mod.detect === "function" &&
-        typeof mod.validateMany === "function"
-      ) {
-        binding = mod as NativeBinding;
-        break;
-      }
-    } catch {
-      // Not built / not loadable here — try the next candidate.
+    const loaded = tryLoad(candidate, nativeRequire);
+    if (loaded !== null) {
+      binding = loaded;
+      break;
+    }
+  }
+  // Published install: no repo checkout, so try the platform package
+  // installed as an optionalDependency of this package.
+  if (binding === null) {
+    const platformPkg = platformPackageName();
+    if (platformPkg !== null) {
+      binding = tryLoad(platformPkg, selfRequire);
     }
   }
   return binding;
