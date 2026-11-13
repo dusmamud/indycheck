@@ -34,9 +34,13 @@ tier and is not part of this package.
 
 ## Install
 
-This package is prepared for Packagist but is **not on Packagist
-yet**, so `composer require dusmamud/indycheck` will not work until
-it is published there. Until then, install it from the repo — either
+Install it from Packagist:
+
+```bash
+composer require dusmamud/indycheck
+```
+
+For an unreleased change, install it from the repo instead — either
 as a path repository or a VCS repository:
 
 ```json
