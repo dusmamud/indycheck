@@ -28,9 +28,37 @@ flutter pub add indycheck
 
 ## Native library
 
-The native library is **not** shipped with this package (yet — future
-releases may ship prebuilt binaries; none exist at 0.2.2). Build it
-once from the indycheck repo:
+The native library is bundled automatically: a build hook
+(`hook/build.dart`, using Dart's [build hooks](https://dart.dev/tools/hooks))
+downloads the prebuilt library for your platform from the
+[indycheck GitHub release](https://github.com/dusmamud/indycheck/releases)
+and bundles it with your app, so in most cases no setup is needed —
+just `dart pub add indycheck` and use it. No Rust toolchain is needed
+on the consuming machine, and this package is still a pure Dart
+package, not a Flutter plugin (no `flutter: plugin:` section, no
+per-platform CMake or podspec).
+
+| Platform | Archive (from the GitHub release) | Bundled library |
+|---|---|---|
+| Linux x64 (glibc) | `indycheck-<version>-linux-x64-gnu.tar.gz` | `libindycheck_ffi.so` |
+| Linux x64 (musl) | `indycheck-<version>-linux-x64-musl.tar.gz` | not usable by Dart — the musl archive is static-only (`libindycheck_ffi.a`, no `.so`), so the hook fails fast on musl with guidance instead of downloading it |
+| macOS arm64 | `indycheck-<version>-darwin-arm64.tar.gz` | `libindycheck_ffi.dylib` |
+| macOS x64 | `indycheck-<version>-darwin-x64.tar.gz` | `libindycheck_ffi.dylib` |
+| Windows x64 (MSVC) | `indycheck-<version>-win32-x64-msvc.zip` | `indycheck_ffi.dll` |
+| Windows x64 (GNU) | `indycheck-<version>-win32-x64-gnu.zip` | `indycheck_ffi.dll` |
+| Android arm64-v8a / armeabi-v7a / x86 / x86_64 | `indycheck-<version>-android-<abi>.tar.gz` | `libindycheck_ffi.so` |
+| iOS arm64 / iOS simulator (arm64) | `indycheck-<version>-ios-arm64.tar.gz` / `indycheck-<version>-ios-simulator.tar.gz` | `libindycheck_ffi.a` (linked into the app) |
+
+> Android and iOS archives ship with the 0.2.3 release. On a platform
+> with no release archive yet (or when the download fails), the hook
+> falls back to building the library locally with Cargo (see below).
+
+### Local build fallback
+
+When no release archive exists for your platform yet (or the download
+fails), the hook builds the library locally from the Rust sources
+instead. That needs a Rust toolchain and the indycheck repo checked
+out; the hook runs the equivalent of:
 
 ```sh
 cargo build -p indycheck-ffi --release
@@ -38,7 +66,11 @@ cargo build -p indycheck-ffi --release
 
 That produces `target/release/libindycheck_ffi.so` (Linux),
 `libindycheck_ffi.dylib` (macOS) or `indycheck_ffi.dll` (Windows).
-Then point the package at it, either with an environment variable:
+
+### Overriding the library
+
+To use a different library instead of the bundled one, point the
+package at it, either with an environment variable:
 
 ```sh
 INDYCHECK_NATIVE_LIB=/path/to/libindycheck_ffi.so dart run
@@ -54,16 +86,25 @@ Indycheck.init('/path/to/libindycheck_ffi.so');
 ```
 
 Resolution order: the explicit path passed to `init` /
-`setLibraryPath` first, then `INDYCHECK_NATIVE_LIB`, then the
-platform's default library file name on the library search path. On
-Android and iOS the library is expected to be linked into the app
-binary (`DynamicLibrary.process()`). If the library cannot be loaded,
-the package throws a `StateError` naming the expected file and the
-`cargo build` command above — it never fails silently.
+`setLibraryPath` first, then `INDYCHECK_NATIVE_LIB`, then the native
+asset bundled by the build hook. On Android and iOS the library may
+also be linked into the app binary (`DynamicLibrary.process()`). If
+the library cannot be loaded, the package throws a `StateError`
+naming the expected file and the `cargo build` command above — it
+never fails silently.
 
 > The `.so` / `.dylib` / `.dll` is a build artefact, not a source: it is
-> never committed to the repo. Anyone building this package must run
-> the `cargo build` step above first.
+> never committed to the repo.
+
+### Requirements
+
+The build hook needs Dart **>= 3.14** — this package declares
+`sdk: '>=3.14.0 <4.0.0'`. Build hooks themselves were stabilised in
+Dart 3.10, but the loader uses `DynamicLibrary.codeAsset`, which is
+a Dart 3.14 API. In a Flutter app that means Flutter 3.50+, which
+ships Dart 3.14. The hook itself needs network access to download
+the release archive, or a local Rust toolchain for the fallback
+build.
 
 ## Usage
 
@@ -148,6 +189,11 @@ different value.
 cargo build -p indycheck-ffi --release
 INDYCHECK_NATIVE_LIB=../../target/release/libindycheck_ffi.so dart test
 ```
+
+With the build hook in place, plain `dart test` is enough — the hook
+downloads (or locally builds) the library and the tests load the
+bundled asset; the `INDYCHECK_NATIVE_LIB` form above is for testing a
+specific local build instead.
 
 ## Honest limits (same as the core)
 
