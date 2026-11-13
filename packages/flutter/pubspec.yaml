@@ -1,5 +1,5 @@
 name: indycheck
-description: Offline Indian ID validation for Dart and Flutter — PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN code, TAN, CIN, LLPIN, Voter ID / EPIC and vehicle registration (including Bharat BH series). Format + checksum only, no network.
+description: Offline Indian ID validation for Dart and Flutter — PAN, Aadhaar, GSTIN, IFSC, UPI, mobile, PIN code, TAN, CIN, LLPIN, EPIC and vehicle registration.
 version: 0.2.3
 homepage: https://github.com/dusmamud/indycheck
 repository: https://github.com/dusmamud/indycheck
