@@ -1,5 +1,14 @@
 # indycheck — PHP binding
 
+> **Distribution note:** This package lives in the main repo
+> [`dusmamud/indycheck`](https://github.com/dusmamud/indycheck)
+> (`packages/php/`) and is mirrored to the auto-synced split repo
+> [`dusmamud/indycheck-php`](https://github.com/dusmamud/indycheck-php),
+> the repository for Packagist distribution as
+> [`dusmamud/indycheck`](https://packagist.org/packages/dusmamud/indycheck).
+> Make changes in the main repo — they are synced automatically.
+> Do not edit files in the split repo directly.
+
 PHP binding for [indycheck](https://github.com/dusmamud/indycheck), the
 offline Indian ID validator (PAN, Aadhaar, GSTIN, IFSC, UPI, mobile,
 PIN code, TAN, CIN, LLPIN, Voter ID / EPIC, vehicle registration —
