@@ -7,31 +7,17 @@ import { Aside } from '@astrojs/starlight/components';
 
 The PHP package is a thin [FFI](https://www.php.net/manual/en/book.ffi.php) binding over the C API in `crates/indycheck-ffi`, which itself wraps the Rust core. **No validation logic lives in PHP** — every call goes through the C API and decodes the JSON result it returns, so PHP returns the same answer as Rust for the same input.
 
-<Aside type="caution" title="Status — in the repo, not on Packagist yet">
-  The package lives in `packages/php` in the repo (Composer name `dusmamud/indycheck`) and ships with the **upcoming 0.2.3 release** — it is **not on Packagist yet**, so `composer require dusmamud/indycheck` will not work until it is published there. It needs PHP 8.1+ with `ext-ffi` and `ffi.enable=true`, plus the compiled native library (see below). This is the FFI tier only; a compiled PHP extension (PIE) is a later tier and is not part of this package.
+<Aside type="note" title="Status — on Packagist (0.2.4)">
+  The package is published on Packagist as `dusmamud/indycheck` — **0.2.4 and 0.2.3 are both live**. Install it with Composer (see below). It needs PHP 8.1+ with `ext-ffi` and `ffi.enable=true`, plus the compiled native library (see below). This is the FFI tier only; a compiled PHP extension (PIE) is a later tier and is not part of this package.
 </Aside>
 
 ## Install
 
-Until the package is on Packagist, install it from the repo — either as a VCS repository in your `composer.json`:
-
-```json
-{
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/dusmamud/indycheck"
-        }
-    ],
-    "require": {
-        "dusmamud/indycheck": "^0.2"
-    }
-}
+```sh
+composer require dusmamud/indycheck
 ```
 
-or, from a local checkout of the repo, point Composer at the package directory with a `path` repository (`packages/php`).
-
-Requires PHP `>=8.1`, `ext-ffi` and `ext-json`.
+That installs the latest published version (0.2.4; 0.2.3 is also on Packagist). Requires PHP `>=8.1`, `ext-ffi` and `ext-json`.
 
 ## Enabling FFI (`ffi.enable=true`)
 
@@ -45,7 +31,7 @@ For PHP-FPM, set `php_admin_value[ffi.enable]=true` in the pool config and resta
 
 ## The native library
 
-Build the Rust shared library once from the indycheck repo root:
+Download the prebuilt `libindycheck_ffi.so` for your platform from the 0.2.4 GitHub release — or build it yourself from the indycheck repo root:
 
 ```sh
 cargo build -p indycheck-ffi --release
@@ -133,7 +119,6 @@ Generated values are syntactically valid, not real issued IDs — they pass this
 
 ## What is not here yet
 
-- **No Packagist release.** Install from the repo as above until the package is published.
-- **No prebuilt native library.** You must run the `cargo build` step; the `.so` / `.dylib` / `.dll` is a build artefact, never committed to the repo.
+- **Native library not shipped in the Composer package.** Download the prebuilt `libindycheck_ffi.so` for your platform from the 0.2.4 GitHub release (or build it with `cargo build -p indycheck-ffi --release`) and point the package at it — see "The native library" above.
 - **No options variants.** Unlike the Rust core and the JS/Python wrappers, the PHP package has no `validate_*_with_options` methods yet — validation always uses the core defaults.
 - **No compiled extension.** This is the FFI tier only; a PIE extension is planned later, not part of this package.
