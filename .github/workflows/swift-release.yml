@@ -15,7 +15,15 @@
 #   - workflow_dispatch with a `tag` input (the reliable path: a tag
 #     created by release-plz with GITHUB_TOKEN does NOT trigger
 #     tag-push workflows, so release.yml dispatches this workflow with
-#     the new tag as ref instead).
+#     the new tag as ref instead). On dispatch the code is built from
+#     the ref the workflow was dispatched on (e.g. main) and the `tag`
+#     input only names the RELEASE the asset attaches to — the two
+#     differ for backfills: indycheck-v0.2.3 predates the staticlib
+#     crate-type change, so building from the tag could never emit the
+#     .a files. A version check below refuses to attach the build to
+#     the release unless the checked-out workspace version still
+#     matches the tag version, so a backfill can never ship a build of
+#     a different version under the tag.
 #
 # Slices (4): ios-arm64, ios-arm64-simulator, macos-arm64, macos-x86_64.
 # The iOS-simulator slice is arm64-only — rustup on the ARM64 macOS
@@ -74,8 +82,15 @@ jobs:
       - name: Resolve ref + tag
         id: ref
         run: |
+          # The `tag` input names the RELEASE the asset attaches to, not
+          # the code to build: the code comes from the ref this run was
+          # dispatched on (or the tag commit on a tag push). They differ
+          # for backfills — indycheck-v0.2.3 predates the staticlib
+          # crate-type change, so building from the tag could never emit
+          # the .a files; the version check below still guarantees the
+          # build is the tagged version.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "ref=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            echo "ref=${{ github.ref }}" >> "$GITHUB_OUTPUT"
             echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
           else
             echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
@@ -95,6 +110,14 @@ jobs:
           echo "TAG=$TAG" >> "$GITHUB_ENV"
           echo "VERSION=${TAG#indycheck-v}" >> "$GITHUB_ENV"
           echo "building IndyCheckFFI.xcframework for $TAG"
+          # The code being built must BE the tagged version — otherwise
+          # this run would attach a different version's framework to
+          # the release (e.g. dispatching for 0.2.3 after main moved
+          # to 0.2.4). The staticlib crate-type line is the only
+          # intended difference from the tagged source.
+          WORKSPACE_VERSION="$(grep -m1 '^version =' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')"
+          [ "$WORKSPACE_VERSION" = "${TAG#indycheck-v}" ] || { echo "workspace version $WORKSPACE_VERSION != tag version ${TAG#indycheck-v} — refusing to attach this build to release $TAG" >&2; exit 1; }
+          echo "workspace version $WORKSPACE_VERSION matches tag $TAG"
       - uses: dtolnay/rust-toolchain@stable
       - name: Add Apple Rust targets
         # NOTE: no x86_64-apple-ios-sim — rustup on the ARM64 macOS
