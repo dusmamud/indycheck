@@ -1,0 +1,62 @@
+# Publish the Flutter package (packages/flutter) to pub.dev via OIDC
+# automated publishing — no long-lived PUB_TOKEN secret is needed.
+#
+# pub.dev side (package Admin page, one-time setup by the owner):
+#   Repository: dusmamud/indycheck
+#   Tag pattern: indycheck-v{{version}}   (NOT the default v{{version}} —
+#     indycheck tags are indycheck-v0.2.3, not v0.2.3)
+#   "Enable publishing from push events": on
+#   "Enable publishing from workflow_dispatch events": on
+#   "Require GitHub Actions environment": off
+#   (Manual publishing can stay on while this is being proven.)
+#
+# Triggers:
+#   - push of a tag `indycheck-v*`: fires when a tag is pushed by a human
+#     or a PAT. It does NOT fire when release-plz creates the tag with
+#     GITHUB_TOKEN (GitHub does not trigger workflows from GITHUB_TOKEN
+#     events) — release.yml dispatches this workflow with the tag as ref
+#     instead, so every release still auto-publishes to pub.dev.
+#   - workflow_dispatch with a `tag` input: used by release.yml and for
+#     backfills (the tag must already exist; the pubspec version in it
+#     must match the tag version).
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - 'indycheck-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish, e.g. indycheck-v0.2.3 (must exist; pubspec version must match it)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Publish to pub.dev
+        working-directory: packages/flutter
+        run: |
+          dart --version
+          dart pub get
+          dart pub publish --force
