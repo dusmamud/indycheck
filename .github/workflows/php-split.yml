@@ -1,0 +1,95 @@
+# PHP split-repo sync — mirrors packages/php/ to dusmamud/indycheck-php
+# for Packagist distribution as dusmamud/indycheck.
+#
+# WHY A SPLIT REPO: Packagist reads composer.json from the repo ROOT and
+# takes versions from Git tags (vX.Y.Z). The PHP package lives in
+# packages/php/ of the main repo, so submitting the main repo directly
+# does not work. This workflow keeps the split repo in sync with
+# packages/php/ via `git subtree split`.
+#
+# REQUIRED SECRET — PHP_SPLIT_PAT (manual, Dus-only):
+#   A fine-grained personal access token with Contents: Read and write
+#   on the dusmamud/indycheck-php repository. GITHUB_TOKEN cannot be
+#   used here: it is scoped to the current repo only and cannot push
+#   to another repo. Create it at:
+#     GitHub -> Settings -> Developer settings -> Personal access tokens
+#     -> Fine-grained tokens -> Generate new token
+#     Repository access: "Only select repositories" -> dusmamud/indycheck-php
+#     Permissions -> Contents: Read and write
+#   Then add it to the MAIN repo (dusmamud/indycheck) at:
+#     Settings -> Secrets and variables -> Actions -> New repository secret
+#     Name: PHP_SPLIT_PAT, Value: <the token>
+#   Until this secret exists the workflow fails with a clear error and
+#   the split repo is NOT updated.
+#
+# WHAT IT DOES (on every push to main touching packages/php/**, or on
+# manual dispatch):
+#   1. Computes the subtree split of packages/php/ (full history).
+#   2. Force-pushes the split to dusmamud/indycheck-php main. The push
+#      is a force-push because the split history is derived
+#      deterministically from main; direct commits to the split repo are
+#      NOT allowed and would be overwritten. The split repo is a mirror.
+#   3. Creates the tag v<version> (version read from Cargo.toml, the
+#      lockstep version — currently v0.2.3) on the split repo if it does
+#      not exist yet, pointing at the synced split commit. Packagist
+#      lists versions from tags, so the tag is what makes 0.2.3 appear.
+#      A tag that already exists is left untouched (released versions
+#      are immutable); a new tag is created automatically when the
+#      version bumps.
+#
+# NOTE: the split repo's README.md and .github/workflows/ci.yml come
+# from packages/php/ itself (README.md, and
+# packages/php/.github/workflows/ci.yml — inert in the main repo, active
+# in the split repo after the split). Do not add files to the split repo
+# by hand; they are overwritten by the next sync.
+name: PHP split sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/php/**'
+
+jobs:
+  sync:
+    name: Sync packages/php to dusmamud/indycheck-php
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PHP_SPLIT_PAT is set
+        run: |
+          if [ -z "${{ secrets.PHP_SPLIT_PAT }}" ]; then
+            echo "::error::PHP_SPLIT_PAT secret is not set. Create a fine-grained PAT with Contents: Read and write on dusmamud/indycheck-php and add it as a repo secret named PHP_SPLIT_PAT in dusmamud/indycheck (see the header comment in .github/workflows/php-split.yml)."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Compute subtree split
+        run: |
+          SPLIT_SHA=$(git subtree split --prefix=packages/php)
+          echo "SPLIT_SHA=$SPLIT_SHA" >> "$GITHUB_ENV"
+          echo "Split commit: $SPLIT_SHA"
+      - name: Push split to indycheck-php
+        env:
+          SPLIT_URL: https://x-access-token:${{ secrets.PHP_SPLIT_PAT }}@github.com/dusmamud/indycheck-php.git
+        run: |
+          git push --force "$SPLIT_URL" "$SPLIT_SHA:refs/heads/main"
+      - name: Tag the release on the split repo
+        env:
+          SPLIT_URL: https://x-access-token:${{ secrets.PHP_SPLIT_PAT }}@github.com/dusmamud/indycheck-php.git
+        run: |
+          VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+          TAG="v$VERSION"
+          echo "Lockstep version: $VERSION, tag: $TAG"
+          if git ls-remote "$SPLIT_URL" "refs/tags/$TAG" | grep -q .; then
+            echo "Tag $TAG already exists on dusmamud/indycheck-php — leaving it in place (released versions are immutable)."
+          else
+            git tag -a "$TAG" -m "indycheck $VERSION (PHP split)" "$SPLIT_SHA"
+            git push "$SPLIT_URL" "refs/tags/$TAG"
+            echo "Created tag $TAG on dusmamud/indycheck-php."
+          fi
