@@ -4,22 +4,20 @@ import 'package:indycheck/indycheck.dart';
 import 'package:test/test.dart';
 
 void main() {
+  // When INDYCHECK_NATIVE_LIB is set, use that library explicitly (the
+  // pre-hook behaviour). When it is unset, the loader resolves the
+  // library bundled by the build hook (`package:indycheck/indycheck_ffi`
+  // code asset) or the process library — no environment variable needed.
   final libPath = Platform.environment['INDYCHECK_NATIVE_LIB'];
-  if (libPath == null || libPath.isEmpty) {
-    throw StateError(
-      'INDYCHECK_NATIVE_LIB is not set. Build the native library first:\n'
-      '  cargo build -p indycheck-ffi --release\n'
-      'then run the tests with INDYCHECK_NATIVE_LIB set to the built library, e.g.:\n'
-      '  INDYCHECK_NATIVE_LIB=../../target/release/libindycheck_ffi.so dart test',
-    );
+  if (libPath != null && libPath.isNotEmpty) {
+    if (!File(libPath).existsSync()) {
+      throw StateError(
+        'INDYCHECK_NATIVE_LIB points at a missing file: $libPath\n'
+        'Build the native library first with `cargo build -p indycheck-ffi --release`.',
+      );
+    }
+    Indycheck.init(libPath);
   }
-  if (!File(libPath).existsSync()) {
-    throw StateError(
-      'INDYCHECK_NATIVE_LIB points at a missing file: $libPath\n'
-      'Build the native library first with `cargo build -p indycheck-ffi --release`.',
-    );
-  }
-  Indycheck.init(libPath);
 
   group('validators', () {
     test('validatePan accepts a well-formed PAN', () {
