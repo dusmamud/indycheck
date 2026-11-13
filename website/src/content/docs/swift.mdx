@@ -7,19 +7,23 @@ import { Aside } from '@astrojs/starlight/components';
 
 The Swift bindings are generated [UniFFI](https://mozilla.github.io/uniffi-rs/) bindings over the Rust core in `crates/indycheck-uniffi`. **No validation logic lives in Swift** — every function calls the matching core validator and returns a `ValidationResult` struct whose `parsed` field is the core result's `parsed` object serialised as a JSON string (or `nil` when there is none). Keeping `parsed` as JSON keeps the interface identical in Swift and Kotlin.
 
-<Aside type="caution" title="Status — generated bindings in the repo, not distributed">
-  The generated bindings live in `crates/indycheck-uniffi/bindings/swift/` in the repo and ship with the **upcoming 0.2.3 release** — but they are **not distributed anywhere**: there is no Swift Package Manager package and no XCFramework. You copy the generated files into your project and build the Rust library yourself (see below). The bindings are **compile-verified in CI with a `validatePan` smoke test only** — there is no full Swift test suite yet.
+<Aside type="note" title="Status — Swift Package (0.2.4)">
+  The Swift package is published as `IndyCheck` — add it in Xcode or SwiftPM (see below). It ships the UniFFI Swift bindings as a binary target backed by the prebuilt `IndyCheckFFI.xcframework` (iOS arm64 + simulator, macOS universal) from the 0.2.4 GitHub release. The bindings are **compile-verified in CI with a `validatePan` smoke test only** — there is no full Swift test suite yet.
 </Aside>
 
 ## Install
 
-Copy the generated bindings into your project:
+**Xcode:** File → Add Package Dependencies → `https://github.com/dusmamud/indycheck-swift` → version **0.2.4**.
 
-- `crates/indycheck-uniffi/bindings/swift/indycheck_uniffi.swift`
-- `crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.h`
-- `crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.modulemap`
+**SwiftPM** (`Package.swift`):
 
-Build the Rust core as a library for your target (via `cargo build -p indycheck-uniffi`) and link it. CI compiles the bindings with `swiftc` and passes the modulemap explicitly (`-Xcc -fmodule-map-file=...`); if you wire the files into an Xcode project, make sure the modulemap is on the compiler's include path the same way. To regenerate the bindings after a core change, see the README in `crates/indycheck-uniffi/`; do not edit the generated files by hand.
+```swift
+.package(url: "https://github.com/dusmamud/indycheck-swift", from: "0.2.4")
+```
+
+Then `import IndyCheck`. The package ships the UniFFI bindings plus the prebuilt XCFramework — no Rust build step, no manual file copying. Requires iOS 13+ / macOS 11+.
+
+Building from source instead: the generated bindings live in `crates/indycheck-uniffi/bindings/swift/` (`indycheck_uniffi.swift`, `indycheck_uniffiFFI.h`, `indycheck_uniffiFFI.modulemap`). Build the Rust core as a library for your target (via `cargo build -p indycheck-uniffi`) and link it. CI compiles the bindings with `swiftc` and passes the modulemap explicitly (`-Xcc -fmodule-map-file=...`); if you wire the files into an Xcode project, make sure the modulemap is on the compiler's include path the same way. To regenerate the bindings after a core change, see the README in `crates/indycheck-uniffi/`; do not edit the generated files by hand.
 
 ## Example
 
@@ -78,7 +82,6 @@ public struct ValidationResult {
 
 ## What is not here yet
 
-- **No distribution.** No Swift Package Manager package or XCFramework — copy the generated files and build the Rust library yourself.
 - **No `validateEpic` alias.** The UniFFI interface exports `validateVoterId` only — use that for Voter ID / EPIC. (The Rust core, JS/Python wrappers, Dart, PHP, Go and C all have a `validateEpic` alias; Kotlin and Swift do not.)
 - **No test-data generators and no `version()`.** The UniFFI interface has no `generate_*` functions and no version function — only the 12 validators, `detect` and `validateMany` listed above. If you need mock test data, generate it with the Rust core, the CLI, or another wrapper.
 - **No options variants.** There are no `validate*WithOptions` functions yet — validation always uses the core defaults.
