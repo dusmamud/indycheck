@@ -146,6 +146,6 @@ final class IndycheckTest extends TestCase
 
     public function testVersion(): void
     {
-        $this->assertSame('0.2.3', Indycheck::version());
+        $this->assertSame('0.2.4', Indycheck::version());
     }
 }
