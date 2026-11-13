@@ -1,0 +1,7 @@
+# Gradle / Android build outputs and local SDK config (never committed).
+.gradle/
+build/
+local.properties
+# Native .so files are built by cargo-ndk at build time (see
+# scripts/build-native-libs.sh) — never committed.
+indycheck/src/main/jniLibs/
