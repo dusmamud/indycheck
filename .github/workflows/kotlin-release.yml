@@ -1,0 +1,159 @@
+# Publish the Kotlin/Android library (packages/kotlin) to Maven Central as
+# io.github.dusmamud:indycheck:<version> via the Sonatype Central Portal
+# (vanniktech Maven Publish plugin; OSSRH is retired — do not use it).
+#
+# Secrets required (repo Settings > Secrets and variables > Actions):
+#   MAVEN_CENTRAL_USERNAME, MAVEN_CENTRAL_PASSWORD (Central Portal user token),
+#   GPG_PRIVATE_KEY (armored GPG private key), GPG_PASSPHRASE.
+# The build job needs no secrets and runs on every relevant push; the
+# publish job fails fast with a clear message when the secrets are missing.
+#
+# Triggers:
+#   - push to main touching the Kotlin project / UniFFI crate / this file:
+#     build job only (assembles the AAR, no publish).
+#   - push of a tag `indycheck-v*`: build + publish.
+#   - workflow_dispatch with a `tag` input: build + publish (used by
+#     release.yml and for backfills; the tag must already exist and the
+#     gradle.properties version must match it).
+# Note: a tag created by release-plz with GITHUB_TOKEN does NOT trigger
+# this workflow (GitHub does not trigger workflows from GITHUB_TOKEN
+# events) — release.yml dispatches it with the tag as ref instead.
+name: Publish to Maven Central
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/kotlin/**'
+      - 'crates/indycheck-uniffi/**'
+      - 'crates/indycheck/**'
+      - '.github/workflows/kotlin-release.yml'
+    tags:
+      - 'indycheck-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish, e.g. indycheck-v0.2.3 (must exist; gradle.properties version must match it)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build AAR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve ref
+        id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "ref=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.ref }}
+          fetch-depth: 0
+      - name: Make Gradle wrapper executable
+        # The API-pushed gradlew lands in git as mode 100644 (the Contents
+        # API does not set the exec bit); make it executable for CI.
+        working-directory: packages/kotlin
+        run: chmod +x gradlew
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Add Android Rust targets
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Set Android NDK home
+        run: |
+          NDK="$(ls -d "$ANDROID_HOME"/ndk/* | sort -V | tail -1)"
+          test -n "$NDK" || { echo "no NDK found under \$ANDROID_HOME/ndk" >&2; exit 1; }
+          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
+          echo "Using NDK: $NDK"
+      - name: Build AAR
+        working-directory: packages/kotlin
+        run: ./gradlew :indycheck:assembleRelease --no-configuration-cache
+      - name: List AAR contents
+        run: |
+          AAR="$(ls packages/kotlin/indycheck/build/outputs/aar/*.aar | head -1)"
+          echo "AAR: $AAR"
+          unzip -l "$AAR"
+      - name: Upload AAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: indycheck-aar
+          path: packages/kotlin/indycheck/build/outputs/aar/*.aar
+          if-no-files-found: error
+
+  publish:
+    name: Publish to Maven Central
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve ref
+        id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "ref=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.ref }}
+          fetch-depth: 0
+      - name: Make Gradle wrapper executable
+        # The API-pushed gradlew lands in git as mode 100644 (the Contents
+        # API does not set the exec bit); make it executable for CI.
+        working-directory: packages/kotlin
+        run: chmod +x gradlew
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Add Android Rust targets
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Set Android NDK home
+        run: |
+          NDK="$(ls -d "$ANDROID_HOME"/ndk/* | sort -V | tail -1)"
+          test -n "$NDK" || { echo "no NDK found under \$ANDROID_HOME/ndk" >&2; exit 1; }
+          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
+          echo "Using NDK: $NDK"
+      - name: Preflight — secrets present
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          missing=""
+          for v in MAVEN_CENTRAL_USERNAME MAVEN_CENTRAL_PASSWORD GPG_PRIVATE_KEY GPG_PASSPHRASE; do
+            [ -n "${!v:-}" ] || missing="$missing $v"
+          done
+          [ -z "$missing" ] || { echo "Missing GitHub secrets:$missing (repo Settings > Secrets and variables > Actions; see packages/kotlin/README.md)" >&2; exit 1; }
+          echo "All 4 secrets present."
+      - name: Check tag version matches gradle.properties
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then TAG="${{ inputs.tag }}"; else TAG="${GITHUB_REF_NAME}"; fi
+          TAG_VERSION="${TAG#indycheck-v}"
+          GRADLE_VERSION="$(grep -m1 '^indycheckVersion=' packages/kotlin/gradle.properties | cut -d= -f2)"
+          [ "$TAG_VERSION" = "$GRADLE_VERSION" ] || { echo "tag version $TAG_VERSION != gradle.properties version $GRADLE_VERSION" >&2; exit 1; }
+          echo "Publishing version $GRADLE_VERSION from tag $TAG"
+      - name: Publish to Maven Central
+        working-directory: packages/kotlin
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSPHRASE }}
+        run: ./gradlew :indycheck:publishAndReleaseToMavenCentral --no-configuration-cache
