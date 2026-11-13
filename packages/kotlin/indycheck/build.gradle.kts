@@ -1,6 +1,7 @@
 // indycheck Android library — UniFFI Kotlin bindings (JNA) over the Rust
 // core, published to Maven Central as
 // io.github.dusmamud:indycheck:<version> (see gradle.properties).
+import com.vanniktech.maven.publish.DeploymentValidation
 //
 // The native .so files for the 4 Android ABIs are built from Rust with
 // cargo-ndk by the `buildNativeLibs` task (scripts/build-native-libs.sh)
