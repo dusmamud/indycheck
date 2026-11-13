@@ -7,17 +7,23 @@ import { Aside } from '@astrojs/starlight/components';
 
 The Kotlin bindings are generated [UniFFI](https://mozilla.github.io/uniffi-rs/) bindings over the Rust core in `crates/indycheck-uniffi`. **No validation logic lives in Kotlin** — every function calls the matching core validator and returns a `ValidationResult` record whose `parsed` field is the core result's `parsed` object serialised as a JSON string (or `null` when there is none). Keeping `parsed` as JSON keeps the interface identical in Kotlin and Swift.
 
-<Aside type="caution" title="Status — generated bindings in the repo, not distributed">
-  The generated bindings live in `crates/indycheck-uniffi/bindings/kotlin/` in the repo and ship with the **upcoming 0.2.3 release** — but they are **not distributed anywhere**: there is no Maven Central artifact, no Gradle package, and no JitPack setup. You copy the generated file into your project and build the Rust library yourself (see below). The bindings are **compile-verified in CI with a `validatePan` smoke test only** — there is no full Kotlin test suite yet.
+<Aside type="note" title="Status — on Maven Central (0.2.4)">
+  The Kotlin library is published to Maven Central as `io.github.dusmamud:indycheck:0.2.4` — a Gradle Android library (AAR) with the UniFFI Kotlin bindings and native `.so` for 4 ABIs. Install it from Maven Central (see below). The bindings are **compile-verified in CI with a `validatePan` smoke test only** — there is no full Kotlin test suite yet.
 </Aside>
 
 ## Install
 
-Copy the generated binding into your project:
+Add the dependency to your Gradle build (Kotlin DSL):
 
-- `crates/indycheck-uniffi/bindings/kotlin/uniffi/indycheck_uniffi/indycheck_uniffi.kt` — package `uniffi.indycheck_uniffi`
+```kotlin
+dependencies {
+    implementation("io.github.dusmamud:indycheck:0.2.4")
+}
+```
 
-Build the Rust core as a shared library for your target (e.g. Android `libindycheck_uniffi.so` via `cargo build -p indycheck-uniffi`) and load it — the generated code does this via JNA. To regenerate the bindings after a core change, see the README in `crates/indycheck-uniffi/`; do not edit the generated file by hand.
+That pulls the AAR (UniFFI Kotlin bindings + native `.so` for armeabi-v7a, arm64-v8a, x86 and x86_64) from Maven Central — no Rust build step, no manual file copying.
+
+Building from source instead: the generated binding lives in `crates/indycheck-uniffi/bindings/kotlin/uniffi/indycheck_uniffi/indycheck_uniffi.kt` (package `uniffi.indycheck_uniffi`). Build the Rust core as a shared library for your target (e.g. Android `libindycheck_uniffi.so` via `cargo build -p indycheck-uniffi`) and load it — the generated code does this via JNA. To regenerate the bindings after a core change, see the README in `crates/indycheck-uniffi/`; do not edit the generated file by hand.
 
 ## Example
 
@@ -80,7 +86,6 @@ data class ValidationResult(
 
 ## What is not here yet
 
-- **No distribution.** No Maven Central / Gradle artifact — copy the generated file and build the Rust library yourself.
 - **No `validateEpic` alias.** The UniFFI interface exports `validateVoterId` only — use that for Voter ID / EPIC. (The Rust core, JS/Python wrappers, Dart, PHP, Go and C all have a `validateEpic` alias; Kotlin and Swift do not.)
 - **No test-data generators and no `version()`.** The UniFFI interface has no `generate_*` functions and no version function — only the 12 validators, `detect` and `validateMany` listed above. If you need mock test data, generate it with the Rust core, the CLI, or another wrapper.
 - **No options variants.** There are no `validate*WithOptions` functions yet — validation always uses the core defaults.
