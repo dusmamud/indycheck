@@ -214,16 +214,22 @@ jobs:
             -library xcframework-macos-universal/libindycheck_uniffi.a -headers xcframework-headers \
             -output IndyCheckFFI.xcframework
       # xcodebuild does not copy the modulemap into the slices, and a
-      # SwiftPM binaryTarget needs it at <slice>/Modules/module.modulemap
-      # for `import indycheck_uniffiFFI` in the generated Swift to resolve.
-      # The committed modulemap references the header by bare name, which
-      # resolves when the header sits next to it (swiftc -I ... in
-      # swift.yml). Inside the XCFramework the header lives in the
-      # sibling Headers/ dir, and clang resolves a quoted header
-      # relative to the modulemap's own directory first — so the copy
-      # points at it with a relative path. Without this,
-      # `#if canImport(indycheck_uniffiFFI)` in the generated Swift is
-      # false and every FFI type is "not in scope" in the SPM smoke test.
+      # SwiftPM binaryTarget needs it for `import indycheck_uniffiFFI`
+      # in the generated Swift to resolve. TWO copies are placed:
+      #   - <slice>/Modules/module.modulemap — the conventional
+      #     XCFramework location (header referenced with a relative
+      #     path, since the header lives in the sibling Headers/ dir).
+      #   - <slice>/Headers/module.modulemap — the copy SwiftPM
+      #     actually uses. Verified from a verbose `swift build`:
+      #     SwiftPM (Xcode 26.6) does NOT pass -fmodule-map-file for
+      #     the Modules copy; it only adds -I <slice>/Headers, and
+      #     clang discovers a module map in a header search path dir.
+      #     Without the Headers copy, `#if canImport(indycheck_uniffiFFI)`
+      #     is false and every FFI type is "not in scope".
+      # The committed modulemap is NOT changed: it references the header
+      # by bare name, which resolves when the header sits next to it
+      # (swiftc -I ... in swift.yml) — the same reason the bare name
+      # works for the Headers copy.
       - name: Add modulemap to every slice
         run: |
           set -euo pipefail
@@ -232,6 +238,8 @@ jobs:
             sed 's|header "indycheck_uniffiFFI.h"|header "../Headers/indycheck_uniffiFFI.h"|' \
               crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.modulemap \
               > "$slice/Modules/module.modulemap"
+            cp crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.modulemap \
+              "$slice/Headers/module.modulemap"
             echo "== $slice/Modules/module.modulemap"
             cat "$slice/Modules/module.modulemap"
           done
@@ -244,7 +252,8 @@ jobs:
             lipo -info "$a"
             slice_dir="$(dirname "$a")"
             test -f "$slice_dir/Headers/indycheck_uniffiFFI.h" || { echo "missing header in $slice_dir" >&2; exit 1; }
-            test -f "$slice_dir/Modules/module.modulemap" || { echo "missing modulemap in $slice_dir" >&2; exit 1; }
+            test -f "$slice_dir/Modules/module.modulemap" || { echo "missing modulemap in $slice_dir/Modules" >&2; exit 1; }
+            test -f "$slice_dir/Headers/module.modulemap" || { echo "missing modulemap in $slice_dir/Headers" >&2; exit 1; }
           done
           echo "== Info.plist"
           cat IndyCheckFFI.xcframework/Info.plist
