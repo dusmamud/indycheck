@@ -216,12 +216,24 @@ jobs:
       # xcodebuild does not copy the modulemap into the slices, and a
       # SwiftPM binaryTarget needs it at <slice>/Modules/module.modulemap
       # for `import indycheck_uniffiFFI` in the generated Swift to resolve.
+      # The committed modulemap references the header by bare name, which
+      # resolves when the header sits next to it (swiftc -I ... in
+      # swift.yml). Inside the XCFramework the header lives in the
+      # sibling Headers/ dir, and clang resolves a quoted header
+      # relative to the modulemap's own directory first — so the copy
+      # points at it with a relative path. Without this,
+      # `#if canImport(indycheck_uniffiFFI)` in the generated Swift is
+      # false and every FFI type is "not in scope" in the SPM smoke test.
       - name: Add modulemap to every slice
         run: |
           set -euo pipefail
           for slice in IndyCheckFFI.xcframework/*/; do
             mkdir -p "$slice/Modules"
-            cp crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.modulemap "$slice/Modules/module.modulemap"
+            sed 's|header "indycheck_uniffiFFI.h"|header "../Headers/indycheck_uniffiFFI.h"|' \
+              crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.modulemap \
+              > "$slice/Modules/module.modulemap"
+            echo "== $slice/Modules/module.modulemap"
+            cat "$slice/Modules/module.modulemap"
           done
           find IndyCheckFFI.xcframework -type f | sort
       - name: Verify XCFramework structure
@@ -288,7 +300,11 @@ jobs:
           print("SPM smoke test passed")
           EOF
           cd .spm-smoke-test
-          swift build
+          if ! swift build; then
+            echo "--- swift build failed; verbose retry to show the emit-module invocation (module-map / header flags):"
+            swift build -v 2>&1 | grep -i "fmodule-map\|indycheck_uniffiFFI\|-I " | head -30 || true
+            exit 1
+          fi
           swift run
       - name: Zip XCFramework
         run: ditto -c -k --keepParent IndyCheckFFI.xcframework IndyCheckFFI.xcframework.zip
