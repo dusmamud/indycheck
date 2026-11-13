@@ -7,11 +7,15 @@ import { Aside } from '@astrojs/starlight/components';
 
 The C API is the shared native foundation of the Dart, PHP and Go packages: a thin wrapper over the Rust core in `crates/indycheck-ffi`. It is the right entry point if you are writing a binding for a language that has no package yet, or calling indycheck from C/C++ directly.
 
-<Aside type="caution" title="Status — built in CI, not distributed as archives yet">
-  The C library is built in CI (workflow `C API`) and the header is checked for drift on Linux — but it is **not distributed as downloadable archives yet**. You build it from the repo (see below). The API ships with the **upcoming 0.2.3 release**, which adds the six `indycheck_generate_*` exports.
+<Aside type="note" title="Status — prebuilt archives on the 0.2.4 release">
+  Prebuilt `libindycheck_ffi` archives for 12 platforms are attached to the **0.2.4 GitHub release** (see below) — download one instead of building from source. The header is checked for drift in CI on Linux. The six `indycheck_generate_*` exports were added in 0.2.3.
 </Aside>
 
-## Build
+## Download (prebuilt)
+
+Download the archive for your platform from the [0.2.4 GitHub release](https://github.com/dusmamud/indycheck/releases/tag/indycheck-v0.2.4) and verify it against `SHA256SUMS.txt` (attached to the same release). Platforms: Linux x64 gnu + musl, macOS arm64 + x64, Windows x64 gnu + msvc, Android (arm64-v8a, armeabi-v7a, x86, x86_64), iOS arm64 + simulator. The musl archive is **static-only** (`.a`, no `.so` — cargo drops the cdylib for the musl target), and the iOS simulator archive is **arm64-only**.
+
+## Build (from source)
 
 From the repo root:
 
@@ -87,7 +91,7 @@ All 24 functions are verified in `crates/indycheck-ffi/indycheck.h`.
 
 ## Test-data generators — test data only
 
-The six `generate_*` exports are new in the upcoming 0.2.3 release:
+The six `generate_*` exports were added in the 0.2.3 release:
 
 | Function | Generates |
 |---|---|
@@ -112,5 +116,4 @@ CI checks the committed header against a fresh cbindgen run (Linux only) so drif
 
 ## What is not here yet
 
-- **No distributed archives.** There are no downloadable `.so` / `.dylib` / `.dll` releases yet — build the library from the repo.
 - **No options variants.** The C API exposes the core defaults only; there are no `*_with_options` entry points yet.
