@@ -27,7 +27,7 @@ package indycheck
 // userenv and bcrypt (std's home-dir / randomness helpers), ntdll
 // (NtCreateFile, NtReadFile, RtlNtStatusToDosError, ...). gcc already
 // links kernel32/advapi32/user32 by default.
-#cgo windows LDFLAGS: -lws2_32 -luserenv -lbcrypt -lntdll
+#cgo windows LDFLAGS: -lws2_32 -luserenv -lbcrypt -lntdll -lsynchronization
 #include <stdlib.h>
 #include "indycheck.h"
 */
