@@ -1,3 +1,3 @@
-module github.com/dusmamud/indycheck-go
+module github.com/dusmamud/indycheck/packages/go
 
 go 1.22
