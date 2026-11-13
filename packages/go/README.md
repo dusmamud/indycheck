@@ -39,10 +39,14 @@ the glibc archive is used.
 
 ## Releases
 
-**0.2.4 is released** (tag `packages/go/v0.2.4`).
+**0.2.5 is released** (tag `packages/go/v0.2.5`). It contains the
+indycheck core **0.2.4** — the Go module is versioned independently
+of the Rust core, and v0.2.5 is the first published Go version
+(the v0.2.4 tag's module path was wrong, so the Go module proxy
+cached a broken entry for it; v0.2.5 is the corrected first release).
 
 ```sh
-go get github.com/dusmamud/indycheck/packages/go@v0.2.4
+go get github.com/dusmamud/indycheck/packages/go@v0.2.5
 ```
 
 The Go module proxy fetches the tagged module once the tag exists
@@ -109,8 +113,8 @@ version.
    ```sh
    git checkout main
    git pull
-   git tag packages/go/v0.2.4
-   git push origin packages/go/v0.2.4
+   git tag packages/go/v0.2.5
+   git push origin packages/go/v0.2.5
    ```
 
    Do not create this tag before the vendored libraries land: the
