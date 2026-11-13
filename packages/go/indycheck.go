@@ -9,25 +9,34 @@
 // function calls the matching C function and decodes the JSON result
 // it returns.
 //
-// Build prerequisite: the Rust shared library must exist first:
+// Build prerequisite: the prebuilt static library is vendored in
+// lib/ (one archive per platform, built by c-release.yml from the
+// same release tag). No Rust toolchain is needed to use this package.
+// To rebuild the vendored libraries from source, run
+// cargo build -p indycheck-ffi --release and replace the matching
+// lib/<platform>/libindycheck_ffi.a — see README.md in this directory.
 //
-//	cargo build -p indycheck-ffi --release
-//
-// That produces target/release/libindycheck_ffi.so at the repo root,
-// which this package links against. See README.md in this directory.
+//	musl Linux: build with -tags musl to select the musl archive
+//	(go build -tags musl); without the tag the glibc archive is used.
 package indycheck
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/../../crates/indycheck-ffi
-#cgo LDFLAGS: -L${SRCDIR}/../../target/release -lindycheck_ffi -Wl,-rpath,${SRCDIR}/../../target/release
+#cgo CFLAGS: -I${SRCDIR}/lib
+#cgo linux,!musl LDFLAGS: -L${SRCDIR}/lib/linux-x64-gnu -lindycheck_ffi -ldl -lpthread -lm
+#cgo linux,musl LDFLAGS: -L${SRCDIR}/lib/linux-x64-musl -lindycheck_ffi -ldl -lpthread -lm
+#cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/lib/darwin-arm64 -lindycheck_ffi
+#cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/lib/darwin-x64 -lindycheck_ffi
 // On Windows the Rust static library is linked by MinGW gcc, which —
 // unlike MSVC's link.exe — does not implicitly link the Windows
 // system libraries the Rust standard library references. Link them
 // explicitly: ws2_32 (Winsock: freeaddrinfo, WSASend, WSARecv, ...),
 // userenv and bcrypt (std's home-dir / randomness helpers), ntdll
-// (NtCreateFile, NtReadFile, RtlNtStatusToDosError, ...). gcc already
-// links kernel32/advapi32/user32 by default.
-#cgo windows LDFLAGS: -lws2_32 -luserenv -lbcrypt -lntdll -lsynchronization
+// (NtCreateFile, NtReadFile, RtlNtStatusToDosError, ...) and
+// synchronization (std's synchronization primitives). gcc already
+// links kernel32/advapi32/user32 by default. The vendored Windows
+// archive must be the GNU-target build (win32-x64-gnu); MinGW gcc
+// cannot link the MSVC .lib.
+#cgo windows LDFLAGS: -L${SRCDIR}/lib/win32-x64-gnu -lindycheck_ffi -lws2_32 -luserenv -lbcrypt -lntdll -lsynchronization
 #include <stdlib.h>
 #include "indycheck.h"
 */
