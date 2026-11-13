@@ -27,8 +27,15 @@
 #   android-x86      libindycheck_ffi.so (cargo-ndk, i686-linux-android)
 #   android-x86_64   libindycheck_ffi.so (cargo-ndk, x86_64-linux-android)
 #   ios-arm64        libindycheck_ffi.a (device, aarch64-apple-ios)
-#   ios-simulator    libindycheck_ffi.a (fat: aarch64-apple-ios-sim +
-#                    x86_64-apple-ios-sim lipo'd together)
+#   ios-simulator    libindycheck_ffi.a (arm64 only — the x86_64
+#                    simulator slice is NOT built: rustup on the ARM64
+#                    macOS runner cannot add x86_64-apple-ios-sim
+#                    ("toolchain 'stable-aarch64-apple-darwin' does
+#                    not support target 'x86_64-apple-ios-sim'"), and
+#                    every Mac sold since 2020 runs the simulator as
+#                    arm64 anyway. Intel-Mac simulator support is
+#                    dropped; the archive stays a single .a so the
+#                    Dart hook's archive map is unchanged.)
 # The release job also uploads SHA256SUMS.txt (sha256sum of all 12
 # archives), which the Dart build hook (packages/flutter/hook/build.dart)
 # verifies downloads against.
@@ -164,11 +171,6 @@ jobs:
           echo "building archives for $TAG"
       - name: Add Rust target
         run: rustup target add ${{ matrix.target }}
-      # The iOS simulator leg also needs the x86_64 simulator target:
-      # both simulator .a files are lipo'd into one fat archive.
-      - name: Add extra Rust target (iOS simulator leg)
-        if: matrix.kind == 'ios-sim'
-        run: rustup target add x86_64-apple-ios-sim
       # The musl target links with musl-gcc, which is not on the stock
       # ubuntu runner. musl-tools provides it (pure-Rust crate, no C
       # deps, but the final link still needs a linker).
@@ -212,12 +214,6 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
           cargo ndk -t ${{ matrix.target }} --platform 21 build -p indycheck-ffi --release
-      # The iOS simulator leg builds the second simulator architecture;
-      # the main build step above already built ${{ matrix.target }}
-      # (aarch64-apple-ios-sim). Both are lipo'd in the package step.
-      - name: Build extra Rust target (iOS simulator leg)
-        if: matrix.kind == 'ios-sim'
-        run: cargo build -p indycheck-ffi --release --target x86_64-apple-ios-sim
       # Show exactly what cargo produced, so the first run's log settles
       # the Windows .lib naming (MSVC emits the static archive as
       # indycheck_ffi.lib and the DLL import library as
@@ -285,13 +281,13 @@ jobs:
               cp "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
               ;;
             ios-sim)
-              # Fat static archive: lipo the two simulator .a files
-              # (arm64 + x86_64) into one.
-              SIMDIR="target/aarch64-apple-ios-sim/release"
-              X86DIR="target/x86_64-apple-ios-sim/release"
-              test -f "$SIMDIR/libindycheck_ffi.a" || { echo "missing arm64-sim libindycheck_ffi.a" >&2; exit 1; }
-              test -f "$X86DIR/libindycheck_ffi.a" || { echo "missing x86_64-sim libindycheck_ffi.a" >&2; exit 1; }
-              lipo -create "$SIMDIR/libindycheck_ffi.a" "$X86DIR/libindycheck_ffi.a" -output "$STAGE/libindycheck_ffi.a"
+              # arm64 simulator only (see the header note): the x86_64
+              # simulator slice is not built. Same single .a as the
+              # ios case; kept as its own platform so the Dart hook's
+              # archive map (indycheck-<ver>-ios-simulator.tar.gz)
+              # is unchanged.
+              test -f "$LIBDIR/libindycheck_ffi.a" || { echo "missing libindycheck_ffi.a" >&2; exit 1; }
+              cp "$LIBDIR/libindycheck_ffi.a" "$STAGE/"
               ;;
           esac
           ls -l "$STAGE"
