@@ -1,0 +1,17 @@
+name: indycheck_hook
+description: Build hook for the indycheck Dart package — downloads the prebuilt native library for the target platform (or builds it from source with Cargo as a fallback) and registers it as a code asset.
+version: 0.1.0
+repository: https://github.com/dusmamud/indycheck
+issue_tracker: https://github.com/dusmamud/indycheck/issues
+
+environment:
+  sdk: '>=3.14.0 <4.0.0'
+
+dependencies:
+  # .tar.gz / .zip extraction of the prebuilt release archives (pure Dart,
+  # so the hook works on every host OS without shelling out to tar/unzip).
+  archive: ^4.0.0
+  code_assets: ^2.2.0
+  # SHA-256 verification of downloaded archives against SHA256SUMS.txt.
+  crypto: ^3.0.0
+  hooks: ^2.2.0
