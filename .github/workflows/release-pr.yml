@@ -25,6 +25,13 @@ on:
     branches:
       - main
 
+# Serialize runs: two concurrent runs race on the `git push --force-with-lease`
+# to the `release-plz` branch (the loser fails with "stale info"). Queuing is
+# safe because each run re-reads main before updating the PR.
+concurrency:
+  group: release-pr
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write
