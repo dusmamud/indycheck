@@ -60,3 +60,31 @@ jobs:
           git rev-parse "$TAG^{commit}" >/dev/null || { echo "tag $TAG not found (release-plz did not create it?)" >&2; exit 1; }
           gh workflow run pubdev-release.yml --ref "$TAG" -f tag="$TAG"
           echo "dispatched pubdev-release.yml for $TAG"
+
+  # Auto-publish the Kotlin/Android library to Maven Central after the
+  # crates.io release. Same GITHUB_TOKEN caveat as the pub.dev job above:
+  # the release-plz tag does not trigger the tag-push workflow, so dispatch
+  # kotlin-release.yml explicitly with the new tag as ref. The publish job
+  # inside kotlin-release.yml fails fast if the 4 secrets are missing
+  # (MAVEN_CENTRAL_USERNAME / MAVEN_CENTRAL_PASSWORD / GPG_PRIVATE_KEY /
+  # GPG_PASSPHRASE) — see packages/kotlin/README.md.
+  publish-kotlin:
+    name: publish to Maven Central (dispatch)
+    needs: release-plz
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Dispatch Maven Central publish for the new tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 '^version =' Cargo.toml | sed -E 's/version = "(.*)"/\1/')
+          TAG="indycheck-v$VERSION"
+          echo "release tag: $TAG"
+          git fetch --tags origin
+          git rev-parse "$TAG^{commit}" >/dev/null || { echo "tag $TAG not found (release-plz did not create it?)" >&2; exit 1; }
+          gh workflow run kotlin-release.yml --ref "$TAG" -f tag="$TAG"
+          echo "dispatched kotlin-release.yml for $TAG"
