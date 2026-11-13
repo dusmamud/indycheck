@@ -1,0 +1,293 @@
+# Swift XCFramework release — builds the Rust static libraries for the
+# four Apple targets, assembles them into IndyCheckFFI.xcframework, smoke
+# tests it as a SwiftPM binary target, and uploads the zipped framework to
+# the GitHub Release for the tag.
+#
+# The Swift package itself lives in a separate repo
+# (dusmamud/indycheck-swift, Package.swift with a binaryTarget pointing
+# at this release asset) — this workflow only produces the XCFramework
+# and its checksum. There is no Swift registry to publish to.
+#
+# Triggers:
+#   - push of a tag `indycheck-v*` (the tag is pushed by release.yml
+#     when release-plz creates it; the release is created a moment
+#     later, so the upload step polls for it — see the race note below).
+#   - workflow_dispatch with a `tag` input (the reliable path: a tag
+#     created by release-plz with GITHUB_TOKEN does NOT trigger
+#     tag-push workflows, so release.yml dispatches this workflow with
+#     the new tag as ref instead).
+#
+# Slices (4): ios-arm64, ios-arm64-simulator, macos-arm64, macos-x86_64.
+# The iOS-simulator slice is arm64-only — rustup on the ARM64 macOS
+# runner cannot add x86_64-apple-ios-sim ("toolchain
+# 'stable-aarch64-apple-darwin' does not support target
+# 'x86_64-apple-ios-sim'"), and every Mac sold since 2020 runs the
+# simulator as arm64 anyway. Intel-Mac simulator support is dropped.
+#
+# Bindings drift gate: the committed UniFFI Swift bindings in
+# crates/indycheck-uniffi/bindings/swift are regenerated from the freshly
+# built host cdylib and diffed — the job FAILS if they differ, so a
+# stale binding can never ship inside the framework.
+#
+# SPM smoke test gate: before anything is uploaded, a throwaway SwiftPM
+# package (.spm-smoke-test/, CI-only, never committed) wraps the
+# XCFramework as a binaryTarget and runs validatePan / validateVehicle /
+# detect against it. If this fails, nothing is uploaded.
+#
+# Asset: IndyCheckFFI.xcframework.zip (stable name, no version in the
+# file name — the tag is in the release URL). Its checksum is computed
+# with `swift package compute-checksum`, exposed as a job output
+# (`checksum`) and echoed in the log with the asset URL; the Swift
+# package repo needs that checksum for its Package.swift binaryTarget.
+#
+# Race note: on a tag push this workflow can start while release.yml is
+# still creating the GitHub Release for the same tag (the tag is pushed
+# first, the release a moment later). The upload step therefore polls
+# `gh release view` for up to ~6 minutes before giving up, so a manual
+# dispatch is only needed if that wait expires. This workflow never
+# creates a release itself.
+name: Swift XCFramework release
+
+on:
+  push:
+    tags:
+      - 'indycheck-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to attach the XCFramework to, e.g. indycheck-v0.2.3 (the release must already exist)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build XCFramework
+    runs-on: macos-latest
+    timeout-minutes: 60
+    outputs:
+      checksum: ${{ steps.checksum.outputs.checksum }}
+      asset_url: ${{ steps.checksum.outputs.asset_url }}
+    steps:
+      - name: Resolve ref + tag
+        id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "ref=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.ref }}
+          fetch-depth: 0
+      - name: Resolve tag + version
+        run: |
+          TAG="${{ steps.ref.outputs.tag }}"
+          case "$TAG" in
+            indycheck-v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "tag '$TAG' does not look like indycheck-vX.Y.Z" >&2; exit 1 ;;
+          esac
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "VERSION=${TAG#indycheck-v}" >> "$GITHUB_ENV"
+          echo "building IndyCheckFFI.xcframework for $TAG"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Add Apple Rust targets
+        # NOTE: no x86_64-apple-ios-sim — rustup on the ARM64 macOS
+        # runner rejects it; the iOS-simulator slice is arm64-only.
+        run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin x86_64-apple-darwin
+      - name: Build host cdylib
+        run: cargo build -p indycheck-uniffi --release
+      # The uniffi-bindgen binary is not published as a cargo-installable
+      # crate in 0.28.x, so build the CLI from a small throwaway crate
+      # (same recipe as crates/indycheck-uniffi/README.md). Cache its
+      # target dir so only the first run compiles the uniffi dependency.
+      - name: Cache uniffi-cli build
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/uniffi-cli/target
+          key: uniffi-cli-0.28.3-${{ runner.os }}-v1
+      - name: Build uniffi-cli
+        env:
+          UNIFFI_CLI_DIR: ${{ runner.temp }}/uniffi-cli
+        run: |
+          set -euo pipefail
+          mkdir -p "$UNIFFI_CLI_DIR/src"
+          cat > "$UNIFFI_CLI_DIR/Cargo.toml" <<'EOF'
+          [package]
+          name = "uniffi-cli"
+          version = "0.1.0"
+          edition = "2021"
+
+          [dependencies]
+          uniffi = { version = "=0.28.3", features = ["cli"] }
+          EOF
+          printf 'fn main() { uniffi::uniffi_bindgen_main() }\n' > "$UNIFFI_CLI_DIR/src/main.rs"
+          cargo build --release --manifest-path "$UNIFFI_CLI_DIR/Cargo.toml"
+          echo "UNIFFI_CLI=$UNIFFI_CLI_DIR/target/release/uniffi-cli" >> "$GITHUB_ENV"
+      # Regenerate the Swift bindings from the freshly built host dylib
+      # and fail if any of the three committed files drifted — a stale
+      # binding must never ship inside the framework.
+      - name: Check committed Swift bindings are up to date
+        env:
+          REGEN_DIR: ${{ runner.temp }}/regen-swift
+        run: |
+          set -euo pipefail
+          mkdir -p "$REGEN_DIR"
+          "$UNIFFI_CLI" generate --library target/release/libindycheck_uniffi.dylib \
+            --language swift --out-dir "$REGEN_DIR"
+          ls -l "$REGEN_DIR"
+          for f in indycheck_uniffi.swift indycheck_uniffiFFI.h indycheck_uniffiFFI.modulemap; do
+            test -f "$REGEN_DIR/$f" || { echo "regeneration did not produce $f" >&2; exit 1; }
+            if ! diff -u "crates/indycheck-uniffi/bindings/swift/$f" "$REGEN_DIR/$f"; then
+              echo "::error::committed bindings/swift/$f differs from freshly generated output — regenerate the bindings and commit them (see crates/indycheck-uniffi/README.md)"
+              exit 1
+            fi
+          done
+          echo "committed Swift bindings match freshly generated output"
+      - name: Build static libs for the 4 Apple targets
+        run: |
+          set -euo pipefail
+          for t in aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin x86_64-apple-darwin; do
+            echo "== $t"
+            cargo build -p indycheck-uniffi --release --target "$t"
+            test -f "target/$t/release/libindycheck_uniffi.a" || { echo "missing static lib for $t" >&2; exit 1; }
+          done
+      - name: Assemble XCFramework
+        run: |
+          set -euo pipefail
+          mkdir -p xcframework-headers
+          cp crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.h xcframework-headers/
+          xcodebuild -create-xcframework \
+            -library target/aarch64-apple-ios/release/libindycheck_uniffi.a -headers xcframework-headers \
+            -library target/aarch64-apple-ios-sim/release/libindycheck_uniffi.a -headers xcframework-headers \
+            -library target/aarch64-apple-darwin/release/libindycheck_uniffi.a -headers xcframework-headers \
+            -library target/x86_64-apple-darwin/release/libindycheck_uniffi.a -headers xcframework-headers \
+            -output IndyCheckFFI.xcframework
+      # xcodebuild does not copy the modulemap into the slices, and a
+      # SwiftPM binaryTarget needs it at <slice>/Modules/module.modulemap
+      # for `import indycheck_uniffiFFI` in the generated Swift to resolve.
+      - name: Add modulemap to every slice
+        run: |
+          set -euo pipefail
+          for slice in IndyCheckFFI.xcframework/*/; do
+            mkdir -p "$slice/Modules"
+            cp crates/indycheck-uniffi/bindings/swift/indycheck_uniffiFFI.modulemap "$slice/Modules/module.modulemap"
+          done
+          find IndyCheckFFI.xcframework -type f | sort
+      - name: Verify XCFramework structure
+        run: |
+          set -euo pipefail
+          for a in IndyCheckFFI.xcframework/*/libindycheck_uniffi.a; do
+            echo "== $a"
+            lipo -info "$a"
+            slice_dir="$(dirname "$a")"
+            test -f "$slice_dir/Headers/indycheck_uniffiFFI.h" || { echo "missing header in $slice_dir" >&2; exit 1; }
+            test -f "$slice_dir/Modules/module.modulemap" || { echo "missing modulemap in $slice_dir" >&2; exit 1; }
+          done
+          echo "== Info.plist"
+          cat IndyCheckFFI.xcframework/Info.plist
+      # PRE-UPLOAD GATE — local SPM smoke test. A throwaway package wraps
+      # the XCFramework as a binaryTarget and exercises the generated
+      # Swift bindings against it. If this fails, nothing is uploaded.
+      - name: SPM smoke test (pre-upload gate)
+        run: |
+          set -euo pipefail
+          rm -rf .spm-smoke-test
+          mkdir -p .spm-smoke-test/Sources/IndyCheck .spm-smoke-test/Sources/SmokeTest
+          cat > .spm-smoke-test/Package.swift <<'EOF'
+          // swift-tools-version: 5.9
+          import PackageDescription
+
+          let package = Package(
+              name: "IndyCheckSmokeTest",
+              products: [
+                  .executable(name: "SmokeTest", targets: ["SmokeTest"]),
+              ],
+              targets: [
+                  .binaryTarget(name: "IndyCheckFFI", path: "../IndyCheckFFI.xcframework"),
+                  .target(name: "IndyCheck", dependencies: ["IndyCheckFFI"], path: "Sources/IndyCheck"),
+                  .executableTarget(name: "SmokeTest", dependencies: ["IndyCheck"], path: "Sources/SmokeTest"),
+              ]
+          )
+          EOF
+          cp crates/indycheck-uniffi/bindings/swift/indycheck_uniffi.swift .spm-smoke-test/Sources/IndyCheck/
+          cat > .spm-smoke-test/Sources/SmokeTest/main.swift <<'EOF'
+          import Foundation
+          import IndyCheck
+
+          let pan = validatePan(input: "ABCDE1234F")
+          guard pan.valid else {
+              print("FAIL: validatePan(ABCDE1234F) invalid: \(pan.code) \(pan.reasonEn)")
+              exit(1)
+          }
+          print("OK: validatePan(ABCDE1234F) -> \(pan.code)")
+
+          let vehicle = validateVehicle(input: "22BH1234AA")
+          guard vehicle.valid else {
+              print("FAIL: validateVehicle(22BH1234AA) invalid: \(vehicle.code) \(vehicle.reasonEn)")
+              exit(1)
+          }
+          print("OK: validateVehicle(22BH1234AA) -> \(vehicle.code)")
+
+          let detected = detect(input: "dus@okaxis")
+          guard detected == "upi" else {
+              print("FAIL: detect(dus@okaxis) = \(detected), expected upi")
+              exit(1)
+          }
+          print("OK: detect(dus@okaxis) -> \(detected)")
+          print("SPM smoke test passed")
+          EOF
+          cd .spm-smoke-test
+          swift build
+          swift run
+      - name: Zip XCFramework
+        run: ditto -c -k --keepParent IndyCheckFFI.xcframework IndyCheckFFI.xcframework.zip
+      # The tag is pushed before the release is created (release-plz
+      # pushes the tag, then creates the release), so wait for the
+      # release to appear instead of failing on a race. Manual
+      # dispatch against an existing release finds it on the first try.
+      # This workflow never creates a release itself.
+      - name: Wait for the GitHub Release to exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for i in $(seq 1 12); do
+            if gh release view "$TAG" --repo dusmamud/indycheck >/dev/null 2>&1; then
+              echo "release $TAG exists"
+              exit 0
+            fi
+            echo "attempt $i/12: release $TAG not found yet, waiting 30s…"
+            sleep 30
+          done
+          echo "release $TAG still does not exist after ~6 minutes — run the Release workflow (release.yml) first, it creates the release" >&2
+          exit 1
+      - name: Upload XCFramework to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ls -lh IndyCheckFFI.xcframework.zip
+          gh release upload "$TAG" IndyCheckFFI.xcframework.zip --clobber --repo dusmamud/indycheck
+          echo "uploaded IndyCheckFFI.xcframework.zip to release $TAG"
+      - name: Compute checksum
+        id: checksum
+        run: |
+          CHECKSUM="$(swift package compute-checksum IndyCheckFFI.xcframework.zip)"
+          ASSET_URL="https://github.com/dusmamud/indycheck/releases/download/$TAG/IndyCheckFFI.xcframework.zip"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+          echo "=============================================="
+          echo "IndyCheckFFI.xcframework.zip"
+          echo "  tag:      $TAG"
+          echo "  asset:    $ASSET_URL"
+          echo "  checksum: $CHECKSUM"
+          echo "=============================================="
+          echo "Use this checksum in the Swift package repo (dusmamud/indycheck-swift) Package.swift binaryTarget."
+      - name: Verify release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release view "$TAG" --repo dusmamud/indycheck --json assets --jq '.assets[] | .name + " " + (.size | tostring)'
