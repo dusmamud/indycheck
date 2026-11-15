@@ -168,7 +168,7 @@ Exit codes: 0 = valid/success, 1 = invalid input, 2 = usage error. No extra depe
 
 ## Test vectors
 
-`shared/test-vectors.json` — 254 cases covering valid + invalid inputs for
+`shared/test-vectors.json` — 262 cases covering valid + invalid inputs for
 all 12 types, `detect`/batch behaviour, `Options` cases (each entry carries
 an `"options"` object and is run through `validate_*_with_options`), and
 generator cases (each entry carries a `"generator"` field; the test

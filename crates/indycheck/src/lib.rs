@@ -107,6 +107,23 @@ fn is_vehicle_pattern(s: &str) -> bool {
     validate_vehicle(&cleaned).valid
 }
 
+fn is_gstin_structure(s: &str) -> bool {
+    // Structural GSTIN shape only (no state-code or checksum check, so
+    // detect() still finds GSTINs that fail validation): 2 digits + PAN
+    // pattern + 1 alphanumeric entity char + 'Z' + 1 alphanumeric check
+    // char, exactly 15 characters.
+    let chars: Vec<char> = s.chars().collect();
+    if chars.len() != 15 {
+        return false;
+    }
+    let pan: String = chars[2..12].iter().collect();
+    chars[..2].iter().all(|c| c.is_ascii_digit())
+        && is_pan_pattern(&pan)
+        && chars[12].is_ascii_alphanumeric()
+        && chars[13] == 'Z'
+        && chars[14].is_ascii_alphanumeric()
+}
+
 /// Detects the type of an Indian ID string.
 ///
 /// Returns one of `"pan"`, `"aadhaar"`, `"gstin"`, `"ifsc"`, `"upi"`,
@@ -131,20 +148,41 @@ pub fn detect(input: &str) -> String {
     if len == 12 && all_digits && verhoeff::is_valid(trimmed) {
         return "aadhaar".to_string();
     }
-    // Spaced / hyphenated Aadhaar, e.g. "2345 6789 0124".
+    // Spaced / hyphenated Aadhaar, e.g. "2345 6789 0124". Only spaces and
+    // hyphens may surround the digits: "AB234567890124CD" has the same 12
+    // digits but is not an Aadhaar in any spaced form.
     let digits_only: String = trimmed.chars().filter(|c| c.is_ascii_digit()).collect();
-    if digits_only.chars().count() == 12 && verhoeff::is_valid(&digits_only) {
+    let spaced_aadhaar = trimmed
+        .chars()
+        .all(|c| c.is_ascii_digit() || c.is_whitespace() || c == '-');
+    if spaced_aadhaar
+        && digits_only.chars().count() == 12
+        && verhoeff::is_valid(&digits_only)
+    {
         return "aadhaar".to_string();
     }
     if mobile::normalize_mobile(trimmed).is_some() {
         return "mobile".to_string();
+    }
+    // Spaced / hyphenated PAN and GSTIN: their validators strip spaces and
+    // hyphens by default, so detect() must too — otherwise validate_many()
+    // reports a valid "ABCDE 1234F" as UNKNOWN_TYPE.
+    let stripped: String = upper
+        .chars()
+        .filter(|c| !c.is_whitespace() && *c != '-')
+        .collect();
+    if is_pan_pattern(&stripped) {
+        return "pan".to_string();
+    }
+    if is_gstin_structure(&stripped) {
+        return "gstin".to_string();
     }
     // CIN is 21 chars and unambiguous by length.
     if len == 21 && is_cin_pattern(&upper) {
         return "cin".to_string();
     }
     match len {
-        15 => return "gstin".to_string(),
+        15 if is_gstin_structure(&upper) => return "gstin".to_string(),
         12 if all_digits => return "aadhaar".to_string(),
         11 if is_ifsc_pattern(&upper) => return "ifsc".to_string(),
         10 if is_pan_pattern(&upper) => return "pan".to_string(),

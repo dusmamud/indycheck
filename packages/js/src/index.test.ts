@@ -3,11 +3,11 @@
  *
  * Layers:
  *  1. Inline cases (100+) — always run, using the Rust codes / reasons.
- *  2. shared/test-vectors.json (254 cases) — read directly and asserted
+ *  2. shared/test-vectors.json (262 cases) — read directly and asserted
  *     in full, including the `options` entries (run through
  *     `validate*WithOptions`) and the `generator` entries (freshly
  *     generated values must re-validate as VALID). As of the last check
- *     the Rust code and the vectors agree on all 254 entries (verified
+ *     the Rust code and the vectors agree on all 262 entries (verified
  *     by emulating the Rust source over the file), so there are no
  *     exceptions: if the Rust side drifts again, this test fails loudly
  *     instead of silently picking a side.
@@ -599,6 +599,36 @@ describe("detect (Rust lib.rs semantics)", () => {
     expect(detectType("DL01AB12CD")).toBe("unknown");
   });
 
+  it("regression: bare '+' mobile is rejected, spaced PAN/GSTIN detect", () => {
+    // A bare '+' is only valid as part of '+91'.
+    for (const v of ["+9876543210", "+9198765432", "+09876543210", "+6123456789"]) {
+      expect(validateMobile(v).valid).toBe(false);
+      expect(validateMobile(v).code).toBe("INVALID_FORMAT");
+    }
+    expect(validateMobile("+919876543210").valid).toBe(true);
+    expect(detectType("ABCDE 1234F")).toBe("pan");
+    expect(detectType("ABCDE-1234F")).toBe("pan");
+    expect(detectType("18AAAPL1234C1Z D")).toBe("gstin");
+    expect(detectType("ABCDEFGHIJKLMNO")).toBe("unknown");
+    expect(detectType("123456789012345")).toBe("unknown");
+    expect(detectType("18AAAPL1234C1ZE")).toBe("gstin");
+    expect(detectType("AB234567890124CD")).toBe("unknown");
+  });
+
+  it("regression: explicit undefined/null options do not switch to lenient", () => {
+    expect(validateMobileWithOptions("5123456789", { strict: undefined }).code).toBe(
+      "INVALID_FIRST_DIGIT",
+    );
+    expect(validateMobileWithOptions("5123456789", { strict: null as never }).code).toBe(
+      "INVALID_FIRST_DIGIT",
+    );
+  });
+
+  it("regression: UPI Kelvin-sign handle is rejected", () => {
+    expect(validateUpi("ab@\u212aOTAK").valid).toBe(false);
+    expect(validateUpi("ab@kotak").valid).toBe(true);
+  });
+
   it("unknown inputs get UNKNOWN_TYPE with the Rust reasons", () => {
     const r = detect("not-an-id");
     expect(r.valid).toBe(false);
@@ -683,7 +713,7 @@ describe("zod schemas", () => {
 
 // ---------------------------------------------------------------------------
 // shared/test-vectors.json — asserted in full, no exceptions.
-// As of the last check the Rust code and the vectors agree on all 254
+// As of the last check the Rust code and the vectors agree on all 262
 // entries (verified by emulating crates/indycheck/src over the file).
 // `options` entries run through validate*WithOptions, `generator`
 // entries generate a fresh value and validate it (like
@@ -702,14 +732,14 @@ interface VectorEntry {
 
 describe("shared/test-vectors.json", () => {
   const vectorsPath = join(__dirname, "..", "..", "..", "shared", "test-vectors.json");
-  it("all 254 vectors match the Rust code", () => {
+  it("all 262 vectors match the Rust code", () => {
     if (!existsSync(vectorsPath)) {
       // Vectors not written yet — inline cases above are the contract.
       expect(true).toBe(true);
       return;
     }
     const vectors = JSON.parse(readFileSync(vectorsPath, "utf8")) as VectorEntry[];
-    expect(vectors.length).toBe(254);
+    expect(vectors.length).toBe(262);
     const failures: string[] = [];
     for (const v of vectors) {
       let result: ValidationResult;

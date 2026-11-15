@@ -635,3 +635,56 @@ fn validate_many_new_types() {
     assert_eq!(results.len(), 5);
     assert!(results.iter().all(|r| r.valid));
 }
+
+// ---- Regression: bare '+' mobile, spaced detect, GSTIN detect ----
+#[test]
+fn mobile_bare_plus_is_rejected() {
+    // A bare '+' is only valid as part of '+91'.
+    for input in ["+9876543210", "+9198765432", "+09876543210", "+6123456789"] {
+        let r = validate_mobile(input);
+        assert!(!r.valid, "{input} should be invalid");
+        assert_eq!(r.code, "INVALID_FORMAT", "{input}");
+        assert!(format_mobile(input).is_none(), "{input}");
+    }
+    // '+91' itself still works.
+    assert!(validate_mobile("+919876543210").valid);
+    assert!(validate_mobile("+91 98765 43210").valid);
+    assert_eq!(format_mobile("+919876543210").as_deref(), Some("9876543210"));
+}
+
+#[test]
+fn detect_spaced_pan_and_gstin() {
+    assert_eq!(detect("ABCDE 1234F"), "pan");
+    assert_eq!(detect("ABCDE-1234F"), "pan");
+    assert_eq!(detect("18AAAPL1234C1Z D"), "gstin");
+    let results = validate_many(&["ABCDE 1234F".to_string()]);
+    assert_eq!(results.len(), 1);
+    assert!(results[0].valid, "spaced PAN must validate via validate_many");
+}
+
+#[test]
+fn detect_fifteen_char_non_gstin_is_unknown() {
+    assert_eq!(detect("ABCDEFGHIJKLMNO"), "unknown");
+    assert_eq!(detect("123456789012345"), "unknown");
+    // A structurally valid GSTIN still detects, even if its checksum fails.
+    assert_eq!(detect("18AAAPL1234C1ZE"), "gstin");
+}
+
+#[test]
+fn detect_spaced_aadhaar_requires_only_spaces_and_hyphens() {
+    assert_eq!(detect("2345 6789 0124"), "aadhaar");
+    assert_eq!(detect("AB234567890124CD"), "unknown");
+}
+
+#[test]
+fn spaces_hyphens_ok_rejects_all_whitespace() {
+    let no_spaces = Options::no_spaces_hyphens();
+    assert_eq!(
+        validate_pan_with_options("ABCDE\n1234F", no_spaces).code,
+        "INVALID_FORMAT"
+    );
+    assert_eq!(
+        validate_aadhaar_with_options("2345\n6789 0124", no_spaces).code,
+        "INVALID_FORMAT"
+    );
+}

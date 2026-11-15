@@ -74,7 +74,7 @@ Every validator returns ``{"valid", "code", "reason_en", "reason_hi",
 "parsed"}`` and never raises on bad input.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.5"
 
 import random
 
@@ -314,6 +314,11 @@ def _ascii_upper(text):
     return "".join(chr(ord(c) - 32) if "a" <= c <= "z" else c for c in text)
 
 
+def _ascii_lower(text):
+    """ASCII-only lower-casing (Rust's to_ascii_lowercase)."""
+    return "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c for c in text)
+
+
 def _is_ascii_alpha(c):
     return ("A" <= c <= "Z") or ("a" <= c <= "z")
 
@@ -384,7 +389,7 @@ def _spaces_hyphens_ok(value, options):
     leading/trailing whitespace counts too."""
     return (
         options["allow_spaces_hyphens"]
-        or (" " not in value and "-" not in value and "\t" not in value)
+        or not any(c.isspace() or c == "-" for c in value)
     )
 
 
@@ -505,12 +510,20 @@ def _normalize_mobile_with_options(value, options):
         if len(cleaned) == 10 and cleaned.isascii() and cleaned.isdigit():
             return cleaned
         return None
-    without_plus = cleaned[1:] if cleaned.startswith("+") else cleaned
-    digits = without_plus
-    if without_plus.startswith("91") and len(without_plus[2:]) == 10:
-        digits = without_plus[2:]
-    elif without_plus.startswith("0") and len(without_plus[1:]) == 10:
-        digits = without_plus[1:]
+    # A bare '+' is only valid as part of '+91': '+9876543210',
+    # '+9198765432' and '+09876543210' must all be rejected, not
+    # silently treated as a 10-digit number.
+    if cleaned.startswith("+"):
+        rest = cleaned[1:]
+        if not rest.startswith("91") or len(rest[2:]) != 10:
+            return None
+        digits = rest[2:]
+    elif cleaned.startswith("91") and len(cleaned[2:]) == 10:
+        digits = cleaned[2:]
+    elif cleaned.startswith("0") and len(cleaned[1:]) == 10:
+        digits = cleaned[1:]
+    else:
+        digits = cleaned
     if len(digits) == 10 and digits.isascii() and digits.isdigit():
         return digits
     return None
@@ -671,7 +684,7 @@ def mask_pan(value):
 def mask_aadhaar_string(value):
     """Rust ``mask_aadhaar``: masks any 12-digit string, else ``""``."""
     cleaned = _strip_spaces_hyphens(value.strip())
-    if len(cleaned) != 12 or not cleaned.isdigit():
+    if len(cleaned) != 12 or not cleaned.isascii() or not cleaned.isdigit():
         return ""
     return f"XXXX XXXX {cleaned[8:]}"
 
@@ -929,14 +942,14 @@ def validate_upi(value):
                 "UPI handle is missing after @",
                 "UPI handle @ ke baad khaali hai",
             )
-        if handle.lower() not in UPI_HANDLES:
+        if _ascii_lower(handle) not in UPI_HANDLES:
             return _fail(
                 "INVALID_HANDLE",
                 "UPI handle is not a known handle",
                 "UPI handle jaana-pehchana handle nahi hai",
             )
         return _ok("UPI ID format is valid", "UPI ID ka format sahi hai",
-                   {"handle": handle.lower()})
+                   {"handle": _ascii_lower(handle)})
     except Exception:
         return _invalid_type()
 
@@ -1450,6 +1463,23 @@ def _is_llpin_pattern(text):
     )
 
 
+def _is_gstin_structure(text):
+    """Structural GSTIN shape only (no state-code or checksum check, so
+    detect() still finds GSTINs that fail validation): 2 digits + PAN
+    pattern + 1 alphanumeric entity char + 'Z' + 1 alphanumeric check
+    char, exactly 15 characters."""
+    chars = list(text)
+    if len(chars) != 15:
+        return False
+    return (
+        all(_is_ascii_digit(c) for c in chars[:2])
+        and _is_pan_pattern("".join(chars[2:12]))
+        and _is_ascii_alnum(chars[12])
+        and chars[13] == "Z"
+        and _is_ascii_alnum(chars[14])
+    )
+
+
 def _is_vehicle_pattern(text):
     # Cheap structural check used only by detect(); the real validation
     # (district/series/number parsing) lives in validate_vehicle.
@@ -1472,16 +1502,29 @@ def detect_type(value):
     # the length-15 GSTIN branch (e.g. "+91 98765 43210" is 15 chars long).
     if length == 12 and all_digits and _verhoeff_valid(trimmed):
         return "aadhaar"
-    # Spaced / hyphenated Aadhaar, e.g. "2345 6789 0124".
+    # Spaced / hyphenated Aadhaar, e.g. "2345 6789 0124". Only spaces and
+    # hyphens may surround the digits: "AB234567890124CD" has the same 12
+    # digits but is not an Aadhaar in any spaced form.
     digits_only = "".join(c for c in trimmed if _is_ascii_digit(c))
-    if len(digits_only) == 12 and _verhoeff_valid(digits_only):
+    spaced_aadhaar = all(
+        _is_ascii_digit(c) or c.isspace() or c == "-" for c in trimmed
+    )
+    if spaced_aadhaar and len(digits_only) == 12 and _verhoeff_valid(digits_only):
         return "aadhaar"
     if _normalize_mobile(trimmed) is not None:
         return "mobile"
+    # Spaced / hyphenated PAN and GSTIN: their validators strip spaces and
+    # hyphens by default, so detect() must too — otherwise validate_many()
+    # reports a valid "ABCDE 1234F" as UNKNOWN_TYPE.
+    stripped = _strip_spaces_hyphens(upper)
+    if _is_pan_pattern(stripped):
+        return "pan"
+    if _is_gstin_structure(stripped):
+        return "gstin"
     # CIN is 21 chars and unambiguous by length.
     if length == 21 and _is_cin_pattern(upper):
         return "cin"
-    if length == 15:
+    if length == 15 and _is_gstin_structure(upper):
         return "gstin"
     if length == 12 and all_digits:
         return "aadhaar"

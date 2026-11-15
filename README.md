@@ -64,7 +64,7 @@ assert!(pan.valid); // entity: Unknown (4th char D is not a published entity cod
 
 let gstin = validate_gstin("18ABCDE1234F1ZZ"); // state 18 = Assam
 assert!(gstin.valid);
-assert_eq!(gstin.parsed["state"], "Assam");
+assert_eq!(gstin.parsed.as_ref().unwrap()["state"], "Assam"); // parsed is Option<Value>
 
 let aadhaar = validate_aadhaar("234567890124");
 assert!(aadhaar.valid);
@@ -122,7 +122,7 @@ indycheck/
 ├── crates/indycheck-ffi/    # C API → Go (last, scaffold)
 ├── packages/js/             # TS wrapper + Zod
 ├── packages/python/         # thin Python wrapper + Pydantic
-├── shared/test-vectors.json # 254 cases — the contract every language must pass
+├── shared/test-vectors.json # 262 cases — the contract every language must pass
 ├── shared/spec.md           # API + error-code spec
 └── website/                 # Astro 5 + Starlight docs + landing + playground
 ```

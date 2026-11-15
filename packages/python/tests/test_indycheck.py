@@ -3,11 +3,11 @@
 Mirrors packages/js/src/index.test.ts: inline cases (Rust codes /
 reasons), parsed shapes from shared/spec.md, Rust detect() semantics,
 Options cases, format/mask helpers, generators, and
-shared/test-vectors.json (254 cases), asserted in full — including the
+shared/test-vectors.json (262 cases), asserted in full — including the
 ``options`` entries (run through ``validate_*_with_options``) and the
 ``generator`` entries (freshly generated values must re-validate as
 VALID). As of the last check the Rust code and the vectors agree on all
-254 entries (verified by emulating the Rust source over the file), so
+262 entries (verified by emulating the Rust source over the file), so
 there are no exceptions: if the Rust side drifts again, that test
 fails loudly.
 """
@@ -540,7 +540,7 @@ def test_shared_test_vectors():
     if not vectors_path.exists():
         pytest.skip("shared/test-vectors.json not written yet — inline cases are the contract")
     vectors = json.loads(vectors_path.read_text(encoding="utf-8"))
-    assert len(vectors) == 254
+    assert len(vectors) == 262
     failures = []
     for v in vectors:
         if "generator" in v:
@@ -565,3 +565,46 @@ def test_shared_test_vectors():
         if result["valid"] and (not result["reason_en"] or not result["reason_hi"]):
             failures.append(f"empty reason for {v['input']!r}")
     assert failures == []
+
+
+def test_regression_bare_plus_mobile():
+    """A bare '+' is only valid as part of '+91'."""
+    for value in ["+9876543210", "+9198765432", "+09876543210", "+6123456789"]:
+        result = validate_mobile(value)
+        assert result["valid"] is False, value
+        assert result["code"] == "INVALID_FORMAT", value
+    assert validate_mobile("+919876543210")["valid"] is True
+    assert validate_mobile("+91 98765 43210")["valid"] is True
+
+
+def test_regression_detect_spaced_pan_gstin():
+    assert detect_type("ABCDE 1234F") == "pan"
+    assert detect_type("ABCDE-1234F") == "pan"
+    assert detect_type("18AAAPL1234C1Z D") == "gstin"
+    assert validate_many(["ABCDE 1234F"])["parsed"]["results"][0]["valid"] is True
+
+
+def test_regression_detect_fifteen_char_non_gstin():
+    assert detect_type("ABCDEFGHIJKLMNO") == "unknown"
+    assert detect_type("123456789012345") == "unknown"
+    assert detect_type("18AAAPL1234C1ZE") == "gstin"
+
+
+def test_regression_detect_spaced_aadhaar_only_spaces_hyphens():
+    assert detect_type("2345 6789 0124") == "aadhaar"
+    assert detect_type("AB234567890124CD") == "unknown"
+
+
+def test_regression_spaces_hyphens_ok_all_whitespace():
+    opts = no_spaces_hyphens_options()
+    assert validate_pan_with_options("ABCDE\n1234F", opts)["code"] == "INVALID_FORMAT"
+
+
+def test_regression_upi_kelvin_sign_rejected():
+    assert validate_upi("ab@\u212aOTAK")["valid"] is False
+    assert validate_upi("ab@kotak")["valid"] is True
+
+
+def test_regression_mask_aadhaar_string_ascii_only():
+    assert mask_aadhaar_string("१२३४५६७८९०१२") == ""
+    assert mask_aadhaar_string("234567890124") == "XXXX XXXX 0124"

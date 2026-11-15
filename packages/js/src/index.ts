@@ -323,6 +323,13 @@ function asciiUpper(s: string): string {
   return s.replace(/[a-z]/g, (c) => c.toUpperCase());
 }
 
+/** ASCII-only lower-casing (Rust's to_ascii_lowercase). Unicode
+ *  `toLowerCase()` would turn e.g. U+212A KELVIN SIGN into 'k', which
+ *  Rust does not. */
+function asciiLower(s: string): string {
+  return s.replace(/[A-Z]/g, (c) => c.toLowerCase());
+}
+
 function charsOf(s: string): string[] {
   return [...s];
 }
@@ -363,6 +370,12 @@ export function defaultOptions(): Options {
   return { ...DEFAULT_OPTIONS };
 }
 
+/** Alias for `defaultOptions` (`Options::strict()` in Rust,
+ *  `strict_options` in Python). */
+export function strictOptions(): Options {
+  return { ...DEFAULT_OPTIONS };
+}
+
 /** Lenient validation: format only — first-digit and checksum checks
  *  are skipped. */
 export function lenientOptions(): Options {
@@ -374,18 +387,28 @@ export function noSpacesHyphensOptions(): Options {
   return { ...DEFAULT_OPTIONS, allow_spaces_hyphens: false };
 }
 
-/** Merge a partial options object onto the defaults. */
+/** Merge a partial options object onto the defaults. Explicit
+ *  `undefined`/`null` values are ignored (like Python and Rust, where
+ *  an option is either set or left at its default) — they must not
+ *  silently switch a validator to lenient. */
 function resolveOptions(options?: Partial<Options>): Options {
-  return { ...DEFAULT_OPTIONS, ...(options ?? {}) };
+  const resolved = { ...DEFAULT_OPTIONS };
+  if (options) {
+    for (const key of Object.keys(DEFAULT_OPTIONS) as (keyof Options)[]) {
+      const value = options[key];
+      if (value !== undefined && value !== null) resolved[key] = value;
+    }
+  }
+  return resolved;
 }
 
-/** Rust `spaces_hyphens_ok`: rejects spaces/hyphens/tabs in the raw
- *  input when the option forbids them. Note this checks the raw input,
- *  so leading/trailing whitespace counts too. */
+/** Rust `spaces_hyphens_ok`: rejects any whitespace or hyphen in the
+ *  raw input when the option forbids them. Note this checks the raw
+ *  input, so leading/trailing whitespace counts too. */
 function spacesHyphensOk(input: string, options: Options): boolean {
   return (
     options.allow_spaces_hyphens ||
-    (!input.includes(" ") && !input.includes("-") && !input.includes("\t"))
+    ![...input].some((c) => /\s/.test(c) || c === "-")
   );
 }
 
@@ -509,12 +532,20 @@ function normalizeMobileWithOptions(input: string, options: Options): string | n
     if (cleaned.length === 10 && charsOf(cleaned).every(isAsciiDigit)) return cleaned;
     return null;
   }
-  const withoutPlus = cleaned.startsWith("+") ? cleaned.slice(1) : cleaned;
-  let digits = withoutPlus;
-  if (withoutPlus.startsWith("91") && withoutPlus.slice(2).length === 10) {
-    digits = withoutPlus.slice(2);
-  } else if (withoutPlus.startsWith("0") && withoutPlus.slice(1).length === 10) {
-    digits = withoutPlus.slice(1);
+  // A bare '+' is only valid as part of '+91': '+9876543210',
+  // '+9198765432' and '+09876543210' must all be rejected, not silently
+  // treated as a 10-digit number.
+  let digits: string;
+  if (cleaned.startsWith("+")) {
+    const rest = cleaned.slice(1);
+    if (!rest.startsWith("91") || rest.slice(2).length !== 10) return null;
+    digits = rest.slice(2);
+  } else if (cleaned.startsWith("91") && cleaned.slice(2).length === 10) {
+    digits = cleaned.slice(2);
+  } else if (cleaned.startsWith("0") && cleaned.slice(1).length === 10) {
+    digits = cleaned.slice(1);
+  } else {
+    digits = cleaned;
   }
   if (digits.length === 10 && charsOf(digits).every(isAsciiDigit)) return digits;
   return null;
@@ -980,7 +1011,7 @@ export function validateUpi(input: unknown): ValidationResult<UpiParsed> {
         "UPI handle @ ke baad khaali hai",
       );
     }
-    if (!UPI_HANDLES.includes(handle.toLowerCase())) {
+    if (!UPI_HANDLES.includes(asciiLower(handle))) {
       return fail(
         "INVALID_HANDLE",
         "UPI handle is not a known handle",
@@ -988,7 +1019,7 @@ export function validateUpi(input: unknown): ValidationResult<UpiParsed> {
       );
     }
     return ok("UPI ID format is valid", "UPI ID ka format sahi hai", {
-      handle: handle.toLowerCase(),
+      handle: asciiLower(handle),
     });
   } catch {
     return invalidType<UpiParsed>();
@@ -1489,6 +1520,22 @@ function isIfscPattern(s: string): boolean {
   );
 }
 
+/** Structural GSTIN shape only (no state-code or checksum check, so
+ *  detect() still finds GSTINs that fail validation): 2 digits + PAN
+ *  pattern + 1 alphanumeric entity char + 'Z' + 1 alphanumeric check
+ *  char, exactly 15 characters. */
+function isGstinStructure(s: string): boolean {
+  const chars = charsOf(s);
+  if (chars.length !== 15) return false;
+  return (
+    chars.slice(0, 2).every(isAsciiDigit) &&
+    isPanPattern(chars.slice(2, 12).join("")) &&
+    isAsciiAlnum(chars[12]) &&
+    chars[13] === "Z" &&
+    isAsciiAlnum(chars[14])
+  );
+}
+
 function isTanPattern(s: string): boolean {
   const chars = charsOf(s);
   return (
@@ -1549,15 +1596,28 @@ export function detectType(input: string): string {
   // like a 91-prefixed mobile; otherwise a normalisable mobile wins over
   // the length-15 GSTIN branch (e.g. "+91 98765 43210" is 15 chars long).
   if (len === 12 && allDigits && verhoeffValid(trimmed)) return "aadhaar";
-  // Spaced / hyphenated Aadhaar, e.g. "2345 6789 0124".
+  // Spaced / hyphenated Aadhaar, e.g. "2345 6789 0124". Only spaces and
+  // hyphens may surround the digits: "AB234567890124CD" has the same 12
+  // digits but is not an Aadhaar in any spaced form.
   const digitsOnly = charsOf(trimmed).filter(isAsciiDigit).join("");
-  if (charsOf(digitsOnly).length === 12 && verhoeffValid(digitsOnly)) return "aadhaar";
+  const spacedAadhaar = [...trimmed].every(
+    (c) => isAsciiDigit(c) || /\s/.test(c) || c === "-",
+  );
+  if (spacedAadhaar && charsOf(digitsOnly).length === 12 && verhoeffValid(digitsOnly))
+    return "aadhaar";
   if (normalizeMobile(trimmed) !== null) return "mobile";
+  // Spaced / hyphenated PAN and GSTIN: their validators strip spaces and
+  // hyphens by default, so detect() must too — otherwise validateMany()
+  // reports a valid "ABCDE 1234F" as UNKNOWN_TYPE.
+  const stripped = [...upper].filter((c) => !/\s/.test(c) && c !== "-").join("");
+  if (isPanPattern(stripped)) return "pan";
+  if (isGstinStructure(stripped)) return "gstin";
   // CIN is 21 chars and unambiguous by length.
   if (len === 21 && isCinPattern(upper)) return "cin";
   switch (len) {
     case 15:
-      return "gstin";
+      if (isGstinStructure(upper)) return "gstin";
+      break;
     case 12:
       if (allDigits) return "aadhaar";
       break;

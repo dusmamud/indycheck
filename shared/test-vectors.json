@@ -1815,5 +1815,61 @@
     "code": "VALID",
     "detect": false,
     "generator": "pan"
+  },
+  {
+    "input": "+9876543210",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "+9198765432",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "+09876543210",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "+6123456789",
+    "type": "mobile",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
+  },
+  {
+    "input": "ABCDE 1234F",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABCDE-1234F",
+    "type": "pan",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "18AAAPL1234C1Z D",
+    "type": "gstin",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "ABCDEFGHIJKLMNO",
+    "type": "gstin",
+    "valid": false,
+    "code": "INVALID_FORMAT",
+    "detect": false
   }
 ]

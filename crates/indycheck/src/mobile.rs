@@ -32,14 +32,21 @@ pub fn normalize_mobile_with_options(input: &str, options: Options) -> Option<St
         }
         return None;
     }
-    let without_plus = cleaned.strip_prefix('+').unwrap_or(&cleaned);
-    let digits: &str = if let Some(rest) = without_plus.strip_prefix("91") {
+    // A bare '+' is only valid as part of '+91': '+9876543210',
+    // '+9198765432' (too few digits after 91) and '+09876543210' must all
+    // be rejected, not silently treated as a 10-digit number.
+    let digits: &str = if let Some(rest) = cleaned.strip_prefix('+') {
+        match rest.strip_prefix("91") {
+            Some(after_91) if after_91.len() == 10 => after_91,
+            _ => return None,
+        }
+    } else if let Some(rest) = cleaned.strip_prefix("91") {
         // Only treat a leading 91 as a country code when it makes 10 digits.
-        if rest.len() == 10 { rest } else { without_plus }
-    } else if let Some(rest) = without_plus.strip_prefix('0') {
-        if rest.len() == 10 { rest } else { without_plus }
+        if rest.len() == 10 { rest } else { &cleaned }
+    } else if let Some(rest) = cleaned.strip_prefix('0') {
+        if rest.len() == 10 { rest } else { &cleaned }
     } else {
-        without_plus
+        &cleaned
     };
     if digits.len() == 10 && digits.bytes().all(|b| b.is_ascii_digit()) {
         Some(digits.to_string())
