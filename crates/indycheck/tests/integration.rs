@@ -649,7 +649,10 @@ fn mobile_bare_plus_is_rejected() {
     // '+91' itself still works.
     assert!(validate_mobile("+919876543210").valid);
     assert!(validate_mobile("+91 98765 43210").valid);
-    assert_eq!(format_mobile("+919876543210").as_deref(), Some("9876543210"));
+    assert_eq!(
+        format_mobile("+919876543210").as_deref(),
+        Some("9876543210")
+    );
 }
 
 #[test]
@@ -659,7 +662,10 @@ fn detect_spaced_pan_and_gstin() {
     assert_eq!(detect("18AAAPL1234C1Z D"), "gstin");
     let results = validate_many(&["ABCDE 1234F".to_string()]);
     assert_eq!(results.len(), 1);
-    assert!(results[0].valid, "spaced PAN must validate via validate_many");
+    assert!(
+        results[0].valid,
+        "spaced PAN must validate via validate_many"
+    );
 }
 
 #[test]

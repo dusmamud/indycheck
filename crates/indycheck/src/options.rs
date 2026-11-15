@@ -66,8 +66,7 @@ pub fn spaces_hyphens_ok(input: &str, options: Options) -> bool {
     // Any whitespace (not just space/tab) or a hyphen counts: strip_spaces_hyphens
     // strips all whitespace, so e.g. '\n' must be INVALID_FORMAT here, not
     // silently slip through and surface as INVALID_LENGTH later.
-    options.allow_spaces_hyphens
-        || !input.chars().any(|c| c.is_whitespace() || c == '-')
+    options.allow_spaces_hyphens || !input.chars().any(|c| c.is_whitespace() || c == '-')
 }
 
 /// Applies the `uppercase` option to a trimmed input.

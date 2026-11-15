@@ -155,10 +155,7 @@ pub fn detect(input: &str) -> String {
     let spaced_aadhaar = trimmed
         .chars()
         .all(|c| c.is_ascii_digit() || c.is_whitespace() || c == '-');
-    if spaced_aadhaar
-        && digits_only.chars().count() == 12
-        && verhoeff::is_valid(&digits_only)
-    {
+    if spaced_aadhaar && digits_only.chars().count() == 12 && verhoeff::is_valid(&digits_only) {
         return "aadhaar".to_string();
     }
     if mobile::normalize_mobile(trimmed).is_some() {
