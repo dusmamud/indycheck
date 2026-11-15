@@ -9,7 +9,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 indycheck validates 12 Indian IDs — PAN, Aadhaar, GSTIN, IFSC, UPI ID, mobile number, PIN code, TAN, CIN, LLPIN, Voter ID (EPIC) and vehicle numbers — **offline**. No API keys, no network calls, no per-check fees. One Rust core, with bindings for JavaScript/TypeScript, Python and Rust.
 
-> These docs are in English for v0.2.4. The error messages in the package itself are bilingual: every result carries both `reason_en` and `reason_hi`.
+> These docs are in English for v0.2.5. The error messages in the package itself are bilingual: every result carries both `reason_en` and `reason_hi`.
 
 ## Install
 
@@ -33,7 +33,7 @@ Requires Node 18+, Python 3.9+, or Rust 1.85+. There are **zero runtime dependen
 import { validatePan } from 'indycheck';
 
 const r = validatePan('AAAPL1234C');
-console.log(r.ok);        // true
+console.log(r.valid);     // true
 console.log(r.code);      // 'VALID'
 console.log(r.parsed);    // { entity: 'Individual', entity_code: 'P' }
 ```
@@ -43,9 +43,9 @@ console.log(r.parsed);    // { entity: 'Individual', entity_code: 'P' }
 from indycheck import validate_pan
 
 r = validate_pan("AAAPL1234C")
-print(r.ok)          # True
-print(r.code)        # 'VALID'
-print(r.parsed)      # {'entity': 'Individual', 'entity_code': 'P'}
+print(r["valid"])    # True
+print(r["code"])     # 'VALID'
+print(r["parsed"])   # {'entity': 'Individual', 'entity_code': 'P'}
 ```
 
 ```rust
@@ -53,7 +53,7 @@ print(r.parsed)      # {'entity': 'Individual', 'entity_code': 'P'}
 use indycheck::validate_pan;
 
 let r = validate_pan("AAAPL1234C");
-assert!(r.ok);
+assert!(r.valid);
 println!("{}", r.code); // VALID
 ```
 
@@ -63,13 +63,10 @@ Every validator returns the same shape:
 
 ```json
 {
-  "ok": true,
-  "type": "pan",
-  "value": "AAAPL1234C",
-  "normalized": "AAAPL1234C",
+  "valid": true,
   "code": "VALID",
-  "reason_en": "Valid format.",
-  "reason_hi": "मान्य प्रारूप।",
+  "reason_en": "PAN format is valid. PAN has no public checksum, so this only checks the format",
+  "reason_hi": "PAN ka format sahi hai. PAN ka koi public checksum nahi hai, isliye sirf format check hua hai",
   "parsed": {
     "entity": "Individual",
     "entity_code": "P"
@@ -77,16 +74,15 @@ Every validator returns the same shape:
 }
 ```
 
-And a failure:
+And a failure (`parsed` is `null` in JS/Python, and omitted from the JSON in Rust):
 
 ```json
 {
-  "ok": false,
-  "type": "pan",
-  "value": "AAAPL12345",
+  "valid": false,
   "code": "INVALID_FORMAT",
-  "reason_en": "PAN format must be 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F). PAN has no public checksum, so only the format is checked.",
-  "reason_hi": "PAN ka format 5 akshar, 4 digit, 1 akshar hona chahiye (jaise ABCDE1234F). PAN ka koi public checksum nahi hai, isliye sirf format check hota hai"
+  "reason_en": "PAN format must be 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F). PAN has no public checksum, so only the format is checked",
+  "reason_hi": "PAN ka format 5 akshar, 4 digit, 1 akshar hona chahiye (jaise ABCDE1234F). PAN ka koi public checksum nahi hai, isliye sirf format check hota hai",
+  "parsed": null
 }
 ```
 
@@ -111,7 +107,7 @@ Use `code` for branching in your code, and `reason_en` / `reason_hi` for showing
 
 TAN, CIN, LLPIN, Voter ID and vehicle numbers have **no public checksum** — for those, indycheck checks the format only. (IFSC, UPI, mobile and PIN code are format-only too.)
 
-Each type has its own named validator — `validatePan(value)`, `validateAadhaar(value)`, and so on — plus `detect(value)` to guess the type, `generatePan()` / `generateMobile()` / `generateVehicle()` for test data, and `mask()` / `format()` for display. Try everything live in the [playground](/playground/).
+Each type has its own named validator — `validatePan(value)`, `validateAadhaar(value)`, and so on — plus `detectType(value)` to guess the type, `generatePan()` / `generateMobile()` / `generateVehicle()` for test data, and per-type `maskMobile()` / `maskPan()` / `formatPan()` helpers for display. Try everything live in the [playground](/playground/).
 
 ## Batch validation
 

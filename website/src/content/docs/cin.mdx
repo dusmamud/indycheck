@@ -33,7 +33,7 @@ Validates a Corporate Identification Number (CIN): the 21-character code the Reg
 import { validateCin } from 'indycheck';
 
 validateCin('U12345DL2025PTC123456');
-// { ok: true, code: 'VALID',
+// { valid: true, code: 'VALID',
 //   parsed: { cin: 'U12345DL2025PTC123456', listing: 'Unlisted',
 //             industry_code: '12345', state_code: 'DL', year: '2025',
 //             company_type: 'PTC',

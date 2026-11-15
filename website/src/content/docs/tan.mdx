@@ -25,21 +25,21 @@ Validates a Tax Deduction and Collection Account Number (TAN): 10 characters —
 import { validateTan } from 'indycheck';
 
 validateTan('MUMB12345C');
-// { ok: true, code: 'VALID', normalized: 'MUMB12345C',
+// { valid: true, code: 'VALID',
 //   parsed: { tan: 'MUMB12345C' } }
 ```
 
 ```python
 from indycheck import validate_tan
 
-validate_tan("MUMB12345C").ok  # True
+validate_tan("MUMB12345C")["valid"]  # True
 ```
 
 ```rust
 use indycheck::validate_tan;
 
 let r = validate_tan("MUMB12345C");
-assert!(r.ok);
+assert!(r.valid);
 ```
 
 ## Examples

@@ -32,7 +32,7 @@ That produces `target/release/libindycheck_ffi.so` (Linux), `libindycheck_ffi.dy
 #include "indycheck.h"
 
 int main(void) {
-    char *pan = indycheck_validate_pan("ABCDE1234F");
+    char *pan = indycheck_validate_pan("AAAPL1234C");
     printf("%s\n", pan); /* {"valid":true,"code":"VALID","reason_en":"...","parsed":{"entity":"P",...}} */
     indycheck_free_string(pan);
 
@@ -45,7 +45,7 @@ int main(void) {
     indycheck_free_string(type);
 
     char *version = indycheck_version();
-    printf("%s\n", version); /* e.g. "0.2.2" */
+    printf("%s\n", version); /* e.g. "0.2.5" */
     indycheck_free_string(version);
     return 0;
 }
@@ -84,7 +84,7 @@ Every function returning `char *` returns a heap-allocated, NUL-terminated UTF-8
 | `indycheck_validate_voter_id` / `indycheck_validate_epic` | Voter ID / EPIC |
 | `indycheck_detect` | Returns `"pan"`, `"aadhaar"`, …, `"vehicle"` or `"unknown"` |
 | `indycheck_validate_many` | Batch: JSON array in, JSON array of results out |
-| `indycheck_version` | Core version string, e.g. `"0.2.0"` |
+| `indycheck_version` | Core version string, e.g. `"0.2.5"` |
 | `indycheck_free_string` | Release a string returned by any `indycheck_*` function |
 
 All 24 functions are verified in `crates/indycheck-ffi/indycheck.h`.

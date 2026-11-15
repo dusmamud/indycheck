@@ -5,6 +5,16 @@ description: What changed in each indycheck release — new validators, fixes, a
 
 All notable changes to indycheck, newest first. The full changelog lives in [`CHANGELOG.md`](https://github.com/dusmamud/indycheck/blob/main/CHANGELOG.md) in the repo. All crates, npm and PyPI packages share one version in lockstep.
 
+## [0.2.5] - 2026-11-15
+
+### Fixed
+
+- **Mobile: a bare `+` is no longer accepted.** `+9876543210`, `+9198765432` and `+09876543210` used to validate as 10-digit numbers; a `+` is now only valid as part of `+91` followed by exactly 10 digits.
+- **`detect()` / `validate_many()` fixes.** Spaced or hyphenated PAN (`ABCDE 1234F`) and GSTIN (`18AAAPL1234C1Z D`) no longer report `UNKNOWN_TYPE`; any 15-character string no longer detects as `gstin` (the length-15 branch now requires the GSTIN structure); and the spaced-Aadhaar branch no longer matches letters around the digits (`AB234567890124CD` is `unknown`). A newline inside an input now reports `INVALID_FORMAT` instead of `INVALID_LENGTH` when spaces/hyphens are disallowed.
+- **JS/Python mirrors.** Same mobile/detect fixes, plus: `resolveOptions` ignores explicit `undefined`/`null`, UPI handles are lower-cased ASCII-only (the Kelvin sign no longer matches `kotak`), `mask_aadhaar_string` accepts ASCII digits only, and the Python `__version__` is `0.2.5`.
+- **Rust formatting.** The 0.2.5 fixes were not `rustfmt`-clean, which failed the main CI workflow; fixed with `cargo fmt` (no logic change).
+- **Docs truthfulness.** The website docs no longer describe a generic `validate()` / `generate()` / `mask()` / `format()` API or a `{ ok, type, value, normalized }` result shape — neither ever existed. Only the real per-type validators, the six real generators, and the real `{ valid, code, reason_en, reason_hi, parsed }` result are documented, with the real `Options` fields (`strict`, `allow_spaces_hyphens`, `normalise_plus91`, `uppercase`, all default `true`). The LLPIN page no longer claims a hyphen is accepted (`AAA-1234` is 8 characters: `INVALID_LENGTH`).
+
 ## [0.2.4] - 2026-11-13
 
 The 0.2.4 release publishes the new language packages for the first time and bundles the Flutter native library. Live on crates.io, npm, PyPI, Maven Central and Packagist, with C archives and the Swift XCFramework on the GitHub release. The Flutter package's pub.dev upload for 0.2.4 is in progress.
@@ -60,10 +70,6 @@ The 0.2.3 release adds new language packages and the native bindings behind them
 
 - **Python bindings: PyO3 upgraded 0.22 → 0.30.** `indycheck-py` now builds on Rust edition 2024 like every other crate.
 - **WASM workflow installs `wasm-opt`** (Binaryen) so wasm-pack optimizes the playground WASM instead of silently skipping that step.
-
-### Fixed
-
-- **Docs truthfulness.** The Test-data generators page no longer claims a `generate(type)` dispatcher or `generateIfsc` / `generateUpi` / `generatePincode` / `generateTan` / `generateCin` / `generateLlpin` / `generateEpic` helpers — those never existed in the package. Only the real generators are documented.
 
 ## [0.2.1] - 2026-11-12
 

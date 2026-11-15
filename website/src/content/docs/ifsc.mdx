@@ -22,7 +22,7 @@ Validates an Indian Financial System Code (IFSC): 11 characters — a 4-letter b
 import { validateIfsc } from 'indycheck';
 
 validateIfsc('SBIN0001234');
-// { ok: true, code: 'VALID', normalized: 'SBIN0001234',
+// { valid: true, code: 'VALID',
 //   parsed: { bank_code: 'SBIN', branch_code: '001234' } }
 ```
 
@@ -37,7 +37,7 @@ print(r.parsed["bank_code"])  # SBIN
 use indycheck::validate_ifsc;
 
 let r = validate_ifsc("SBIN0001234");
-assert!(r.ok);
+assert!(r.valid);
 ```
 
 ## Examples

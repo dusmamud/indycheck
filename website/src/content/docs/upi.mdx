@@ -13,7 +13,7 @@ Validates a UPI ID (also called a VPA — Virtual Payment Address): `name@handle
 | --- | --- |
 | Format | `name@handle` — exactly one `@` |
 | Name | 2–50 characters: `A–Z a–z 0–9 . _ -` |
-| Handle | Must be a known handle from the maintained list (`paytm`, `okaxis`, `okhdfcbank`, `okicici`, `oksbi`, `ybl`, … — 37 handles), matched case-insensitively |
+| Handle | Must be a known handle from the maintained list (`paytm`, `okaxis`, `okhdfcbank`, `okicici`, `oksbi`, `ybl`, … — 36 handles), matched case-insensitively |
 | Checksum | None — UPI IDs have no checksum |
 
 ## Usage
@@ -22,24 +22,24 @@ Validates a UPI ID (also called a VPA — Virtual Payment Address): `name@handle
 import { validateUpi } from 'indycheck';
 
 validateUpi('9876543210@paytm');
-// { ok: true, code: 'VALID',
+// { valid: true, code: 'VALID',
 //   parsed: { handle: 'paytm' } }
 
-validateUpi('rahul@okicici');  // ok: true
-validateUpi('rahul@');         // ok: false, code: 'INVALID_HANDLE'
+validateUpi('rahul@okicici');  // valid: true
+validateUpi('rahul@');         // valid: false, code: 'INVALID_HANDLE'
 ```
 
 ```python
 from indycheck import validate_upi
 
-validate_upi("9876543210@paytm").ok  # True
+validate_upi("9876543210@paytm")["valid"]  # True
 ```
 
 ```rust
 use indycheck::validate_upi;
 
 let r = validate_upi("9876543210@paytm");
-assert!(r.ok);
+assert!(r.valid);
 ```
 
 ## Examples

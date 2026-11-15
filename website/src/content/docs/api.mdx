@@ -5,7 +5,7 @@ description: Full API reference for indycheck — every validator, the result sh
 
 import { Aside } from '@astrojs/starlight/components';
 
-All three bindings — JavaScript/TypeScript, Python and Rust — expose the same functions and the same result shape. The rules live in one Rust core, so results never differ between languages.
+All three bindings — JavaScript/TypeScript, Python and Rust — expose the same validators and the same result shape. The rules live in one Rust core, so results never differ between languages. (The other language packages — Go, PHP, Dart, Kotlin, Swift and C — wrap the same core; see their own pages.)
 
 ## Install
 
@@ -17,57 +17,64 @@ cargo add indycheck
 
 ## Functions
 
+There is no generic `validate(type, value)` / `generate(type)` / `mask(type, value)` / `format(type, value)` dispatcher. Each ID type has its own named validator, and masking, formatting and test-data generation are per-type functions too (see [Masking & formatting](/masking-formatting/) and [Test-data generators](/generators/)).
+
+| Validator | JS/TS | Python | Rust |
+| --- | --- | --- | --- |
+| Mobile | `validateMobile(value)` | `validate_mobile(value)` | `validate_mobile(value)` |
+| PAN | `validatePan(value)` | `validate_pan(value)` | `validate_pan(value)` |
+| Aadhaar | `validateAadhaar(value)` | `validate_aadhaar(value)` | `validate_aadhaar(value)` |
+| GSTIN | `validateGstin(value)` | `validate_gstin(value)` | `validate_gstin(value)` |
+| IFSC | `validateIfsc(value)` | `validate_ifsc(value)` | `validate_ifsc(value)` |
+| UPI ID | `validateUpi(value)` | `validate_upi(value)` | `validate_upi(value)` |
+| PIN code | `validatePincode(value)` | `validate_pincode(value)` | `validate_pincode(value)` |
+| TAN | `validateTan(value)` | `validate_tan(value)` | `validate_tan(value)` |
+| CIN | `validateCin(value)` | `validate_cin(value)` | `validate_cin(value)` |
+| LLPIN | `validateLlpin(value)` | `validate_llpin(value)` | `validate_llpin(value)` |
+| Voter ID | `validateEpic(value)` | `validate_epic(value)` | `validate_epic(value)` |
+| Vehicle | `validateVehicle(value)` | `validate_vehicle(value)` | `validate_vehicle(value)` |
+
+Aliases: `validateVoterId` / `validate_voter_id` and `validateVehicleRegistration` / `validate_vehicle_registration` are the same validators as `validateEpic` and `validateVehicle`.
+
+### With options
+
+Only mobile, PAN, Aadhaar and GSTIN take options — as `validate*WithOptions(value, options)` in JS, `validate_*_with_options(value, options)` in Python, and `validate_*_with_options(value, options)` in Rust. The other validators take no options argument. See [Options](/options/) (`strict`, `allow_spaces_hyphens`, `normalise_plus91`, `uppercase`).
+
+### Detect and batch
+
 | Function | JS/TS | Python | Rust |
 | --- | --- | --- | --- |
-| Generic | `validate(type, value, options?)` | `validate(type, value, options=None)` | `validate(type, value, options)` |
-| Detect | `detect(value, options?)` | `detect(value, options=None)` | `detect(value, options)` |
-| Generate | `generate(type)` | `generate(type)` | `generate(type)` |
-| Mask | `mask(type, value)` | `mask(type, value)` | `mask(type, value)` |
-| Format | `format(type, value)` | `format_value(type, value)` | `format_value(type, value)` |
-| Mobile | `validateMobile(value, options?)` | `validate_mobile(value, options=None)` | `validate_mobile(value, options)` |
-| PAN | `validatePan(value, options?)` | `validate_pan(value, options=None)` | `validate_pan(value, options)` |
-| Aadhaar | `validateAadhaar(value, options?)` | `validate_aadhaar(value, options=None)` | `validate_aadhaar(value, options)` |
-| GSTIN | `validateGstin(value, options?)` | `validate_gstin(value, options=None)` | `validate_gstin(value, options)` |
-| IFSC | `validateIfsc(value, options?)` | `validate_ifsc(value, options=None)` | `validate_ifsc(value, options)` |
-| UPI ID | `validateUpi(value, options?)` | `validate_upi(value, options=None)` | `validate_upi(value, options)` |
-| PIN code | `validatePincode(value, options?)` | `validate_pincode(value, options=None)` | `validate_pincode(value, options)` |
-| TAN | `validateTan(value, options?)` | `validate_tan(value, options=None)` | `validate_tan(value, options)` |
-| CIN | `validateCin(value, options?)` | `validate_cin(value, options=None)` | `validate_cin(value, options)` |
-| LLPIN | `validateLlpin(value, options?)` | `validate_llpin(value, options=None)` | `validate_llpin(value, options)` |
-| Voter ID | `validateEpic(value, options?)` | `validate_epic(value, options=None)` | `validate_epic(value, options)` |
-| Vehicle | `validateVehicle(value, options?)` | `validate_vehicle(value, options=None)` | `validate_vehicle(value, options)` |
+| Detect the type | `detectType(value)` → type string; `detect(value)` → full result | `detect_type(value)` → type string; `detect(value)` → full result | `detect(value)` → type string |
+| Batch | `validateMany(inputs)` | `validate_many(inputs)` | `validate_many(inputs)` |
 
-`type` for the generic function is one of: `'pan'`, `'aadhaar'`, `'gstin'`, `'ifsc'`, `'upi'`, `'mobile'`, `'pincode'`, `'tan'`, `'cin'`, `'llpin'`, `'epic'`, `'vehicle'`.
-
-Every validator accepts an optional `options` object — see [Options](/options/) (`strict`, `allowSpaces`, `allowHyphens`, `normalizeCountryCode`, `uppercase`). `detect()` guesses the type from the shape (see [CLI](/cli/) for the order). `generate()` returns random syntactically-valid test data — see [Test-data generators](/generators/). `mask()` / `format()` are covered in [Masking & formatting](/masking-formatting/).
+`detectType` / `detect_type` returns one of `'pan'`, `'aadhaar'`, `'gstin'`, `'ifsc'`, `'upi'`, `'mobile'`, `'pincode'`, `'tan'`, `'cin'`, `'llpin'`, `'voter'`, `'vehicle'` or `'unknown'`. In JS and Python, `detect(value)` runs the matching validator as well and returns its full result in `parsed.result`; in Rust, `detect(value)` returns just the type string. In JS and Python, `validateMany` accepts an array of strings (or `{ type, value }` objects) and returns one result whose `parsed` holds the per-item results; in Rust, `validate_many` returns a `Vec<ValidationResult>`, one per input, in order. An undetectable input gets code `UNKNOWN_TYPE`.
 
 ## Result shape
 
-Every call returns the same object (shown here as JSON; Python returns a dataclass, Rust a struct, with the same fields):
+Every validator returns the same object (shown here as JSON; Python returns a dict, Rust a struct, with the same fields):
 
 ```json
 {
-  "ok": true,
-  "type": "pan",
-  "value": "AAAPL1234C",
-  "normalized": "AAAPL1234C",
+  "valid": true,
   "code": "VALID",
-  "reason_en": "Valid format.",
-  "reason_hi": "मान्य प्रारूप।",
-  "parsed": { "...": "..." }
+  "reason_en": "PAN format is valid. PAN has no public checksum, so this only checks the format",
+  "reason_hi": "PAN ka format sahi hai. PAN ka koi public checksum nahi hai, isliye sirf format check hua hai",
+  "parsed": {
+    "entity": "Individual",
+    "entity_code": "P"
+  }
 }
 ```
 
 | Field | Type | Always present? | Meaning |
 | --- | --- | --- | --- |
-| `ok` | boolean | Yes | `true` only when the value is fully valid |
-| `type` | string | Yes | The validator used (`'pan'`, `'aadhaar'`, …) |
-| `value` | string | Yes | The input exactly as passed in |
-| `normalized` | string | Only on success | Cleaned-up value (uppercase, prefixes/spaces stripped) |
+| `valid` | boolean | Yes | `true` only when the value is fully valid |
 | `code` | string | Yes | Machine-readable result — see error codes below |
 | `reason_en` | string | Yes | Human-readable reason in English |
-| `reason_hi` | string | Yes | The same reason in Hindi |
-| `parsed` | object | Only on success | Structured fields extracted from the value |
+| `reason_hi` | string | Yes | The same reason in Hindi (Roman script) |
+| `parsed` | object or `null` | Yes in JS/Python (`null` on failure); omitted in Rust JSON on failure | Structured fields extracted from the value |
+
+There is no `ok`, `type`, `value` or top-level `normalized` field on a result. The cleaned-up value, where one exists, lives inside `parsed` — for example `parsed.normalized` on a successful mobile result.
 
 ### `parsed` by validator
 
@@ -84,7 +91,7 @@ Every call returns the same object (shown here as JSON; Python returns a datacla
 | CIN | `cin`, `listing`, `industry_code`, `state_code`, `year`, `company_type`, `registration_number` |
 | LLPIN | `llpin` |
 | Voter ID (EPIC) | `epic` |
-| Vehicle | `registration`, `state_code`, `district`, `series`, `number` |
+| Vehicle | `registration`, `series_type` (`"state"` or `"bharat"`), `state_code`, `district`, `series`, `number`; Bharat adds `year`, `suffix` |
 
 The full machine-readable code table — including `UNKNOWN_TYPE` (from `detect()` / `validate_many()` when no type fits) — lives on the [Error codes](/error-codes/) page.
 
@@ -96,15 +103,16 @@ The full machine-readable code table — including `UNKNOWN_TYPE` (from `detect(
 | --- | --- | --- |
 | `VALID` | Fully valid | all |
 | `EMPTY` | Input was empty / only whitespace | all |
+| `INVALID_TYPE` | Input was not a string (JS/Python only) | all |
 | `INVALID_LENGTH` | Wrong length | all except mobile, UPI ID |
 | `INVALID_FORMAT` | Characters or pattern don't match (wrong separators, illegal characters, wrong fixed character) | all |
 | `INVALID_CHECKSUM` | Checksum digit fails (Verhoeff for Aadhaar, Mod-36 Luhn for GSTIN) | Aadhaar, GSTIN |
 | `INVALID_FIRST_DIGIT` | First digit not allowed (0/1 for Aadhaar, 0 for PIN, not 6–9 for mobile) | Aadhaar, mobile, PIN |
 | `INVALID_STATE_CODE` | First two digits are not an Indian state/UT code (01–38) | GSTIN |
-| `INVALID_ENTITY` | Reserved — an unlisted PAN 4th character is reported as entity `"Unknown"` instead, and the PAN is still valid | never emitted as of v0.2.0 |
+| `INVALID_ENTITY` | Reserved — an unlisted PAN 4th character is reported as entity `"Unknown"` instead, and the PAN is still valid | never emitted as of v0.2.5 |
 | `INVALID_HANDLE` | UPI handle is missing or not a known handle | UPI ID |
-| `UNKNOWN_TYPE` | The `type` passed to `validate()` is not a known validator | generic `validate` only |
 | `UNKNOWN_TYPE` | The value matches no known ID format | `detect()` / `validate_many()` only |
+| `SOME_INVALID` | Some inputs in a batch were invalid (JS/Python `validateMany` wrapper only; Rust returns a plain list) | `validateMany` only |
 
 ### Precedence
 
@@ -118,31 +126,29 @@ When several things are wrong, indycheck reports the first check that fails. The
 import { validatePan } from 'indycheck';
 
 const r = validatePan(userInput);
-if (!r.ok) {
+if (!r.valid) {
   // Show Hindi to Hindi-speaking users, English otherwise.
   showError(lang === 'hi' ? r.reason_hi : r.reason_en);
 }
 ```
 
-### Generic dispatch
-
-```js
-import { validate } from 'indycheck';
-
-function checkField(type, value) {
-  const r = validate(type, value);
-  return r.ok ? null : r.code; // null = fine, else a stable error code
-}
-```
-
 ### Batch validation
 
-```python
-from indycheck import validate
+```js
+import { validateMany } from 'indycheck';
 
-rows = [("pan", "AAAPL1234C"), ("pan", "AAAPL12345"), ("mobile", "9876543210")]
-bad = [(t, v, r.code) for (t, v) in rows for r in [validate(t, v)] if not r.ok]
-print(bad)  # [('pan', 'AAAPL12345', 'INVALID_FORMAT')]
+const r = validateMany(['AAAPL1234C', '5123456789', '9876543210']);
+console.log(r.parsed.validCount, 'of', r.parsed.total, 'valid'); // 2 of 3 valid
+const bad = r.parsed.results.filter((x) => !x.valid);
+console.log(bad); // [{ input: '5123456789', type: 'mobile', code: 'INVALID_FIRST_DIGIT', ... }]
+```
+
+```python
+from indycheck import validate_many
+
+r = validate_many(["AAAPL1234C", "5123456789", "9876543210"])
+bad = [(x["input"], x["code"]) for x in r["parsed"]["results"] if not x["valid"]]
+print(bad)  # [('5123456789', 'INVALID_FIRST_DIGIT')]
 ```
 
 ### Never log Aadhaar
@@ -151,11 +157,11 @@ print(bad)  # [('pan', 'AAAPL12345', 'INVALID_FORMAT')]
 import { validateAadhaar } from 'indycheck';
 
 const r = validateAadhaar(aadhaarInput);
-if (r.ok) {
+if (r.valid) {
   db.save({ aadhaar_masked: r.parsed.masked }); // XXXX XXXX 0124 — never the full number
 }
 ```
 
 <Aside type="caution" title="Honest limits">
-  indycheck validates format and checksum only. A result of `ok: true` never means "this ID exists" or "this ID belongs to this person". There is no network call, no UIDAI/NSDL/GSTN/MCA/ECI lookup, and no database of real IDs anywhere in the package. TAN, CIN, LLPIN, Voter ID and vehicle numbers have no public checksum at all — for those, indycheck checks the format only.
+  indycheck validates format and checksum only. A result of `valid: true` never means "this ID exists" or "this ID belongs to this person". There is no network call, no UIDAI/NSDL/GSTN/MCA/ECI lookup, and no database of real IDs anywhere in the package. TAN, CIN, LLPIN, Voter ID and vehicle numbers have no public checksum at all — for those, indycheck checks the format only.
 </Aside>

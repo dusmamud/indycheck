@@ -15,18 +15,20 @@ These are the exact codes the package returns — the same strings the Rust core
 | --- | --- | --- |
 | `VALID` | Fully valid | The value passed every check |
 | `EMPTY` | Input was empty or only whitespace | All validators |
+| `INVALID_TYPE` | Input was not a string (JS/Python only — Rust takes `&str`, so it cannot happen there) | All validators |
 | `INVALID_LENGTH` | Wrong length | PAN, Aadhaar, GSTIN, IFSC, PIN code, TAN, CIN, LLPIN, Voter ID, vehicle (never mobile or UPI ID) |
 | `INVALID_FORMAT` | Characters or pattern don't match | All validators |
 | `INVALID_CHECKSUM` | Checksum digit fails | Aadhaar (Verhoeff), GSTIN (Mod-36 Luhn) |
 | `INVALID_FIRST_DIGIT` | First digit not allowed | Aadhaar (0/1), mobile (not 6–9), PIN (0) |
 | `INVALID_STATE_CODE` | Unknown state/UT code | GSTIN (01–38) |
-| `INVALID_ENTITY` | Reserved — 4th PAN character is not a listed holder type | Never emitted as of v0.2.0 (see below) |
+| `INVALID_ENTITY` | Reserved — 4th PAN character is not a listed holder type | Never emitted as of v0.2.5 (see below) |
 | `INVALID_HANDLE` | UPI handle is missing or not a known handle | UPI ID |
-| `UNKNOWN_TYPE` | The type could not be identified, or an unknown type was passed to `validate()` | Generic `validate()`, `detect()` / `validate_many()` |
+| `UNKNOWN_TYPE` | The value matches no known ID format | `detect()` / `validate_many()` |
+| `SOME_INVALID` | Some inputs in a batch were invalid (JS/Python `validateMany` wrapper only — Rust `validate_many` returns a plain list, so it never emits this) | `validateMany` only |
 
 ### `INVALID_ENTITY` is reserved, not emitted
 
-A PAN whose 4th character is not in the published entity list (`P` `C` `H` `F` `A` `T` `B` `L` `J` `G`) is reported as entity `"Unknown"` and is still format-valid — the canonical format example `ABCDE1234F` (4th character `D`) is valid. `INVALID_ENTITY` is a reserved stable code for the future; the package never returns it as of v0.2.0.
+A PAN whose 4th character is not in the published entity list (`P` `C` `H` `F` `A` `T` `B` `L` `J` `G`) is reported as entity `"Unknown"` and is still format-valid — the canonical format example `ABCDE1234F` (4th character `D`) is valid. `INVALID_ENTITY` is a reserved stable code for the future; the package never returns it as of v0.2.5.
 
 ## Code by validator
 
@@ -75,10 +77,11 @@ Every code comes with two human-readable reasons:
 
 ```json
 {
-  "ok": false,
+  "valid": false,
   "code": "INVALID_CHECKSUM",
-  "reason_en": "Aadhaar checksum failed (Verhoeff) — the number is mistyped or fake.",
-  "reason_hi": "आधार चेकसम गलत है (Verhoeff) — नंबर गलत टाइप हुआ है या नकली है।"
+  "reason_en": "Aadhaar checksum is invalid (Verhoeff check failed)",
+  "reason_hi": "Aadhaar ka checksum galat hai (Verhoeff check fail hua)",
+  "parsed": null
 }
 ```
 
@@ -100,7 +103,7 @@ const FIELD_ERRORS = {
 
 function panError(value) {
   const r = validatePan(value);
-  return r.ok ? null : (FIELD_ERRORS[r.code] ?? r.reason_en);
+  return r.valid ? null : (FIELD_ERRORS[r.code] ?? r.reason_en);
 }
 ```
 

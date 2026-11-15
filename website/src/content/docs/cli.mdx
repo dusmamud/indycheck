@@ -8,7 +8,7 @@ import { Aside } from '@astrojs/starlight/components';
 The CLI is the `indycheck` binary from the Rust crate — the same offline
 engine as the library. It prints a `ValidationResult` as JSON, so it is
 easy to use from shell scripts. There are no `--json` or `--lenient`
-flags in v0.2.0: output is always JSON, and validation always uses the
+flags in v0.2.5: output is always JSON, and validation always uses the
 default (strict) options. Options, `--lenient` and CSV mode are planned
 for a later release — see the notes at the bottom of this page.
 
@@ -100,11 +100,12 @@ The order `detect` tries is fixed (see `detect()` in
 1. Anything containing `@` → `upi`
 2. A 12-digit number that passes the Verhoeff checksum (spaces/hyphens ignored) → `aadhaar`
 3. A normalisable mobile number → `mobile` (this wins over the length-15 GSTIN branch — `"+91 98765 43210"` is 15 characters long but detects as `mobile`)
-4. A 21-character CIN pattern → `cin`
-5. By length: 15 → `gstin`; 12 digits → `aadhaar`; 11 with the IFSC pattern → `ifsc`; 10 with the PAN pattern → `pan`; 10 with the TAN pattern → `tan`; 10 with the voter pattern → `voter`; 10 digits → `mobile`; 7 with the LLPIN pattern → `llpin`; 6 digits → `pincode`
-6. A normalisable mobile in formatted form → `mobile`
-7. PAN, TAN, voter, IFSC, then LLPIN patterns, then the vehicle pattern → `vehicle`
-8. Anything else → `"unknown"`
+4. A PAN or GSTIN pattern after stripping spaces and hyphens → `pan` / `gstin` (so `"ABCDE 1234F"` and `"18AAAPL1234C1Z D"` detect)
+5. A 21-character CIN pattern → `cin`
+6. By length: 15 with the GSTIN structure → `gstin`; 12 digits → `aadhaar`; 11 with the IFSC pattern → `ifsc`; 10 with the PAN pattern → `pan`; 10 with the TAN pattern → `tan`; 10 with the voter pattern → `voter`; 10 digits → `mobile`; 7 with the LLPIN pattern → `llpin`; 6 digits → `pincode`
+7. A normalisable mobile in formatted form → `mobile`
+8. PAN, TAN, voter, IFSC, then LLPIN patterns, then the vehicle pattern → `vehicle`
+9. Anything else → `"unknown"`
 
 So GSTIN is tried before PAN, and Aadhaar before mobile — a 12-digit Verhoeff-valid number is an Aadhaar even if it could also be read as a `91`-prefixed mobile.
 
@@ -140,7 +141,7 @@ against a real verification provider. See [Test-data generators](/generators/).
 
 ```bash
 $ indycheck --version
-indycheck 0.2.0
+indycheck 0.2.5
 ```
 
 `indycheck version` and `indycheck -V` print the same line. Useful in scripts
@@ -150,8 +151,8 @@ to check the installed version before calling `validate`.
 
 ```bash
 $ indycheck update
-indycheck 0.2.1 (installed)
-latest: 0.2.1 (crates.io)
+indycheck 0.2.5 (installed)
+latest: 0.2.5 (crates.io)
 You're up to date.
 ```
 
@@ -166,7 +167,7 @@ Update available. Run:
 Offline (or with neither `curl` nor `cargo` available) it says so and prints
 the same update command. `update` takes no arguments.
 
-## Planned, not in v0.2.0
+## Planned, not in v0.2.5
 
 - `--lenient` / `--strict` flags and per-option flags on `validate`
 - `--file` / `--csv` batch validation of a file or CSV column

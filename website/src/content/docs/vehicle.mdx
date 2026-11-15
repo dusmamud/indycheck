@@ -46,18 +46,18 @@ MoRTH notified the BH series on 26 August 2021 (effective 15 September 2021) for
 import { validateVehicle } from 'indycheck';
 
 validateVehicle('DL01AB1234');
-// { ok: true, code: 'VALID',
+// { valid: true, code: 'VALID',
 //   parsed: { registration: 'DL01AB1234', series_type: 'state',
 //             state_code: 'DL', district: '01', series: 'AB',
 //             number: '1234' } }
 
 validateVehicle('22BH1234AA');
-// { ok: true, code: 'VALID',
+// { valid: true, code: 'VALID',
 //   parsed: { registration: '22BH1234AA', series_type: 'bharat',
 //             year: '22', series: 'BH', number: '1234',
 //             suffix: 'AA' } }
 
-validateVehicle('DL 01 AB 1234'); // ok: true — spaces accepted
+validateVehicle('DL 01 AB 1234'); // valid: true — spaces accepted
 ```
 
 ```python

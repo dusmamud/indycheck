@@ -63,7 +63,7 @@ echo Indycheck::detect('9876543210'); // mobile
 $batch = Indycheck::validateMany(['ABCDE1234F', '9876543210', 'nope']);
 // $batch[0]['valid'] === true, $batch[2]['valid'] === false
 
-echo Indycheck::version(); // e.g. '0.2.2'
+echo Indycheck::version(); // e.g. '0.2.4'
 ```
 
 ## API
@@ -98,7 +98,7 @@ A failed validation is a normal return value (`'valid' => false`), never an exce
 | `Indycheck::validateVoterId` / `Indycheck::validateEpic` | Voter ID / EPIC |
 | `Indycheck::detect` | Returns the type string (`'pan'`, `'mobile'`, `'vehicle'`, …, `'unknown'`) |
 | `Indycheck::validateMany(array $inputs)` | Batch: validates each input, results in input order |
-| `Indycheck::version()` | Core version string, e.g. `'0.2.2'` |
+| `Indycheck::version()` | Core version string, e.g. `'0.2.4'` |
 
 All 23 methods are verified in `packages/php/src/Indycheck.php` and covered by 16 PHPUnit tests (`packages/php/tests/IndycheckTest.php`).
 

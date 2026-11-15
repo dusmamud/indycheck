@@ -28,11 +28,13 @@ All crates, npm and PyPI packages share one version in lockstep.
   override is gone).
 - WASM workflow: installs `wasm-opt` (Binaryen) so wasm-pack optimizes
   the playground WASM instead of silently skipping that step.
-- Docs: the Test-data generators page no longer claims a `generate(type)`
-  dispatcher or `generateIfsc` / `generateUpi` / `generatePincode` /
-  `generateTan` / `generateCin` / `generateLlpin` / `generateEpic`
-  helpers — those never existed in the package. Only the five real
-  generators are documented, with examples that use the real API.
+- Docs: the website docs no longer describe a generic `validate()` /
+  `generate()` / `mask()` / `format()` API or a `{ ok, type, value,
+  normalized }` result shape — neither ever existed. Only the real
+  per-type validators, the six real generators, and the real
+  `{ valid, code, reason_en, reason_hi, parsed }` result are documented,
+  with the real `Options` fields. The LLPIN page no longer claims a
+  hyphen is accepted.
 
 ## [0.2.1] - 2026-11-12
 

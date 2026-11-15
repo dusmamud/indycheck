@@ -63,7 +63,7 @@ func main() {
 	fmt.Println(len(batch), batch[2].Valid) // 3 false
 
 	ver, _ := indycheck.Version()
-	fmt.Println(ver) // e.g. "0.2.2"
+	fmt.Println(ver) // e.g. "0.2.4"
 }
 ```
 
@@ -97,7 +97,7 @@ type Result struct {
 | `ValidateVoterID` / `ValidateEpic` | Voter ID / EPIC |
 | `Detect` | Returns the type string (`"pan"`, `"mobile"`, `"vehicle"`, …, `"unknown"`) |
 | `ValidateMany([]string)` | Batch: detects then validates each input, results in input order |
-| `Version()` | Core version string, e.g. `"0.2.2"` |
+| `Version()` | Core version string, e.g. `"0.2.4"` |
 
 All functions are verified in `packages/go/indycheck.go`.
 

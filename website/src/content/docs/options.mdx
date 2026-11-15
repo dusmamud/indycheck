@@ -5,116 +5,117 @@ description: Control how indycheck normalises input — strict vs lenient mode, 
 
 import { Aside } from '@astrojs/starlight/components';
 
-Every validator takes an optional second argument, `options`, that controls how the input is normalised before checking. The same options work in JavaScript, Python and Rust, and in the [playground's options panel](/playground/).
+Mobile, PAN, Aadhaar and GSTIN take an optional `options` argument that controls how the input is normalised before checking. The other validators take **no options** — they always run with the defaults. The same options work in JavaScript, Python and Rust.
 
 ## The options object
 
 ```js
 {
   strict: true,               // default: true
-  allowSpaces: false,         // default: false
-  allowHyphens: false,        // default: false
-  normalizeCountryCode: true, // default: true (mobile only)
-  uppercase: true,            // default: true (letter IDs only)
+  allow_spaces_hyphens: true, // default: true
+  normalise_plus91: true,     // default: true
+  uppercase: true,            // default: true
 }
 ```
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `strict` | `true` | `true` = strict mode, `false` = lenient mode (see below) |
-| `allowSpaces` | `false` | Strip all spaces before validating |
-| `allowHyphens` | `false` | Strip all hyphens before validating |
-| `normalizeCountryCode` | `true` | Mobile only: strip `+91`, `91` or `0` prefix before checking |
-| `uppercase` | `true` | Letter IDs only (PAN, GSTIN, IFSC, TAN, CIN, LLPIN, EPIC, vehicle): uppercase the input first |
+| `strict` | `true` | `true` = every rule enforced, including first-digit rules and checksums. `false` = lenient mode: first-digit and checksum checks are skipped (format only) |
+| `allow_spaces_hyphens` | `true` | Strip spaces and hyphens before validating. `false` makes any space or hyphen an `INVALID_FORMAT` error |
+| `normalise_plus91` | `true` | Mobile only: strip a `+91`, `91` or `0` prefix before checking. `false` accepts only a bare 10-digit number |
+| `uppercase` | `true` | Upper-case letter input before validating. `false` makes a lower-case letter fail the format check instead |
+
+The option names are one field each — there are no separate `allowSpaces` / `allowHyphens` / `normalizeCountryCode` options. In Python the options are a dict with the same keys; in Rust they are the `Options` struct (`Options::default()`, `Options::strict()`, `Options::lenient()`, `Options::no_spaces_hyphens()`).
 
 ## Strict mode (default)
 
-In strict mode the input must be (nearly) exactly as specified. The only normalisation that always happens:
-
-- Letter IDs are uppercased (`aaapl1234c` → `AAAPL1234C`).
-- Display separators that are part of the convention are accepted: spaces in Aadhaar (`2345 6789 0124`), spaces/dashes in mobile and PIN codes, the hyphen in LLPIN (`AAA-1234`), and spaces/hyphens in vehicle plates (`DL 01 AB 1234`).
-
-Anything else is rejected with `INVALID_FORMAT`:
+In strict mode every rule is enforced, but spaces and hyphens are still stripped by default — `allow_spaces_hyphens` defaults to `true`, so these are all valid with the default options:
 
 ```js
-import { validatePan } from 'indycheck';
+import { validatePan, validateAadhaar, validateMobile, validatePanWithOptions } from 'indycheck';
 
-validatePan('AAAPL 1234C');
-// { ok: false, code: 'INVALID_FORMAT',
-//   reason_en: 'Spaces are not allowed in strict mode — set allowSpaces: true or use lenient mode (strict: false).' }
-
-validatePan('AAAPL-1234C');
-// { ok: false, code: 'INVALID_FORMAT',
-//   reason_en: 'Hyphens are not allowed in strict mode — …' }
+validatePan('AAAPL 1234C');          // valid: true — space stripped
+validatePan('AAAPL-1234C');          // valid: true — hyphen stripped
+validateAadhaar('2345 6789 0124');   // valid: true — spaces ignored
+validateMobile('+91 98765 43210');   // valid: true — prefix stripped
 ```
 
-Use strict mode for **APIs and stored data** — it guarantees the value you accept is already canonical.
+To reject separators, turn the flag off (options go through the `*WithOptions` variant — the plain validators take no options argument):
+
+```js
+validatePanWithOptions('AAAPL 1234C', { allow_spaces_hyphens: false });
+// { valid: false, code: 'INVALID_FORMAT',
+//   reason_en: 'PAN must not contain spaces or hyphens with these options' }
+```
+
+Use strict mode for **APIs and stored data** — it guarantees the value you accept passes every rule the library knows.
 
 ## Lenient mode
 
-Set `strict: false` and every normalisation turns on at once: spaces and hyphens are stripped, letter IDs are uppercased, and `+91` is stripped from mobiles. It is a shortcut for `{ allowSpaces: true, allowHyphens: true, normalizeCountryCode: true, uppercase: true }`.
+Set `strict: false` and only the first-digit and checksum checks are skipped — the format is still checked. It does **not** turn any normalisation on or off; spaces, hyphens, `+91` and uppercasing are controlled by their own flags, which keep their defaults.
 
 ```js
-validatePan('AAAPL-1234C', { strict: false });  // ok: true
-validatePan('aaapl1234c', { strict: false });   // ok: true
-validateGstin('27AAAPL1234C1Z E', { strict: false }); // ok: true
+import { validateMobileWithOptions, validateAadhaarWithOptions } from 'indycheck';
+
+validateMobileWithOptions('5123456789', { strict: false }); // valid: true — first-digit rule skipped
+validateMobile('5123456789');                               // valid: false — INVALID_FIRST_DIGIT
+
+validateAadhaarWithOptions('234567890123', { strict: false }); // valid: true — Verhoeff skipped
+validateAadhaar('234567890123');                              // valid: false — INVALID_CHECKSUM
 ```
 
-Use lenient mode for **user-typed form input** — people paste values with spaces, dashes and lowercase letters. Always store the returned `normalized` value, not the raw input.
+For PAN, `strict` / `lenient` make no difference — there is no checksum or first-digit rule to skip. Use lenient mode for **progressive form validation**, where a half-typed number should not fail on its checksum yet.
 
 ## Individual flags
 
-You can also turn flags on one at a time in strict mode:
+You can also turn flags off one at a time:
 
 ```js
-// Spaces yes, hyphens still no:
-validatePan('AAAPL 1234C', { allowSpaces: true });  // ok: true
-validatePan('AAAPL-1234C', { allowSpaces: true });  // ok: false — INVALID_FORMAT
-
-// Don't uppercase — lowercase input must now fail:
-validatePan('aaapl1234c', { uppercase: false });    // ok: false — INVALID_FORMAT
-validatePan('AAAPL1234C', { uppercase: false });    // ok: true
+import { validateMobileWithOptions, validatePanWithOptions } from 'indycheck';
 
 // Don't strip the country code — the bare 10-digit number is required:
-validateMobile('+91 98765 43210', { normalizeCountryCode: false });
-// { ok: false, code: 'INVALID_FORMAT' }
-validateMobile('9876543210', { normalizeCountryCode: false }); // ok: true
+validateMobileWithOptions('+91 98765 43210', { normalise_plus91: false });
+// { valid: false, code: 'INVALID_FORMAT' }
+validateMobileWithOptions('9876543210', { normalise_plus91: false }); // valid: true
+
+// Don't uppercase — lowercase input must now fail:
+validatePanWithOptions('aaapl1234c', { uppercase: false }); // valid: false — INVALID_FORMAT
+validatePanWithOptions('AAAPL1234C', { uppercase: false }); // valid: true
+
+// Lenient + no separators:
+validatePanWithOptions('AAAPL-1234C', { strict: false, allow_spaces_hyphens: false });
+// valid: false — INVALID_FORMAT
 ```
 
-## Which options affect which validator?
+## Which validators take options?
 
-| Validator | `uppercase` | `allowSpaces` / `allowHyphens` | `normalizeCountryCode` |
-| --- | --- | --- | --- |
-| PAN | Yes | Yes | — |
-| Aadhaar | — | Always allowed | — |
-| GSTIN | Yes | Yes | — |
-| IFSC | Yes | Yes | — |
-| UPI ID | — (case-sensitive, never changed) | Yes in lenient mode | — |
-| Mobile | — | Always allowed | Yes |
-| PIN code | — | Always allowed | — |
-| TAN | Yes | Yes | — |
-| CIN | Yes | Yes | — |
-| LLPIN | Yes | Hyphen always allowed | — |
-| Voter ID (EPIC) | Yes | Yes | — |
-| Vehicle | Yes | Always allowed | — |
+| Validator | Options? | Notes |
+| --- | --- | --- |
+| Mobile | Yes — `validateMobileWithOptions` | `strict`, `allow_spaces_hyphens`, `normalise_plus91` apply |
+| PAN | Yes — `validatePanWithOptions` | `allow_spaces_hyphens` and `uppercase` apply; `strict` makes no difference |
+| Aadhaar | Yes — `validateAadhaarWithOptions` | `strict` skips the first-digit and Verhoeff checks; `allow_spaces_hyphens` applies |
+| GSTIN | Yes — `validateGstinWithOptions` | `strict` skips the Mod-36 check-digit check (format and state code still checked) |
+| IFSC, UPI ID, PIN code, TAN, CIN, LLPIN, Voter ID, Vehicle | No | These validators take no options argument. They upper-case letter input unconditionally; only vehicle strips spaces and hyphens. Internal spaces in a PIN code, TAN, CIN, IFSC, LLPIN or Voter ID fail the length check (`INVALID_LENGTH`) — for example `validatePincode('781 001')` is `INVALID_LENGTH`, and a hyphenated LLPIN (`AAA-1234`) is 8 characters, so `INVALID_LENGTH` |
 
 ## Python and Rust
 
 ```python
-from indycheck import validate_pan
+from indycheck import validate_pan_with_options
 
-validate_pan("AAAPL 1234C", {"allow_spaces": True}).ok  # True
-validate_pan("AAAPL-1234C", {"strict": False}).ok       # True
+validate_pan_with_options("AAAPL 1234C", {"allow_spaces_hyphens": False})["valid"]  # False
+validate_pan_with_options("AAAPL-1234C", {"strict": False})["valid"]               # True
 ```
 
 ```rust
-use indycheck::{validate_pan, Options};
+use indycheck::{validate_pan_with_options, Options};
 
 let opts = Options { strict: false, ..Default::default() };
-let r = validate_pan("AAAPL-1234C", opts);
-assert!(r.ok);
+let r = validate_pan_with_options("AAAPL-1234C", opts);
+assert!(r.valid);
 ```
 
-<Aside type="note" title="Normalised output">
-  Whatever the options, a successful result always includes `normalized` — the canonical value (uppercase, separators and country code stripped). Store that, and your database stays consistent no matter how users typed the value.
+Only the `*_with_options` functions take an `Options` argument — `validate_pan("AAAPL1234C")` takes just the value and always uses the defaults.
+
+<Aside type="note" title="Where the cleaned-up value lives">
+  There is no top-level `normalized` field on a result. A successful mobile result carries the canonical 10-digit number in `parsed.normalized` — store that, and `+91 98765 43210` and `9876543210` dedupe to the same user. Other validators expose their parts in `parsed` (see [API &amp; error codes](/api/)).
 </Aside>

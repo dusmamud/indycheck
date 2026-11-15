@@ -22,21 +22,21 @@ Validates a Voter ID number — the EPIC (Electors Photo Identity Card) number i
 import { validateEpic } from 'indycheck';
 
 validateEpic('ABC1234567');
-// { ok: true, code: 'VALID', normalized: 'ABC1234567',
+// { valid: true, code: 'VALID',
 //   parsed: { epic: 'ABC1234567' } }
 ```
 
 ```python
 from indycheck import validate_epic
 
-validate_epic("ABC1234567").ok  # True
+validate_epic("ABC1234567")["valid"]  # True
 ```
 
 ```rust
 use indycheck::validate_epic;
 
 let r = validate_epic("ABC1234567");
-assert!(r.ok);
+assert!(r.valid);
 ```
 
 ## Examples

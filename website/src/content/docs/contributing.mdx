@@ -33,10 +33,10 @@ indycheck is open source and contributions are welcome — bug reports, rule cor
 cargo test
 
 # JavaScript binding (Node 18+)
-cd packages/indycheck-js && npm install && npm test
+cd packages/js && npm install && npm test
 
 # Python binding (Python 3.9+)
-cd packages/indycheck-py && pip install -e . && pytest
+cd packages/python && pip install -e . && pytest
 
 # This website
 cd website && npm install && npm run build
@@ -44,7 +44,7 @@ cd website && npm install && npm run build
 
 ## Docs contributions
 
-Docs live in `website/src/content/docs/` (English for v0.2.0) and the landing/playground pages in `website/src/pages/`. Every doc page should have: real valid + invalid examples, a code sample in at least JavaScript, and the honest-limits note. Check your change with `npm run build` in `website/`.
+Docs live in `website/src/content/docs/` (English for v0.2.5) and the landing/playground pages in `website/src/pages/`. Every doc page should have: real valid + invalid examples, a code sample in at least JavaScript, and the honest-limits note. Check your change with `npm run build` in `website/`.
 
 ## Code style
 
@@ -57,7 +57,7 @@ Docs live in `website/src/content/docs/` (English for v0.2.0) and the landing/pl
 Open an issue with:
 
 1. The validator and the exact input (synthetic data only).
-2. What indycheck returned (`ok`, `code`).
+2. What indycheck returned (`valid`, `code`).
 3. What you expected, and the official source for the rule.
 4. Your environment: package version, language, OS.
 

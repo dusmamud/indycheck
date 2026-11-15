@@ -5,7 +5,7 @@ description: Validate Indian PIN codes — 6 digits, first digit 1–9.
 
 import { Aside } from '@astrojs/starlight/components';
 
-Validates an Indian PIN code: exactly 6 digits, first digit 1–9. Spaces and dashes are ignored.
+Validates an Indian PIN code: exactly 6 digits, first digit 1–9. Only leading/trailing whitespace is trimmed — internal spaces and dashes are not stripped, so `781 001` fails with `INVALID_LENGTH`.
 
 ## Rules
 
@@ -31,21 +31,21 @@ Validates an Indian PIN code: exactly 6 digits, first digit 1–9. Spaces and da
 import { validatePincode } from 'indycheck';
 
 validatePincode('781001');
-// { ok: true, code: 'VALID', normalized: '781001',
+// { valid: true, code: 'VALID',
 //   parsed: { pincode: '781001' } }
 ```
 
 ```python
 from indycheck import validate_pincode
 
-validate_pincode("781001").ok  # True
+validate_pincode("781001")["valid"]  # True
 ```
 
 ```rust
 use indycheck::validate_pincode;
 
 let r = validate_pincode("781001");
-assert!(r.ok);
+assert!(r.valid);
 ```
 
 ## Examples

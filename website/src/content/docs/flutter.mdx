@@ -9,8 +9,8 @@ The Dart package is a thin [`dart:ffi`](https://api.dart.dev/stable/dart-ffi/dar
 
 This is a pure Dart package, not a Flutter plugin: it works in a Dart CLI or server, and in a Flutter app that bundles the native library.
 
-<Aside type="note" title="Status — on pub.dev (0.2.2), 0.2.4 in progress">
-  The package is published on pub.dev as `indycheck` — **0.2.2 is live** and **0.2.4 is in progress**. The native library is **bundled via a build hook** in 0.2.4: the hook downloads the prebuilt library for your platform from the GitHub release (SHA-256 verified), so there is no manual build step in the standard case. A failed validation is a normal `ValidationResult` with `valid == false` — the methods only throw on transport failures (the native library cannot be loaded, or it returns null).
+<Aside type="note" title="Status — on pub.dev (0.2.5)">
+  The package is published on pub.dev as `indycheck` — the current version is **0.2.5**. The native library is **bundled via a build hook**: the hook downloads the prebuilt library for your platform from the GitHub release (SHA-256 verified), so there is no manual build step in the standard case. A failed validation is a normal `ValidationResult` with `valid == false` — the methods only throw on transport failures (the native library cannot be loaded, or it returns null).
 </Aside>
 
 ## Install
@@ -23,15 +23,15 @@ dart pub add indycheck
 flutter pub add indycheck
 ```
 
-That installs the latest published version (0.2.2; 0.2.4 is in progress). To pin a version, add it to your `pubspec.yaml`:
+That installs the latest published version (0.2.5). To pin a version, add it to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  indycheck: ^0.2.2
+  indycheck: ^0.2.5
   ffi: ^2.1.0
 ```
 
-Requires Dart SDK `>=3.14.0 <4.0.0` and `ffi ^2.1.0` (Flutter 3.50+). To use the latest code before 0.2.4 lands on pub.dev, install it as a git dependency instead:
+Requires Dart SDK `>=3.14.0 <4.0.0` and `ffi ^2.1.0` (Flutter 3.50+). To use the latest code from the repo instead of pub.dev, install it as a git dependency:
 
 ```yaml
 dependencies:
@@ -90,7 +90,7 @@ void main() {
   final batch = Indycheck.validateMany(['ABCDE1234F', '9876543210', 'nope']);
   print(batch.map((r) => r.valid).toList()); // [true, true, false]
 
-  print(Indycheck.version()); // e.g. '0.2.2'
+  print(Indycheck.version()); // e.g. '0.2.5'
 }
 ```
 
@@ -124,7 +124,7 @@ class ValidationResult {
 | `Indycheck.validateVoterId` / `Indycheck.validateEpic` | Voter ID / EPIC |
 | `Indycheck.detect` | Returns the type string (`'pan'`, `'mobile'`, `'vehicle'`, …, `'unknown'`) |
 | `Indycheck.validateMany(List<String>)` | Batch: validates each input, results in input order |
-| `Indycheck.version()` | Core version string, e.g. `'0.2.2'` |
+| `Indycheck.version()` | Core version string, e.g. `'0.2.5'` |
 | `Indycheck.isLoaded` | Whether the native library has been loaded |
 
 ## Test-data generators — test data only
