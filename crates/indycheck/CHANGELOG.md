@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6](https://github.com/dusmamud/indycheck/compare/indycheck-v0.2.5...indycheck-v0.2.6) - 2026-11-18
+
+### Fixed
+
+- *(aadhaar)* correct Verhoeff permutation row P[3] (issue #7)
+- *(mobile,detect)* reject bare '+' numbers and fix detect for spaced PAN/GSTIN
+
+### Other
+
+- rustfmt the 870b47d fixes
+
 ## [0.2.5](https://github.com/dusmamud/indycheck/compare/indycheck-v0.2.4...indycheck-v0.2.5) - 2026-11-13
 
 ### Added
