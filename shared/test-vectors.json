@@ -182,7 +182,21 @@
     "detect": true
   },
   {
-    "input": "987654321090",
+    "input": "987654321096",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "400000000005",
+    "type": "aadhaar",
+    "valid": true,
+    "code": "VALID",
+    "detect": true
+  },
+  {
+    "input": "200000001008",
     "type": "aadhaar",
     "valid": true,
     "code": "VALID",
@@ -273,7 +287,7 @@
     "detect": true
   },
   {
-    "input": "999999999999",
+    "input": "999999999998",
     "type": "aadhaar",
     "valid": false,
     "code": "INVALID_CHECKSUM",

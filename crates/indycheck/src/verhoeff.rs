@@ -22,7 +22,7 @@ pub const P: [[u8; 10]; 8] = [
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
     [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
-    [8, 0, 1, 3, 2, 4, 9, 6, 7, 5],
+    [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
     [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
     [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
     [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
@@ -70,12 +70,21 @@ mod tests {
         // Generated with verify_digit("23456789012") == '4'.
         assert!(is_valid("234567890124"));
         assert!(!is_valid("234567890125"));
+        // Issue #7: these were rejected with INVALID_CHECKSUM before the
+        // Verhoeff permutation row P[3] fix (they pass on both tables only
+        // when the row is correct; "234567890124" passes on either).
+        assert!(is_valid("987654321096"));
+        assert!(is_valid("400000000005"));
+        assert!(is_valid("200000001008"));
     }
 
     #[test]
     fn verify_digit_roundtrip() {
         assert_eq!(verify_digit("23456789012"), Some('4'));
-        assert_eq!(verify_digit("98765432109"), Some('0'));
+        // Issue #7: was Some('0') under the mistyped P[3] row.
+        assert_eq!(verify_digit("98765432109"), Some('6'));
+        assert_eq!(verify_digit("40000000000"), Some('5'));
+        assert_eq!(verify_digit("20000000100"), Some('8'));
         assert_eq!(verify_digit(""), None);
         assert_eq!(verify_digit("12a"), None);
     }

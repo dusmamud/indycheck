@@ -220,6 +220,15 @@ fn aadhaar_valid() {
 }
 
 #[test]
+fn aadhaar_valid_verhoeff_row3_regression() {
+    // Issue #7: Verhoeff permutation row P[3] was mistyped, so these valid
+    // numbers were rejected with INVALID_CHECKSUM before the fix.
+    for n in ["987654321096", "400000000005", "200000001008"] {
+        assert!(validate_aadhaar(n).valid, "{n} should be valid");
+    }
+}
+
+#[test]
 fn aadhaar_valid_with_spaces() {
     assert!(validate_aadhaar("2345 6789 0124").valid);
 }

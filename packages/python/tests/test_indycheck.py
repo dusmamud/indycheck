@@ -3,11 +3,11 @@
 Mirrors packages/js/src/index.test.ts: inline cases (Rust codes /
 reasons), parsed shapes from shared/spec.md, Rust detect() semantics,
 Options cases, format/mask helpers, generators, and
-shared/test-vectors.json (262 cases), asserted in full — including the
+shared/test-vectors.json (264 cases), asserted in full — including the
 ``options`` entries (run through ``validate_*_with_options``) and the
 ``generator`` entries (freshly generated values must re-validate as
 VALID). As of the last check the Rust code and the vectors agree on all
-262 entries (verified by emulating the Rust source over the file), so
+264 entries (verified by emulating the Rust source over the file), so
 there are no exceptions: if the Rust side drifts again, that test
 fails loudly.
 """
@@ -128,11 +128,15 @@ INLINE_CASES = [
     ("pan", "", False, "EMPTY"),
     # Aadhaar
     ("aadhaar", "234567890124", True, "VALID"),
-    ("aadhaar", "987654321090", True, "VALID"),
+    # Issue #7: "987654321090" was valid only under the mistyped Verhoeff
+    # P[3] row; the correct check digit for base 98765432109 is 6.
+    ("aadhaar", "987654321096", True, "VALID"),
+    ("aadhaar", "400000000005", True, "VALID"),
+    ("aadhaar", "200000001008", True, "VALID"),
     ("aadhaar", "2345 6789 0124", True, "VALID"),
     ("aadhaar", "2345-6789-0124", True, "VALID"),
     ("aadhaar", "234567890125", False, "INVALID_CHECKSUM"),
-    ("aadhaar", "999999999999", False, "INVALID_CHECKSUM"),
+    ("aadhaar", "999999999998", False, "INVALID_CHECKSUM"),
     ("aadhaar", "123456789017", False, "INVALID_FIRST_DIGIT"),
     ("aadhaar", "023456789012", False, "INVALID_FIRST_DIGIT"),
     ("aadhaar", "23456789012", False, "INVALID_LENGTH"),
@@ -540,7 +544,7 @@ def test_shared_test_vectors():
     if not vectors_path.exists():
         pytest.skip("shared/test-vectors.json not written yet — inline cases are the contract")
     vectors = json.loads(vectors_path.read_text(encoding="utf-8"))
-    assert len(vectors) == 262
+    assert len(vectors) == 264
     failures = []
     for v in vectors:
         if "generator" in v:

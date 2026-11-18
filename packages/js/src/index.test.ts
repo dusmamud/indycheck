@@ -3,11 +3,11 @@
  *
  * Layers:
  *  1. Inline cases (100+) — always run, using the Rust codes / reasons.
- *  2. shared/test-vectors.json (262 cases) — read directly and asserted
+ *  2. shared/test-vectors.json (264 cases) — read directly and asserted
  *     in full, including the `options` entries (run through
  *     `validate*WithOptions`) and the `generator` entries (freshly
  *     generated values must re-validate as VALID). As of the last check
- *     the Rust code and the vectors agree on all 262 entries (verified
+ *     the Rust code and the vectors agree on all 264 entries (verified
  *     by emulating the Rust source over the file), so there are no
  *     exceptions: if the Rust side drifts again, this test fails loudly
  *     instead of silently picking a side.
@@ -171,12 +171,16 @@ const INLINE_CASES: InlineCase[] = [
   { fn: "pan", input: undefined, valid: false, code: "INVALID_TYPE" },
   // ---- Aadhaar ----
   { fn: "aadhaar", input: "234567890124", valid: true, code: "VALID" },
-  { fn: "aadhaar", input: "987654321090", valid: true, code: "VALID" },
+  // Issue #7: "987654321090" was valid only under the mistyped Verhoeff
+  // P[3] row; the correct check digit for base 98765432109 is 6.
+  { fn: "aadhaar", input: "987654321096", valid: true, code: "VALID" },
+  { fn: "aadhaar", input: "400000000005", valid: true, code: "VALID" },
+  { fn: "aadhaar", input: "200000001008", valid: true, code: "VALID" },
   { fn: "aadhaar", input: "345678901238", valid: true, code: "VALID" },
   { fn: "aadhaar", input: "2345 6789 0124", valid: true, code: "VALID" },
   { fn: "aadhaar", input: "2345-6789-0124", valid: true, code: "VALID" },
   { fn: "aadhaar", input: "234567890125", valid: false, code: "INVALID_CHECKSUM" },
-  { fn: "aadhaar", input: "999999999999", valid: false, code: "INVALID_CHECKSUM" },
+  { fn: "aadhaar", input: "999999999998", valid: false, code: "INVALID_CHECKSUM" },
   { fn: "aadhaar", input: "123456789017", valid: false, code: "INVALID_FIRST_DIGIT" },
   { fn: "aadhaar", input: "023456789012", valid: false, code: "INVALID_FIRST_DIGIT" },
   { fn: "aadhaar", input: "23456789012", valid: false, code: "INVALID_LENGTH" },
@@ -713,7 +717,7 @@ describe("zod schemas", () => {
 
 // ---------------------------------------------------------------------------
 // shared/test-vectors.json — asserted in full, no exceptions.
-// As of the last check the Rust code and the vectors agree on all 262
+// As of the last check the Rust code and the vectors agree on all 264
 // entries (verified by emulating crates/indycheck/src over the file).
 // `options` entries run through validate*WithOptions, `generator`
 // entries generate a fresh value and validate it (like
@@ -732,14 +736,14 @@ interface VectorEntry {
 
 describe("shared/test-vectors.json", () => {
   const vectorsPath = join(__dirname, "..", "..", "..", "shared", "test-vectors.json");
-  it("all 262 vectors match the Rust code", () => {
+  it("all 264 vectors match the Rust code", () => {
     if (!existsSync(vectorsPath)) {
       // Vectors not written yet — inline cases above are the contract.
       expect(true).toBe(true);
       return;
     }
     const vectors = JSON.parse(readFileSync(vectorsPath, "utf8")) as VectorEntry[];
-    expect(vectors.length).toBe(262);
+    expect(vectors.length).toBe(264);
     const failures: string[] = [];
     for (const v of vectors) {
       let result: ValidationResult;
